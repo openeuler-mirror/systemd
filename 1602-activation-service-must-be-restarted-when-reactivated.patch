@@ -1,0 +1,44 @@
+From 4acc8a3168e5f11b5308cf8558d68bf2a0503444 Mon Sep 17 00:00:00 2001
+From: huangkaibin <huangkaibin@huawei.com>
+Date: Mon, 7 Aug 2017 17:06:30 +0800
+Subject: [PATCH] systemd: Activation service must be restarted when it is already started and re-actived
+by dbus
+
+When dbus-daemon service is killed, every activation service must be restarted
+to reestblished dbus connection between dbus-daemon and the service.
+Otherwise, there will be problem on the dbus connection. This patch fix this
+problem by set JobType to JOB_RESTART when it is re-actived in signal_activation_request function.
+---
+ src/core/dbus.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/dbus.c b/src/core/dbus.c
+index 29524d4..38940ef 100644
+--- a/src/core/dbus.c
++++ b/src/core/dbus.c
+@@ -152,6 +152,8 @@ static int signal_activation_request(sd_bus_message *message, void *userdata, sd
+         const char *name;
+         Unit *u;
+         int r;
++        int jobtype;
++        Service *s = NULL;
+
+         assert(message);
+         assert(m);
+@@ -177,7 +179,13 @@ static int signal_activation_request(sd_bus_message *message, void *userdata, sd
+                 goto failed;
+         }
+
+-        r = manager_add_job(m, JOB_START, u, JOB_REPLACE, NULL, &error, NULL);
++        jobtype = JOB_START;
++        s = SERVICE(u);
++        if(s && s->state != SERVICE_DEAD) {
++            jobtype = JOB_RESTART;
++            log_unit_info(u, "Service '%s' will be restarted to activate the service. The current service state is %d.", u->id, s->state);
++        }
++        r = manager_add_job(m, jobtype, u, JOB_REPLACE, NULL, &error, NULL);
+         if (r < 0)
+                 goto failed;
+
+--
+1.8.3.1

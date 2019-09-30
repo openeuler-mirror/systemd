@@ -1,0 +1,79 @@
+#!/bin/bash -e
+#
+# This script is run to rename virtual interfaces
+#
+
+if [ -n "$UDEV_LOG" ]; then
+	if [ "$UDEV_LOG" -ge 7 ]; then
+		set -x
+	fi
+fi
+
+# according to dev_new_index(), ifindex is within [1, INT_MAX]
+int_max=$(/usr/bin/getconf INT_MAX)
+ifindex_before() {
+	a=$1
+	b=$2
+
+	((0 < (b - a) && (b - a) < int_max / 2 ||
+		-1 * int_max < (b - a) && (b - a) < -1 * int_max / 2))
+}
+
+rename_interface() {
+	local src_net=$1
+	local dest_net=$2
+	local err=0
+
+	/sbin/ip link set dev $src_net down
+	/sbin/ip link set dev $src_net name $dest_net
+}
+
+if [ -z "$INTERFACE" ]; then
+	echo "missing \$INTERFACE" >&2
+	exit 1
+fi
+
+if [ -e "/sys/class/net/$INTERFACE/device/physfn" ]; then
+	pf=$(ls -1 "/sys/class/net/$INTERFACE/device/physfn/net")
+	if [ $(echo "$pf" | wc -l) -ne 1 ]; then
+		echo "too many pf's" >&2
+		exit 1
+	fi
+	read vfindex < "/sys/class/net/$INTERFACE/ifindex"
+	read pfindex < "/sys/class/net/$pf/ifindex"
+	if ifindex_before $pfindex $vfindex; then
+		bus_info=$(basename $(readlink "/sys/class/net/$INTERFACE/device"))
+		for virtfn in "/sys/class/net/$pf/device/"virtfn*; do
+			if [ "$(basename $(readlink "$virtfn"))" = "$bus_info" ]; then
+				vfnum=$(basename "$virtfn")
+				vfnum=${vfnum#virtfn}
+				echo "INTERFACE_NEW=$pf.vf$vfnum"
+				exit 0
+			fi
+		done
+	fi
+fi
+
+read pfindex < "/sys/class/net/$INTERFACE/ifindex"
+shopt -s nullglob
+for virtfn in "/sys/class/net/$INTERFACE/device/"virtfn*; do
+	vf=$(ls -1 "$virtfn/net")
+	if [ $(echo "$vf" | wc -l) -ne 1 ]; then
+		echo "too many vf's" >&2
+		exit 1
+	fi
+	read vfindex < "/sys/class/net/$vf/ifindex"
+	if ifindex_before $vfindex $pfindex; then
+		vfnum=$(basename "$virtfn")
+		vfnum=${vfnum#virtfn}
+		if [ "$INTERFACE_NEW" ]; then
+			new_name=$INTERFACE_NEW
+		else
+			new_name=$INTERFACE
+		fi
+		new_name="$new_name.vf$vfnum"
+		if [ "$vf" != "$new_name" ]; then
+			rename_interface "$vf" "$new_name"
+		fi
+	fi
+done

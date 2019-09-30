@@ -1,0 +1,4 @@
+#!/bin/bash
+
+VIRT_PLATFORM="$(/usr/bin/systemd-detect-virt)"
+echo "$VIRT_PLATFORM"
