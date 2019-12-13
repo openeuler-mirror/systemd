@@ -5,10 +5,18 @@
 %global _docdir_fmt %{name}
 %global _systemddir /usr/lib/systemd
 
+%ifarch aarch64
+%global efi_arch aa64
+%endif
+
+%ifarch x86_64
+%global efi_arch x64
+%endif
+
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        3
+Release:        4
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1284,8 +1292,8 @@ fi
 %{_systemddir}/system-generators/systemd-gpt-auto-generator
 %{_systemddir}/ntp-units.d/80-systemd-timesync.list
 %dir %{_systemddir}/boot/efi
-%{_systemddir}/boot/efi/systemd-bootaa64.efi
-%{_systemddir}/boot/efi/linuxaa64.efi.stub
+%{_systemddir}/boot/efi/systemd-boot%{efi_arch}.efi
+%{_systemddir}/boot/efi/linux%{efi_arch}.efi.stub
 %{_systemddir}/network/99-default.link
 %dir /usr/lib/kernel/install.d
 /usr/lib/kernel/install.d/20-grubby.install
@@ -1430,6 +1438,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Nov 22 2019 shenyangyang<shenyangyang4@huawei.com> - 243-4
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:add efi_arch to solve build problem of x86
+
 * Sat Sep 28 2019 guoxiaoqi<guoxiaoqi2@huawei.com> - 243-3
 - Type:bugfix
 - ID:NA
