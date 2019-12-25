@@ -1,0 +1,32 @@
+From 7ca51ff9a4213025070f29c7814bba82984b90e7 Mon Sep 17 00:00:00 2001
+From: yefei25 <yefei25@huawei.com>
+Date: Tue, 19 Nov 2019 21:49:52 +0800
+Subject: [PATCH] systemd: change time log level
+
+
+Signed-off-by: yefei25 <yefei25@huawei.com>
+---
+ src/core/manager.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/manager.c b/src/core/manager.c
+index 32c340f..29eccd8 100644
+--- a/src/core/manager.c
++++ b/src/core/manager.c
+@@ -2681,11 +2681,11 @@ static int manager_dispatch_time_change_fd(sd_event_source *source, int fd, uint
+ 
+         assert(m);
+         assert(m->time_change_fd == fd);
+-
+-        log_struct(LOG_DEBUG,
++        if (getpid_cached() == 1) {
++        log_struct(LOG_INFO,
+                    "MESSAGE_ID=" SD_MESSAGE_TIME_CHANGE_STR,
+                    LOG_MESSAGE("Time has been changed"));
+-
++        }
+         /* Restart the watch */
+         (void) manager_setup_time_change(m);
+ 
+-- 
+2.19.1

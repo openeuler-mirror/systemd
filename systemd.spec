@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        4
+Release:        6
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -39,7 +39,7 @@ Source13:       rc.local
 Source100:	udev-40-openEuler.rules
 Source101:	udev-55-persistent-net-generator.rules
 Source102:	udev-56-net-sriov-names.rules
-Source103:	udev-61-euleros-persistent-storage.rules
+Source103:	udev-61-openeuler-persistent-storage.rules
 Source104:	net-set-sriov-names
 Source105:	rule_generator.functions
 Source106:	write_net_rules
@@ -61,6 +61,7 @@ Patch9007:  1619-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
 Patch9008:  1620-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
 #Patch9006:  core-bugfix-call-malloc_trim-to-return-memory-to-OS-immediately.patch
 #Patch9009:  systemd-core-Close-and-free-dbus-when-bus-authentica.patch
+Patch9009:  systemd-change-time-log-level.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -365,7 +366,7 @@ ln -s rc.d/rc.local %{buildroot}%{_sysconfdir}/rc.local
 install -m 0644 %{SOURCE100} %{buildroot}/%{_udevrulesdir}/40-openEuler.rules
 install -m 0644 %{SOURCE101} %{buildroot}/%{_udevrulesdir}/55-persistent-net-generator.rules
 install -m 0644 %{SOURCE102} %{buildroot}/%{_udevrulesdir}/56-net-sriov-names.rules
-install -m 0644 %{SOURCE103} %{buildroot}/%{_udevrulesdir}/61-euleros-persistent-storage.rules
+install -m 0644 %{SOURCE103} %{buildroot}/%{_udevrulesdir}/61-openeuler-persistent-storage.rules
 install -m 0755 %{SOURCE104} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE105} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE106} %{buildroot}/usr/lib/udev
@@ -1427,7 +1428,7 @@ fi
 %files udev-compat
 %{_udevrulesdir}/55-persistent-net-generator.rules
 %{_udevrulesdir}/56-net-sriov-names.rules
-%{_udevrulesdir}/61-euleros-persistent-storage.rules
+%{_udevrulesdir}/61-openeuler-persistent-storage.rules
 /usr/lib/udev/rule_generator.functions
 /usr/lib/udev/write_net_rules
 /usr/lib/udev/net-set-sriov-names
@@ -1438,6 +1439,18 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Dec 23 2019 openEuler Buildteam <buildteam@openeuler.org> - 243-6
+- Type:NA
+- ID:NA
+- SUG:NA
+- DESC:modify name of persistent-storage.rules
+
+* Fri Dec 20 2019 jiangchuangang<jiangchuangang@huawei.com> - 243-5
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:change time log level
+
 * Fri Nov 22 2019 shenyangyang<shenyangyang4@huawei.com> - 243-4
 - Type:bugfix
 - ID:NA
