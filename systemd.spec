@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        6
+Release:        7
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -30,7 +30,6 @@ Source5:        inittab
 Source6:        sysctl.conf.README
 Source7:        systemd-journal-remote.xml
 Source8:        systemd-journal-gatewayd.xml
-Source9:        20-yama-ptrace.conf
 Source10:       systemd-udev-trigger-no-reload.conf
 Source11:       20-grubby.install
 Source12:       systemd-user
@@ -335,10 +334,6 @@ install -Dm0644 -t %{buildroot}/usr/lib/firewalld/services/ %{SOURCE7} %{SOURCE8
 
 # Restore systemd-user pam config from before "removal of Fedora-specific bits"
 install -Dm0644 -t %{buildroot}/etc/pam.d/ %{SOURCE12}
-
-# Install additional docs
-# https://bugzilla.redhat.com/show_bug.cgi?id=1234951
-install -Dm0644 -t %{buildroot}%{_pkgdocdir}/ %{SOURCE9}
 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1378974
 install -Dm0644 -t %{buildroot}%{system_unit_dir}/systemd-udev-trigger.service.d/ %{SOURCE10}
@@ -1439,6 +1434,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Dec 31 2019 openEuler Buildteam <buildteam@openeuler.org> - 243-7
+- Type:NA
+- ID:NA
+- SUG:NA
+- DESC:delete unneeded source
+
 * Mon Dec 23 2019 openEuler Buildteam <buildteam@openeuler.org> - 243-6
 - Type:NA
 - ID:NA
