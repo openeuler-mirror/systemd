@@ -1,4 +1,4 @@
-From 464a73411c13596a130a7a8f0ac00ca728e5f69e Mon Sep 17 00:00:00 2001
+From 5ab4d083dbe0a1ae095875c4af6ac26749b67211 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
 Date: Wed, 14 Aug 2019 15:57:42 +0200
 Subject: [PATCH] udev: use bfq as the default scheduler
