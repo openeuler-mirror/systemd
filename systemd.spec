@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        7
+Release:        8
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -44,23 +44,19 @@ Source105:	rule_generator.functions
 Source106:	write_net_rules
 Source107:	detect_virt
 
-# https://bugzilla.redhat.com/show_bug.cgi?id=1738828
-#https://github.com/keszybz/systemd/commit/464a73411c13596a130a7a8f0ac00ca728e5f69e.patch
-Patch0001:      464a73411c13596a130a7a8f0ac00ca728e5f69e.patch
-Patch0002:      0002-Revert-units-set-NoNewPrivileges-for-all-long-runnin.patch
-Patch0998:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+Patch0001:      0001-udev-use-bfq-as-the-default-scheduler.patch 
 
 #openEuler
-Patch9002:  1509-fix-journal-file-descriptors-leak-problems.patch
-Patch9003:  1602-activation-service-must-be-restarted-when-reactivated.patch
-Patch9004:  1605-systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
+Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
+Patch9003:      1602-activation-service-must-be-restarted-when-reactivated.patch
+Patch9004:      1605-systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
 #Patch9004:  1612-serialize-pids-for-scope-when-not-started.patch
 #Patch9005:  1615-do-not-finish-job-during-daemon-reload-in-unit_notify.patch
-Patch9007:  1619-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
-Patch9008:  1620-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
+Patch9007:      1619-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
+Patch9008:      1620-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
 #Patch9006:  core-bugfix-call-malloc_trim-to-return-memory-to-OS-immediately.patch
 #Patch9009:  systemd-core-Close-and-free-dbus-when-bus-authentica.patch
-Patch9009:  systemd-change-time-log-level.patch
+Patch9009:      systemd-change-time-log-level.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1434,6 +1430,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Jan 08 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-8
+- Type:NA
+- ID:NA
+- SUG:NA
+- DESC:delete unneeded patchs
+
 * Tue Dec 31 2019 openEuler Buildteam <buildteam@openeuler.org> - 243-7
 - Type:NA
 - ID:NA
