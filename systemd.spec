@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        8
+Release:        9
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -112,7 +112,6 @@ Provides:       %{name}-libs%{?_isa}
 Provides:       %{name}-pam
 Provides:       %{name}-rpm-config
 Obsoletes:      %{name}-libs
-Obsoletes:       %{name}-libs%{?_isa}
 Obsoletes:      %{name}-pam
 Obsoletes:      %{name}-rpm-config
 
@@ -1430,6 +1429,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Jan 15 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-9
+- Type:NA
+- ID:NA
+- SUG:NA
+- DESC:delete unneeded obsoletes
+
 * Wed Jan 08 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-8
 - Type:NA
 - ID:NA
