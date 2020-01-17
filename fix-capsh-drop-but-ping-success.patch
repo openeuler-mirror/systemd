@@ -1,0 +1,29 @@
+From c20f91b6d99ac98a7d883e77f609e52482fe7c3b Mon Sep 17 00:00:00 2001
+From: openEuler Buildteam <buildteam@openeuler.org>
+Date: Fri, 17 Jan 2020 23:00:49 +0800
+Subject: [PATCH] change
+fix capsh --drop=cap_net_raw -- -c "/bin/ping -c 1 localhost"
+but ping success, the reson is github issue.
+
+https://github.com/systemd/systemd/pull/13141/commits/0a8ce60ee87de9a817284b31c6ccba062664057f
+
+---
+ sysctl.d/50-default.conf | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/sysctl.d/50-default.conf b/sysctl.d/50-default.conf
+index 41bd1f9..4d9bef8 100644
+--- a/sysctl.d/50-default.conf
++++ b/sysctl.d/50-default.conf
+@@ -36,7 +36,7 @@ net.ipv4.conf.all.promote_secondaries = 1
+ #   #define GID_T_MAX (((gid_t)~0U) >> 1)
+ # That's not so bad because values between 2^31 and 2^32-1 are reserved on
+ # systemd-based systems anyway: https://systemd.io/UIDS-GIDS.html#summary
+--net.ipv4.ping_group_range = 0 2147483647
++net.ipv4.ping_group_range = 1 0
+ 
+ # Fair Queue CoDel packet scheduler to fight bufferbloat
+ net.core.default_qdisc = fq_codel
+-- 
+1.8.3.1
+
