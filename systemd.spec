@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        9
+Release:        10
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -45,6 +45,7 @@ Source106:	write_net_rules
 Source107:	detect_virt
 
 Patch0001:      0001-udev-use-bfq-as-the-default-scheduler.patch 
+Patch0002:      0001-udev-ignore-error-caused-by-device-disconnection.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -57,6 +58,7 @@ Patch9008:      1620-nop_job-of-a-unit-must-also-be-coldpluged-after-deserizatio
 #Patch9006:  core-bugfix-call-malloc_trim-to-return-memory-to-OS-immediately.patch
 #Patch9009:  systemd-core-Close-and-free-dbus-when-bus-authentica.patch
 Patch9009:      systemd-change-time-log-level.patch
+Patch9010:      fix-capsh-drop-but-ping-success.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1429,6 +1431,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Jan 17 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-10
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fix capsh drop but ping success and udev ignore error caused by device disconnection
+
 * Wed Jan 15 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-9
 - Type:NA
 - ID:NA
