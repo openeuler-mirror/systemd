@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        10
+Release:        11
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -59,6 +59,7 @@ Patch9008:      1620-nop_job-of-a-unit-must-also-be-coldpluged-after-deserizatio
 #Patch9009:  systemd-core-Close-and-free-dbus-when-bus-authentica.patch
 Patch9009:      systemd-change-time-log-level.patch
 Patch9010:      fix-capsh-drop-but-ping-success.patch
+Patch9011:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1431,6 +1432,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Sun Jan 19 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-11
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fix resolv.conf has symlink default
+
 * Fri Jan 17 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-10
 - Type:bugfix
 - ID:NA
