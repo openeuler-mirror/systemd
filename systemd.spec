@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        11
+Release:        12
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -110,11 +110,8 @@ Requires(post): sed
 Requires(post): grep
 Requires(post): /usr/bin/getent
 
-Provides:       %{name}-libs
-Provides:       %{name}-libs%{?_isa}
 Provides:       %{name}-pam
 Provides:       %{name}-rpm-config
-Obsoletes:      %{name}-libs
 Obsoletes:      %{name}-pam
 Obsoletes:      %{name}-rpm-config
 
@@ -125,7 +122,8 @@ the rest of the system.
 %package devel
 Summary:        Development headers for systemd
 License:        LGPLv2+ and MIT
-Requires:       %{name} = %{version}-%{release}
+Requires:       %{name}-libs = %{version}-%{release}
+Requires:       %{name}-pam = %{version}-%{release}
 Provides:       libudev-devel = %{version}
 Provides:       libudev-devel%{_isa} = %{version}
 Obsoletes:      libudev-devel < 183
@@ -133,6 +131,24 @@ Obsoletes:      libudev-devel < 183
 %description devel
 Development headers and auxiliary files for developing applications linking
 to libudev or libsystemd.
+
+%package libs
+Summary:        systemd libraries
+License:        LGPLv2+ and MIT
+Obsoletes:      libudev < 183
+Obsoletes:      systemd < 185-4
+Conflicts:      systemd < 185-4
+Obsoletes:      systemd-compat-libs < 230
+Obsoletes:      nss-myhostname < 0.4
+Provides:       nss-myhostname = 0.4
+Provides:       nss-myhostname%{_isa} = 0.4
+Requires(post): coreutils
+Requires(post): sed
+Requires(post): grep
+Requires(post): /usr/bin/getent
+
+%description libs
+Libraries for systemd and udev.
 
 %package udev
 Summary: Rule-based device node and kernel event manager
@@ -529,7 +545,7 @@ if [ $1 -eq 1 ] ; then
         systemctl preset-all &>/dev/null || :
 fi
 
-#%post libs
+%post libs
 %{?ldconfig}
 
 function mod_nss() {
@@ -1160,22 +1176,17 @@ fi
 %dir /etc/xdg/systemd
 %config(noreplace) /etc/xdg/systemd/user
 
-#%files libs
-%license LICENSE.LGPL2.1
-/usr/lib64/libnss_systemd.so.2
-/usr/lib64/libudev.so.1
-/usr/lib64/libnss_resolve.so.2
-/usr/lib64/libsystemd.so.0.27.0
-/usr/lib64/libsystemd.so.0
-/usr/lib64/libnss_myhostname.so.2
-/usr/lib64/libudev.so.1.6.15
-
-#%files pam
 /usr/lib64/security/pam_systemd.so
-
-
-#%files rpm-macros
 /usr/lib/rpm/macros.d/macros.systemd
+
+%files libs
+/usr/lib64/libnss_systemd.so.2
+/usr/lib64/libnss_resolve.so.2
+/usr/lib64/libnss_myhostname.so.2
+/usr/lib64/libsystemd.so.0
+/usr/lib64/libsystemd.so.0.27.0
+/usr/lib64/libudev.so.1
+/usr/lib64/libudev.so.1.6.15
 
 %files devel
 /usr/share/man/man3/*
@@ -1432,6 +1443,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Jan 21 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-12
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:add systemd-libs
+
 * Sun Jan 19 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-11
 - Type:bugfix
 - ID:NA
