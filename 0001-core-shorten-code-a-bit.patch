@@ -1,0 +1,27 @@
+From 17bda1f19d5394290d7552d9db0c423b207dc40a Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 23 Dec 2019 16:35:28 +0100
+Subject: [PATCH] core: shorten code a bit
+
+The return parameter here cannot be NULL, the bus call either succeeds
+or fails but will never uceed and return an empty owner.
+---
+ src/core/unit.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/src/core/unit.c b/src/core/unit.c
+index 7ea0e8a..be92d97 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -3232,8 +3232,6 @@ static int get_name_owner_handler(sd_bus_message *message, void *userdata, sd_bu
+                 return 0;
+         }
+ 
+-        new_owner = empty_to_null(new_owner);
+-
+         if (UNIT_VTABLE(u)->bus_name_owner_change)
+                 UNIT_VTABLE(u)->bus_name_owner_change(u, NULL, new_owner);
+ 
+-- 
+1.8.3.1
+
