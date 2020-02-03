@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        12
+Release:        13
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -46,6 +46,12 @@ Source107:	detect_virt
 
 Patch0001:      0001-udev-use-bfq-as-the-default-scheduler.patch 
 Patch0002:      0001-udev-ignore-error-caused-by-device-disconnection.patch
+Patch0003:      0001-core-dont-check-error-parameter-of-get_name_owner_handler.patch
+Patch0004:      0001-core-dont-check-potentially-NULL-error.patch
+Patch0005:      0001-core-shorten-code-a-bit.patch
+Patch0006:      0001-core-no-need-to-eat-up-error.patch
+Patch0007:      0001-core-create-or-remove-unit-bus-name-slots-always-together.patch
+Patch0008:      0001-core-drop-initial-ListNames-bus-call-from-PID1.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -636,6 +642,10 @@ udevadm hwdb --update &>/dev/null
 # https://bugzilla.redhat.com/show_bug.cgi?id=1151958
 grep -q -E '^KEYMAP="?fi-latin[19]"?' /etc/vconsole.conf 2>/dev/null &&
     sed -i.rpm.bak -r 's/^KEYMAP="?fi-latin[19]"?/KEYMAP="fi"/' /etc/vconsole.conf || :
+
+if [ -f "/usr/lib/udev/rules.d/50-udev-default.rules" ]; then
+     sed -i 's/KERNEL=="kvm", GROUP="kvm", MODE="0666"/KERNEL=="kvm", GROUP="kvm", MODE="0660"/g' /usr/lib/udev/rules.d/50-udev-default.rules
+fi
 
 %preun udev
 %systemd_preun %udev_services
@@ -1443,6 +1453,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Feb 3 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-13
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:modify kvm authority 0660 and fix dbus daemon restart need 90s after killed
+
 * Tue Jan 21 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-12
 - Type:enhancement
 - ID:NA
@@ -1554,7 +1570,7 @@ fi
 - SUG:NA
 - DESC:change CPUSetMemMigrate type to bool
 
-* Thu Jul 23 2019 yangbin<robin.yb@huawei.com> - 239-3.h36
+* Tue Jul 23 2019 yangbin<robin.yb@huawei.com> - 239-3.h36
 - Type:enhancement
 - ID:NA
 - SUG:NA

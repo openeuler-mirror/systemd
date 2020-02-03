@@ -1,0 +1,31 @@
+From 5085ef0d711f1faaacddaf5519daeb150794ea99 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 23 Dec 2019 16:35:44 +0100
+Subject: [PATCH] core: no need to eat up error
+
+This is a method call reply. We might as well propagate the error. The
+worst that happens is that sd-bus logs about it.
+---
+ src/core/unit.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/src/core/unit.c b/src/core/unit.c
+index be92d97..5cf16c6 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -3227,10 +3227,8 @@ static int get_name_owner_handler(sd_bus_message *message, void *userdata, sd_bu
+         }
+ 
+         r = sd_bus_message_read(message, "s", &new_owner);
+-        if (r < 0) {
+-                bus_log_parse_error(r);
+-                return 0;
+-        }
++        if (r < 0)
++                return bus_log_parse_error(r);
+ 
+         if (UNIT_VTABLE(u)->bus_name_owner_change)
+                 UNIT_VTABLE(u)->bus_name_owner_change(u, NULL, new_owner);
+-- 
+1.8.3.1
+
