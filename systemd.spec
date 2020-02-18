@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        13
+Release:        14
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -264,7 +264,7 @@ CONFIGURE_OPTS=(
         -Dhwdb=true
         -Dsysusers=true
         -Ddefault-kill-user-processes=false
-        -Dtests=false
+        -Dtests=true
         -Dinstall-tests=false
         -Dtty-gid=5
         -Dusers-gid=100
@@ -1453,6 +1453,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Feb 17 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-14
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:enable tests
+
 * Mon Feb 3 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-13
 - Type:enhancement
 - ID:NA
