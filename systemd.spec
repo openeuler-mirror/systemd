@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        14
+Release:        15
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -52,6 +52,7 @@ Patch0005:      0001-core-shorten-code-a-bit.patch
 Patch0006:      0001-core-no-need-to-eat-up-error.patch
 Patch0007:      0001-core-create-or-remove-unit-bus-name-slots-always-together.patch
 Patch0008:      0001-core-drop-initial-ListNames-bus-call-from-PID1.patch
+Patch0009:      1605-update-rtc-with-system-clock-when-shutdown.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -844,6 +845,8 @@ fi
 %dir /usr/lib/sysusers.d
 /usr/lib/sysusers.d/systemd.conf
 /usr/lib/sysusers.d/basic.conf
+/usr/lib/systemd/system/hwclock-save.service
+/usr/lib/systemd/system/sysinit.target.wants/hwclock-save.service
 %{_systemddir}/systemd-update-done
 %{_systemddir}/systemd-update-utmp
 %{_systemddir}/systemd-initctl
@@ -1453,6 +1456,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Sat Feb 29 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-15
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:update rtc with system clock when shutdown
+
 * Mon Feb 17 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-14
 - Type:enhancement
 - ID:NA
