@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        15
+Release:        16
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -53,6 +53,7 @@ Patch0006:      0001-core-no-need-to-eat-up-error.patch
 Patch0007:      0001-core-create-or-remove-unit-bus-name-slots-always-together.patch
 Patch0008:      0001-core-drop-initial-ListNames-bus-call-from-PID1.patch
 Patch0009:      1605-update-rtc-with-system-clock-when-shutdown.patch
+Patch0010:      1603-udev-add-actions-while-rename-netif-failed.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1456,6 +1457,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Mar 5 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-16
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:add 1603-udev-add-actions-while-rename-netif-failed.patch
+
 * Sat Feb 29 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-15
 - Type:enhancement
 - ID:NA
