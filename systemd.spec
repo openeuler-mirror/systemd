@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        16
+Release:        17
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -54,6 +54,12 @@ Patch0007:      0001-core-create-or-remove-unit-bus-name-slots-always-together.p
 Patch0008:      0001-core-drop-initial-ListNames-bus-call-from-PID1.patch
 Patch0009:      1605-update-rtc-with-system-clock-when-shutdown.patch
 Patch0010:      1603-udev-add-actions-while-rename-netif-failed.patch
+Patch0011:      CVE-2020-1712-1.patch
+Patch0012:      CVE-2020-1712-2.patch
+Patch0013:      CVE-2020-1712-3.patch
+Patch0014:      CVE-2020-1712-4.patch
+Patch0015:      sd-journal-close-journal-files-that-were-deleted-by-.patch
+Patch0016:      pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1457,6 +1463,13 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Mar 10 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-17
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:fix CVE-2020-1712 and close journal files that were deleted by journald
+       before we've setup inotify watch and bump pim_max to 80%
+
 * Thu Mar 5 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-16
 - Type:enhancement
 - ID:NA
