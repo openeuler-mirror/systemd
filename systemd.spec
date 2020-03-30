@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        18
+Release:        19
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -58,9 +58,10 @@ Patch0011:      CVE-2020-1712-1.patch
 Patch0012:      CVE-2020-1712-2.patch
 Patch0013:      CVE-2020-1712-3.patch
 Patch0014:      CVE-2020-1712-4.patch
-Patch0015:      sd-journal-close-journal-files-that-were-deleted-by-.patch
-Patch0016:      pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
-Patch0017:      fix-two-VF-virtual-machines-have-same-mac-address.patch
+Patch0015:      CVE-2020-1712-5.patch
+Patch0016:      sd-journal-close-journal-files-that-were-deleted-by-.patch
+Patch0017:      pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
+Patch0018:      fix-two-VF-virtual-machines-have-same-mac-address.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1464,6 +1465,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Mar 25 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-19
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:add patch of CVE-2020-1714-5
+
 * Fri Mar 13 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-18
 - Type:enhancement
 - ID:NA
