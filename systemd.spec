@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        19
+Release:        20
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -90,6 +90,7 @@ BuildRequires:  python3-devel, python3-lxml, firewalld-filesystem, libseccomp-de
 BuildRequires:  gnu-efi gnu-efi-devel
 BuildRequires:  valgrind-devel, util-linux
 
+Requires:       %{name}-libs = %{version}-%{release}
 Requires(post): coreutils
 Requires(post): sed
 Requires(post): acl
@@ -110,21 +111,7 @@ Obsoletes:      systemd-sysv < 206
 Obsoletes:      %{name} < 229-5
 Provides:       systemd-sysv = 206
 Conflicts:      initscripts < 9.56.1
-Conflicts:      fedora-release < 23-0.12
 Recommends:     %{name}-help
-
-#libs
-Obsoletes:      libudev < 183
-Obsoletes:      systemd < 185-4
-Conflicts:      systemd < 185-4
-Obsoletes:      systemd-compat-libs < 230
-Obsoletes:      nss-myhostname < 0.4
-Provides:       nss-myhostname = 0.4
-Provides:       nss-myhostname%{_isa} = 0.4
-Requires(post): coreutils
-Requires(post): sed
-Requires(post): grep
-Requires(post): /usr/bin/getent
 
 Provides:       %{name}-pam
 Provides:       %{name}-rpm-config
@@ -1465,6 +1452,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Apr 9 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-20
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:delete redundant info in spec
+
 * Wed Mar 25 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-19
 - Type:enhancement
 - ID:NA
