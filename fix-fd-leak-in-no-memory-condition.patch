@@ -1,0 +1,33 @@
+From 43681c404794341a42ba0a34b9730103f4f2c560 Mon Sep 17 00:00:00 2001
+From: Gaurav <g.gupta@samsung.com>
+Date: Mon, 8 Apr 2019 10:13:26 +0530
+Subject: [PATCH] Fix fd leak in no memory condition
+
+In case of no memory situation, fd is not being close.
+Please review.
+
+https://github.com/systemd/systemd/commit/43681c404794341a42ba0a34b9730103f4f2c560.patch
+
+---
+ src/libsystemd/sd-event/sd-event.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/libsystemd/sd-event/sd-event.c b/src/libsystemd/sd-event/sd-event.c
+index 5adbcee..5d0e057 100644
+--- a/src/libsystemd/sd-event/sd-event.c
++++ b/src/libsystemd/sd-event/sd-event.c
+@@ -900,8 +900,10 @@ _public_ int sd_event_add_io(
+         assert_return(!event_pid_changed(e), -ECHILD);
+ 
+         s = source_new(e, !ret, SOURCE_IO);
+-        if (!s)
++        if (!s) {
++                fd = safe_close(fd);
+                 return -ENOMEM;
++        }
+ 
+         s->wakeup = WAKEUP_EVENT_SOURCE;
+         s->io.fd = fd;
+-- 
+2.19.1
+

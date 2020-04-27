@@ -1,0 +1,27 @@
+From 16d1f6e5122038fa24392e166a0a88c6cab41dd0 Mon Sep 17 00:00:00 2001
+From: Lukas Nykryn <lnykryn@redhat.com>
+Date: Tue, 26 Feb 2019 15:22:38 +0100
+Subject: [PATCH] rules: add the rule that adds elevator= kernel
+ command line parameter
+
+Resolves: #1670126
+
+---
+ rules/meson.build | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/rules/meson.build b/rules/meson.build
+index 1da958b..043313a 100644
+--- a/rules/meson.build
++++ b/rules/meson.build
+@@ -1,6 +1,7 @@
+ # SPDX-License-Identifier: LGPL-2.1+
+ 
+ rules = files('''
++        40-elevator.rules
+         60-block.rules
+         60-block-scheduler.rules
+         60-cdrom_id.rules
+-- 
+2.19.1
+
