@@ -1,0 +1,28 @@
+From 7a650ee8d3faf79fd5ef866b69741880a3a42b8d Mon Sep 17 00:00:00 2001
+From: Jan Synacek <jsynacek@redhat.com>
+Date: Thu, 2 May 2019 14:11:54 +0200
+Subject: [PATCH] journal: don't enable systemd-journald-audit.socket
+ by default
+
+Resolves: #1699287
+
+---
+ units/systemd-journald.service.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/units/systemd-journald.service.in b/units/systemd-journald.service.in
+index 089bc38..7436619 100644
+--- a/units/systemd-journald.service.in
++++ b/units/systemd-journald.service.in
+@@ -31,7 +31,7 @@ RestrictAddressFamilies=AF_UNIX AF_NETLINK
+ RestrictNamespaces=yes
+ RestrictRealtime=yes
+ RestrictSUIDSGID=yes
+-Sockets=systemd-journald.socket systemd-journald-dev-log.socket systemd-journald-audit.socket
++Sockets=systemd-journald.socket systemd-journald-dev-log.socket
+ StandardOutput=null
+ SystemCallArchitectures=native
+ SystemCallErrorNumber=EPERM
+-- 
+2.19.1
+

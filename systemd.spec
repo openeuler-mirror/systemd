@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        19
+Release:        21
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -62,6 +62,29 @@ Patch0015:      CVE-2020-1712-5.patch
 Patch0016:      sd-journal-close-journal-files-that-were-deleted-by-.patch
 Patch0017:      pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
 Patch0018:      fix-two-VF-virtual-machines-have-same-mac-address.patch
+Patch0019:      logind-set-RemoveIPC-to-false-by-default.patch
+Patch0020:      rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
+Patch0021:      unit-don-t-add-Requires-for-tmp.mount.patch
+Patch0022:      Revert-sysctl.d-switch-net.ipv4.conf.all.rp_filter-f.patch
+Patch2023:      rules-add-elevator-kernel-command-line-parameter.patch
+Patch2024:      rules-add-the-rule-that-adds-elevator-kernel-command.patch
+Patch2025:      units-add-Install-section-to-tmp.mount.patch
+Patch0026:      Make-systemd-udevd.service-start-after-systemd-remou.patch
+Patch0027:      udev-virsh-shutdown-vm.patch
+Patch0028:      fix-fd-leak-in-no-memory-condition.patch
+Patch0029:      dbus-execute-avoid-extra-strdup.patch
+Patch0030:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
+Patch0031:      sd-bus-properly-initialize-containers.patch
+Patch0032:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+Patch0033:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
+
+# The patch of 0026~0029 resolve the pid1 memory leaks
+Patch0034:      revert-pid1-drop-unit-caches-only-based-on-mtime.patch
+Patch0035:      revert-analyze-add-unit-files-to-dump-the-unit-fragm.patch
+Patch0036:      revert-pid1-use-a-cache-for-all-unit-aliases.patch
+Patch0037:      revert-shared-unit-file-add-a-function-to-validate-u.patch
+
+Patch0038:      systemd-Fix-busctl-crash-on-aarch64-when-setting-out.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1353,6 +1376,8 @@ fi
 %{_udevhwdbdir}/60-sensor.hwdb
 %{_udevhwdbdir}/70-mouse.hwdb
 %{_udevrulesdir}/40-openEuler.rules
+%{_udevrulesdir}/40-elevator.rules
+%{_udevrulesdir}/73-idrac.rules
 %{_udevrulesdir}/60-block.rules
 %{_udevrulesdir}/60-input-id.rules
 %{_udevrulesdir}/71-seat.rules
@@ -1465,6 +1490,18 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Apr 27 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-21
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:resolve memleak of pid1 and add some patches
+
+* Thu Apr 9 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-20
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:delete redundant info in spec
+
 * Wed Mar 25 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-19
 - Type:enhancement
 - ID:NA

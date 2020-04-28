@@ -1,0 +1,52 @@
+From bec31cf5f0037dd049299e8665e03fc74024e357 Mon Sep 17 00:00:00 2001
+From: Alin Popa <alin.popa@bmw.de>
+Date: Fri, 14 Feb 2020 09:33:43 +0100
+Subject: [PATCH] systemd: Fix busctl crash on aarch64 when setting output
+ table format
+
+The enum used for column names is integer type while table_set_display() is parsing
+arguments on size_t alignment which may result in assert in table_set_display() if
+the size between types missmatch. This patch cast the enums to size_t.
+An alternative solution would be to change the table_set_display() function
+arguments to unsigned type.
+---
+ src/busctl/busctl.c | 22 ++++++++++++++++++++--
+ 1 file changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/src/busctl/busctl.c b/src/busctl/busctl.c
+index 5f3d5dd..b4e133f 100644
+--- a/src/busctl/busctl.c
++++ b/src/busctl/busctl.c
+@@ -212,9 +212,27 @@ static int list_bus_names(int argc, char **argv, void *userdata) {
+                 return log_error_errno(r, "Failed to set sort column: %m");
+ 
+         if (arg_show_machine)
+-                r = table_set_display(table, COLUMN_NAME, COLUMN_PID, COLUMN_PROCESS, COLUMN_USER, COLUMN_CONNECTION, COLUMN_UNIT, COLUMN_SESSION, COLUMN_DESCRIPTION, COLUMN_MACHINE, (size_t) -1);
++                r = table_set_display(table, (size_t) COLUMN_NAME,
++                                             (size_t) COLUMN_PID,
++                                             (size_t) COLUMN_PROCESS,
++                                             (size_t) COLUMN_USER,
++                                             (size_t) COLUMN_CONNECTION,
++                                             (size_t) COLUMN_UNIT,
++                                             (size_t) COLUMN_SESSION,
++                                             (size_t) COLUMN_DESCRIPTION,
++                                             (size_t) COLUMN_MACHINE,
++                                             (size_t) -1);
+         else
+-                r = table_set_display(table, COLUMN_NAME, COLUMN_PID, COLUMN_PROCESS, COLUMN_USER, COLUMN_CONNECTION, COLUMN_UNIT, COLUMN_SESSION, COLUMN_DESCRIPTION, (size_t) -1);
++                r = table_set_display(table, (size_t) COLUMN_NAME,
++                                             (size_t) COLUMN_PID,
++                                             (size_t) COLUMN_PROCESS,
++                                             (size_t) COLUMN_USER,
++                                             (size_t) COLUMN_CONNECTION,
++                                             (size_t) COLUMN_UNIT,
++                                             (size_t) COLUMN_SESSION,
++                                             (size_t) COLUMN_DESCRIPTION,
++                                             (size_t) -1);
++
+         if (r < 0)
+                 return log_error_errno(r, "Failed to set columns to display: %m");
+ 
+-- 
+1.8.3.1
+

@@ -1,0 +1,23 @@
+From 3d5e0620b4a3298620c8d985cec42772c7f77c6d Mon Sep 17 00:00:00 2001
+From: openEuler Buildteam <buildteam@openeuler.org>
+Date: Thu, 31 Jan 2019 02:24:16 -0500
+Subject: [PATCH] systemd:virsh shutdown vm
+
+---
+ src/login/70-power-switch.rules | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/login/70-power-switch.rules b/src/login/70-power-switch.rules
+index d69e65b..cb77f7a 100644
+--- a/src/login/70-power-switch.rules
++++ b/src/login/70-power-switch.rules
+@@ -11,5 +11,6 @@ ACTION=="remove", GOTO="power_switch_end"
+ 
+ SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_SWITCH}=="1", TAG+="power-switch"
+ SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_KEY}=="1", TAG+="power-switch"
++SUBSYSTEM=="input", KERNEL=="event*", SUBSYSTEMS=="platform", ATTRS{keys}=="116", TAG+="power-switch"
+ 
+ LABEL="power_switch_end"
+-- 
+1.8.3.1
+
