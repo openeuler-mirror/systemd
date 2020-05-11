@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        21
+Release:        22
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -85,6 +85,7 @@ Patch0036:      revert-pid1-use-a-cache-for-all-unit-aliases.patch
 Patch0037:      revert-shared-unit-file-add-a-function-to-validate-u.patch
 
 Patch0038:      systemd-Fix-busctl-crash-on-aarch64-when-setting-out.patch
+Patch0039:      seccomp-more-comprehensive-protection-against-libsec.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1490,6 +1491,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon May 11 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-22
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:solve the build failure caused by the upgrade of libseccomp
+
 * Mon Apr 27 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-21
 - Type:enhancement
 - ID:NA
