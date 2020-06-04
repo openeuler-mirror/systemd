@@ -1,0 +1,45 @@
+From 0e77fc66bceb9832da82a56a4c1040fe49f8d805 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 29 May 2020 16:56:09 +0900
+Subject: [PATCH] network: fix double free in macsec_receive_channel_free()
+
+Fixes #15941.
+Fixes https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=22547
+---
+ src/network/netdev/macsec.c                 |  2 +-
+ test/fuzz/fuzz-netdev-parser/oss-fuzz-22547 | 10 ++++++++++
+ 2 files changed, 11 insertions(+), 1 deletion(-)
+ create mode 100644 test/fuzz/fuzz-netdev-parser/oss-fuzz-22547
+
+diff --git a/src/network/netdev/macsec.c b/src/network/netdev/macsec.c
+index 3542f9652a..8f7559e9ae 100644
+--- a/src/network/netdev/macsec.c
++++ b/src/network/netdev/macsec.c
+@@ -102,7 +102,7 @@ static void macsec_receive_channel_free(ReceiveChannel *c) {
+ 
+         if (c->macsec) {
+                 if (c->sci.as_uint64 > 0)
+-                        ordered_hashmap_remove(c->macsec->receive_channels, &c->sci.as_uint64);
++                        ordered_hashmap_remove_value(c->macsec->receive_channels, &c->sci.as_uint64, c);
+ 
+                 if (c->section)
+                         ordered_hashmap_remove(c->macsec->receive_channels_by_section, c->section);
+diff --git a/test/fuzz/fuzz-netdev-parser/oss-fuzz-22547 b/test/fuzz/fuzz-netdev-parser/oss-fuzz-22547
+new file mode 100644
+index 0000000000..ca55a33ae9
+--- /dev/null
++++ b/test/fuzz/fuzz-netdev-parser/oss-fuzz-22547
+@@ -0,0 +1,10 @@
++[NetDev]
++Name=o
++Kind=macsec
++
++[MACsecReceiveChannel]
++MACAddress=12.0.4
++Port=913
++[MACsecReceiveChannel]
++MACAddress=12.0.4
++Port=913
+-- 
+2.23.0
+

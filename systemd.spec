@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        23
+Release:        24
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -86,6 +86,8 @@ Patch0037:      revert-shared-unit-file-add-a-function-to-validate-u.patch
 
 Patch0038:      systemd-Fix-busctl-crash-on-aarch64-when-setting-out.patch
 Patch0039:      seccomp-more-comprehensive-protection-against-libsec.patch
+Patch0040:      network-fix-double-free-in-macsec_receive_channel_fr.patch
+Patch0041:      network-L2TP-fix-crash.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1478,6 +1480,13 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu May 28 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-24
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:fix double free in macsec_receive_channel_free() and 
+       fix crash in network L2TP
+
 * Thu May 28 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-23
 - Type:enhancement
 - ID:NA
