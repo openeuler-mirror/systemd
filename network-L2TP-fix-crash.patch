@@ -1,0 +1,59 @@
+From a1422af564e3b1128fc7754596b4c2f8b36a4620 Mon Sep 17 00:00:00 2001
+From: Susant Sahani <ssahani@vmware.com>
+Date: Sat, 30 May 2020 06:35:28 +0200
+Subject: [PATCH] network: L2TP fix crash
+
+```
+=220358== Invalid read of size 8
+==220358==    at 0x452F05: l2tp_session_free (l2tp-tunnel.c:46)
+==220358==    by 0x456926: l2tp_tunnel_done (l2tp-tunnel.c:725)
+==220358==    by 0x43CF4D: netdev_free (netdev.c:205)
+==220358==    by 0x43D045: netdev_unref (netdev.c:210)
+==220358==    by 0x4198B7: manager_free (networkd-manager.c:1877)
+==220358==    by 0x40D0B3: manager_freep (networkd-manager.h:105)
+==220358==    by 0x40DE1C: run (networkd.c:21)
+==220358==    by 0x40DE75: main (networkd.c:130)
+==220358==  Address 0x5c035d0 is 0 bytes inside a block of size 40 free'd
+==220358==    at 0x483A9F5: free (vg_replace_malloc.c:538)
+==220358==    by 0x452F87: l2tp_session_free (l2tp-tunnel.c:57)
+==220358==    by 0x456857: netdev_l2tp_tunnel_verify (l2tp-tunnel.c:710)
+==220358==    by 0x440947: netdev_load_one (netdev.c:738)
+==220358==    by 0x441222: netdev_load (netdev.c:851)
+==220358==    by 0x419C50: manager_load_config (networkd-manager.c:1934)
+==220358==    by 0x40D7BE: run (networkd.c:87)
+==220358==    by 0x40DE75: main (networkd.c:130)
+==220358==  Block was alloc'd at
+==220358==    at 0x4839809: malloc (vg_replace_malloc.c:307)
+==220358==    by 0x452A76: malloc_multiply (alloc-util.h:96)
+==220358==    by 0x4531E6: l2tp_session_new_static (l2tp-tunnel.c:82)
+==220358==    by 0x455C01: config_parse_l2tp_session_id (l2tp-tunnel.c:535)
+==220358==    by 0x48E6D72: next_assignment (conf-parser.c:133)
+==220358==    by 0x48E77A3: parse_line (conf-parser.c:271)
+==220358==    by 0x48E7E4F: config_parse (conf-parser.c:396)
+==220358==    by 0x48E80E5: config_parse_many_files (conf-parser.c:453)
+==220358==    by 0x48E8490: config_parse_many (conf-parser.c:512)
+==220358==    by 0x44089C: netdev_load_one (netdev.c:729)
+==220358==    by 0x441222: netdev_load (netdev.c:851)
+==220358==    by 0x419C50: manager_load_config (networkd-manager.c:1934)
+
+```
+---
+ src/network/netdev/l2tp-tunnel.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/network/netdev/l2tp-tunnel.c b/src/network/netdev/l2tp-tunnel.c
+index 19683c0a00..91788c3681 100644
+--- a/src/network/netdev/l2tp-tunnel.c
++++ b/src/network/netdev/l2tp-tunnel.c
+@@ -44,7 +44,7 @@ static void l2tp_session_free(L2tpSession *s) {
+                 return;
+ 
+         if (s->tunnel && s->section)
+-                ordered_hashmap_remove(s->tunnel->sessions_by_section, s);
++                ordered_hashmap_remove(s->tunnel->sessions_by_section, s->section);
+ 
+         network_config_section_free(s->section);
+ 
+-- 
+2.23.0
+
