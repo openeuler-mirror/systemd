@@ -6,17 +6,16 @@ Subject: [PATCH] rules: add elevator= kernel command line parameter
 Kernel removed the elevator= option
 
 Resolves: #1670126
-
 ---
- rules/40-elevator.rules | 20 ++++++++++++++++++++
+ rules.d/40-elevator.rules | 20 ++++++++++++++++++++
  1 file changed, 20 insertions(+)
- create mode 100644 rules/40-elevator.rules
+ create mode 100644 rules.d/40-elevator.rules
 
-diff --git a/rules/40-elevator.rules b/rules/40-elevator.rules
+diff --git a/rules.d/40-elevator.rules b/rules.d/40-elevator.rules
 new file mode 100644
-index 0000000..dbe8fc8
+index 0000000000..5f615bf51a
 --- /dev/null
-+++ b/rules/40-elevator.rules
++++ b/rules.d/40-elevator.rules
 @@ -0,0 +1,20 @@
 +# We aren't adding devices skip the elevator check
 +ACTION!="add", GOTO="sched_out"
@@ -39,5 +38,5 @@ index 0000000..dbe8fc8
 +
 +LABEL="sched_out"
 -- 
-1.8.3.1
+2.23.0
 

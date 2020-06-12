@@ -7,21 +7,21 @@ Subject: [PATCH] rules: add the rule that adds elevator= kernel
 Resolves: #1670126
 
 ---
- rules/meson.build | 1 +
+ rules.d/meson.build | 1 +
  1 file changed, 1 insertion(+)
 
-diff --git a/rules/meson.build b/rules/meson.build
-index 1da958b..043313a 100644
---- a/rules/meson.build
-+++ b/rules/meson.build
+diff --git a/rules.d/meson.build b/rules.d/meson.build
+index b06edf0621..bd65424a0d 100644
+--- a/rules.d/meson.build
++++ b/rules.d/meson.build
 @@ -1,6 +1,7 @@
  # SPDX-License-Identifier: LGPL-2.1+
  
  rules = files('''
 +        40-elevator.rules
          60-block.rules
-         60-block-scheduler.rules
          60-cdrom_id.rules
+         60-drm.rules
 -- 
-2.19.1
+2.23.0
 

@@ -1,17 +1,16 @@
-m a13f14c6a2da55b9f797b6f33449ba523c07dd46 Mon Sep 17 00:00:00 2001
+From a13f14c6a2da55b9f797b6f33449ba523c07dd46 Mon Sep 17 00:00:00 2001
 From: update-rtc-with-system-clock-when-shutdown
 Date: Sat, 2 Feb 2019 02:54:52 -0500
 Subject: [PATCH] Module: modification summary
-
 ---
  units/hwclock-save.service.in | 19 +++++++++++++++++++
  units/meson.build             |  2 ++
-
+ 2 files changed, 21 insertions(+)
  create mode 100644 units/hwclock-save.service.in
 
 diff --git a/units/hwclock-save.service.in b/units/hwclock-save.service.in
 new file mode 100644
-index 0000000..db33418
+index 0000000000..db33418932
 --- /dev/null
 +++ b/units/hwclock-save.service.in
 @@ -0,0 +1,19 @@
@@ -35,10 +34,10 @@ index 0000000..db33418
 +WantedBy=default.target
 +
 diff --git a/units/meson.build b/units/meson.build
-index e4ac6ce..67126d6 100644
+index c641900c66..63fc331921 100644
 --- a/units/meson.build
 +++ b/units/meson.build
-@@ -211,6 +211,8 @@ in_units = [
+@@ -220,6 +220,8 @@ in_units = [
           'sysinit.target.wants/'],
          ['systemd-update-done.service',          '',
           'sysinit.target.wants/'],
@@ -48,5 +47,5 @@ index e4ac6ce..67126d6 100644
           'multi-user.target.wants/ graphical.target.wants/ rescue.target.wants/'],
          ['systemd-update-utmp.service',          'ENABLE_UTMP',
 -- 
-1.8.3.1
+2.23.0
 

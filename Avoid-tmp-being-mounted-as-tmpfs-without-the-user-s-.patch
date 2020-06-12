@@ -8,17 +8,16 @@ Ensure PrivateTmp doesn't require tmpfs through tmp.mount, but rather
 adds an After relationship.
 
 Resolves: #1578772
-
 ---
  src/core/unit.c | 13 +++++++------
  1 file changed, 7 insertions(+), 6 deletions(-)
 
 diff --git a/src/core/unit.c b/src/core/unit.c
-index 10e314f..bb4836a 100644
+index 2b86fdedfd..2c804c8486 100644
 --- a/src/core/unit.c
 +++ b/src/core/unit.c
-@@ -1036,13 +1036,14 @@ int unit_add_exec_dependencies(Unit *u, ExecContext *c) {
-                 return 0;
+@@ -1090,13 +1090,14 @@ int unit_add_exec_dependencies(Unit *u, ExecContext *c) {
+         }
  
          if (c->private_tmp) {
 -                const char *p;
@@ -39,5 +38,5 @@ index 10e314f..bb4836a 100644
                  r = unit_add_dependency_by_name(u, UNIT_AFTER, SPECIAL_TMPFILES_SETUP_SERVICE, true, UNIT_DEPENDENCY_FILE);
                  if (r < 0)
 -- 
-2.19.1
+2.23.0
 

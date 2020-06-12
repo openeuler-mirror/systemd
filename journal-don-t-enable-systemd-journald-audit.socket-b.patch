@@ -11,18 +11,18 @@ Resolves: #1699287
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/units/systemd-journald.service.in b/units/systemd-journald.service.in
-index 089bc38..7436619 100644
+index 0cb1bfa3ca..fa7348aa79 100644
 --- a/units/systemd-journald.service.in
 +++ b/units/systemd-journald.service.in
-@@ -31,7 +31,7 @@ RestrictAddressFamilies=AF_UNIX AF_NETLINK
- RestrictNamespaces=yes
- RestrictRealtime=yes
+@@ -34,7 +34,7 @@ RestrictRealtime=yes
  RestrictSUIDSGID=yes
+ RuntimeDirectory=systemd/journal
+ RuntimeDirectoryPreserve=yes
 -Sockets=systemd-journald.socket systemd-journald-dev-log.socket systemd-journald-audit.socket
 +Sockets=systemd-journald.socket systemd-journald-dev-log.socket
  StandardOutput=null
  SystemCallArchitectures=native
  SystemCallErrorNumber=EPERM
 -- 
-2.19.1
+2.23.0
 

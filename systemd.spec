@@ -13,10 +13,14 @@
 %global efi_arch x64
 %endif
 
+%ifarch %{ix86} x86_64 aarch64
+%global have_gnu_efi 1
+%endif
+
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
-Version:        243
-Release:        23
+Version:        246
+Release:        1
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -44,62 +48,36 @@ Source105:	rule_generator.functions
 Source106:	write_net_rules
 Source107:	detect_virt
 
-Patch0001:      0001-udev-use-bfq-as-the-default-scheduler.patch 
-Patch0002:      0001-udev-ignore-error-caused-by-device-disconnection.patch
-Patch0003:      0001-core-dont-check-error-parameter-of-get_name_owner_handler.patch
-Patch0004:      0001-core-dont-check-potentially-NULL-error.patch
-Patch0005:      0001-core-shorten-code-a-bit.patch
-Patch0006:      0001-core-no-need-to-eat-up-error.patch
-Patch0007:      0001-core-create-or-remove-unit-bus-name-slots-always-together.patch
-Patch0008:      0001-core-drop-initial-ListNames-bus-call-from-PID1.patch
-Patch0009:      1605-update-rtc-with-system-clock-when-shutdown.patch
-Patch0010:      1603-udev-add-actions-while-rename-netif-failed.patch
-Patch0011:      CVE-2020-1712-1.patch
-Patch0012:      CVE-2020-1712-2.patch
-Patch0013:      CVE-2020-1712-3.patch
-Patch0014:      CVE-2020-1712-4.patch
-Patch0015:      CVE-2020-1712-5.patch
-Patch0016:      sd-journal-close-journal-files-that-were-deleted-by-.patch
-Patch0017:      pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
-Patch0018:      fix-two-VF-virtual-machines-have-same-mac-address.patch
-Patch0019:      logind-set-RemoveIPC-to-false-by-default.patch
-Patch0020:      rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
-Patch0021:      unit-don-t-add-Requires-for-tmp.mount.patch
-Patch0022:      Revert-sysctl.d-switch-net.ipv4.conf.all.rp_filter-f.patch
-Patch2023:      rules-add-elevator-kernel-command-line-parameter.patch
-Patch2024:      rules-add-the-rule-that-adds-elevator-kernel-command.patch
-Patch2025:      units-add-Install-section-to-tmp.mount.patch
-Patch0026:      Make-systemd-udevd.service-start-after-systemd-remou.patch
-Patch0027:      udev-virsh-shutdown-vm.patch
-Patch0028:      fix-fd-leak-in-no-memory-condition.patch
-Patch0029:      dbus-execute-avoid-extra-strdup.patch
-Patch0030:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
-Patch0031:      sd-bus-properly-initialize-containers.patch
-Patch0032:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
-Patch0033:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
+Patch0001:      1605-update-rtc-with-system-clock-when-shutdown.patch
+Patch0002:      1603-udev-add-actions-while-rename-netif-failed.patch
+Patch0003:      fix-two-VF-virtual-machines-have-same-mac-address.patch
+Patch0004:      logind-set-RemoveIPC-to-false-by-default.patch
+Patch0005:      rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
+Patch0006:      unit-don-t-add-Requires-for-tmp.mount.patch
+Patch0007:      rules-add-elevator-kernel-command-line-parameter.patch
+Patch0008:      rules-add-the-rule-that-adds-elevator-kernel-command.patch
+Patch0009:      units-add-Install-section-to-tmp.mount.patch
+Patch0010:      Make-systemd-udevd.service-start-after-systemd-remou.patch
+Patch0011:      udev-virsh-shutdown-vm.patch
+Patch0012:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
+Patch0013:      sd-bus-properly-initialize-containers.patch
+Patch0014:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+Patch0015:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
 
-# The patch of 0026~0029 resolve the pid1 memory leaks
-Patch0034:      revert-pid1-drop-unit-caches-only-based-on-mtime.patch
-Patch0035:      revert-analyze-add-unit-files-to-dump-the-unit-fragm.patch
-Patch0036:      revert-pid1-use-a-cache-for-all-unit-aliases.patch
-Patch0037:      revert-shared-unit-file-add-a-function-to-validate-u.patch
-
-Patch0038:      systemd-Fix-busctl-crash-on-aarch64-when-setting-out.patch
-Patch0039:      seccomp-more-comprehensive-protection-against-libsec.patch
+## The patch of 0026~0029 resolve the pid1 memory leaks
+#Patch0034:      revert-pid1-drop-unit-caches-only-based-on-mtime.patch
+#Patch0035:      revert-analyze-add-unit-files-to-dump-the-unit-fragm.patch
+#Patch0036:      revert-pid1-use-a-cache-for-all-unit-aliases.patch
+#Patch0037:      revert-shared-unit-file-add-a-function-to-validate-u.patch
 
 #openEuler
-Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
-Patch9003:      1602-activation-service-must-be-restarted-when-reactivated.patch
-Patch9004:      1605-systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
-#Patch9004:  1612-serialize-pids-for-scope-when-not-started.patch
-#Patch9005:  1615-do-not-finish-job-during-daemon-reload-in-unit_notify.patch
-Patch9007:      1619-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
-Patch9008:      1620-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
-#Patch9006:  core-bugfix-call-malloc_trim-to-return-memory-to-OS-immediately.patch
-#Patch9009:  systemd-core-Close-and-free-dbus-when-bus-authentica.patch
-Patch9009:      systemd-change-time-log-level.patch
-Patch9010:      fix-capsh-drop-but-ping-success.patch
-Patch9011:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+Patch9001:      1509-fix-journal-file-descriptors-leak-problems.patch
+Patch9002:      1602-activation-service-must-be-restarted-when-reactivated.patch
+Patch9003:      1605-systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
+Patch9004:      1619-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
+Patch9005:      systemd-change-time-log-level.patch
+Patch9006:      fix-capsh-drop-but-ping-success.patch
+Patch9007:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -111,8 +89,14 @@ BuildRequires:  gnutls-devel, qrencode-devel, libmicrohttpd-devel, libxkbcommon-
 BuildRequires:  iptables-devel, docbook-style-xsl, pkgconfig, libxslt, gperf
 BuildRequires:  gawk, tree, hostname, git, meson >= 0.43, gettext, dbus >= 1.9.18
 BuildRequires:  python3-devel, python3-lxml, firewalld-filesystem, libseccomp-devel
+%if 0%{?have_gnu_efi}
 BuildRequires:  gnu-efi gnu-efi-devel
-BuildRequires:  valgrind-devel, util-linux
+%endif
+
+%ifarch %{valgrind_arches}
+BuildRequires:  valgrind-devel
+%endif
+BuildRequires:  util-linux
 
 Requires:       %{name}-libs = %{version}-%{release}
 Requires(post): coreutils
@@ -280,7 +264,9 @@ CONFIGURE_OPTS=(
         -Dlibiptc=true
         -Dlibcurl=true
         -Defi=true
+%if 0%{?have_gnu_efi}
         -Dgnu-efi=true
+%endif
         -Dtpm=true
         -Dhwdb=true
         -Dsysusers=true
@@ -706,6 +692,7 @@ fi
 
 %files -f %{name}.lang
 %doc %{_pkgdocdir}
+%exclude /usr/lib/systemd/tests
 %exclude %{_pkgdocdir}/LICENSE.*
 %license LICENSE.GPL2 LICENSE.LGPL2.1
 %ghost %dir %attr(0755,-,-) /etc/systemd/system/basic.target.wants
@@ -857,6 +844,7 @@ fi
 /usr/bin/systemd-sysusers
 /usr/bin/systemd-tty-ask-password-agent
 /usr/bin/busctl
+/usr/bin/userdbctl
 %dir /usr/lib/environment.d
 %dir /usr/lib/binfmt.d
 %dir /usr/lib/tmpfiles.d
@@ -896,7 +884,7 @@ fi
 %dir %{_systemddir}/user-environment-generators
 %{_systemddir}/systemd-shutdown
 %{_systemddir}/systemd-portabled
-%{_systemddir}/libsystemd-shared-243.so
+%{_systemddir}/libsystemd-shared-245.so
 %{_systemddir}/systemd-reply-password
 %dir %{_systemddir}/system-generators
 %dir %{_systemddir}/system
@@ -1116,6 +1104,16 @@ fi
 %{_unitdir}/sockets.target.wants/systemd-journald-dev-log.socket
 %{_unitdir}/sockets.target.wants/systemd-journald.socket
 %{_unitdir}/sockets.target.wants/systemd-initctl.socket
+%{_unitdir}/blockdev@.target
+%{_unitdir}/sys-kernel-tracing.mount
+%{_unitdir}/sysinit.target.wants/sys-kernel-tracing.mount
+%{_unitdir}/system-systemd\x2dcryptsetup.slice
+%{_unitdir}/systemd-journald-varlink@.socket
+%{_unitdir}/systemd-journald@.service
+%{_unitdir}/systemd-journald@.socket
+%{_unitdir}/systemd-userdbd.service
+%{_unitdir}/systemd-userdbd.socket
+%{_unitdir}/modprobe@.service
 %{_systemddir}/system-generators/systemd-fstab-generator
 %{_systemddir}/system-generators/systemd-sysv-generator
 %{_systemddir}/system-generators/systemd-rc-local-generator
@@ -1144,7 +1142,12 @@ fi
 %{_userunitdir}/systemd-tmpfiles-clean.timer
 %{_userunitdir}/sockets.target
 %{_userunitdir}/smartcard.target
+%{_systemddir}/systemd-userdbd
+%{_systemddir}/systemd-userwork
 %{_systemddir}/network/80-container-host0.network
+%{_systemddir}/network/80-wifi-adhoc.network
+%{_systemddir}/network/80-wifi-ap.network.example
+%{_systemddir}/network/80-wifi-station.network.example
 %{_systemddir}/catalog/systemd.fr.catalog
 %{_systemddir}/catalog/systemd.be.catalog
 %{_systemddir}/catalog/systemd.bg.catalog
@@ -1157,6 +1160,9 @@ fi
 %{_systemddir}/catalog/systemd.zh_TW.catalog
 %{_systemddir}/catalog/systemd.ru.catalog
 %{_systemddir}/catalog/systemd.catalog
+%{_systemddir}/systemd-xdg-autostart-condition
+%{_systemddir}/user-generators/systemd-xdg-autostart-generator
+%{_systemddir}/user/xdg-desktop-autostart.target
 /usr/lib/sysctl.d/50-coredump.conf
 /usr/lib/sysctl.d/50-default.conf
 /usr/lib/sysctl.d/50-pid-max.conf
@@ -1172,6 +1178,7 @@ fi
 /usr/lib/tmpfiles.d/legacy.conf
 /usr/lib/tmpfiles.d/static-nodes-permissions.conf
 /usr/lib/tmpfiles.d/var.conf
+/usr/lib/tmpfiles.d/systemd-pstore.conf
 /usr/lib/environment.d/99-environment.conf
 %ghost %config(noreplace) /etc/localtime
 %dir /etc/rc.d
@@ -1209,17 +1216,17 @@ fi
 %dir /etc/xdg/systemd
 %config(noreplace) /etc/xdg/systemd/user
 
-/usr/lib64/security/pam_systemd.so
+%{_libdir}/security/pam_systemd.so
 /usr/lib/rpm/macros.d/macros.systemd
 
 %files libs
-/usr/lib64/libnss_systemd.so.2
-/usr/lib64/libnss_resolve.so.2
-/usr/lib64/libnss_myhostname.so.2
-/usr/lib64/libsystemd.so.0
-/usr/lib64/libsystemd.so.0.27.0
-/usr/lib64/libudev.so.1
-/usr/lib64/libudev.so.1.6.15
+%{_libdir}/libnss_systemd.so.2
+%{_libdir}/libnss_resolve.so.2
+%{_libdir}/libnss_myhostname.so.2
+%{_libdir}/libsystemd.so.0
+%{_libdir}/libsystemd.so.*
+%{_libdir}/libudev.so.1
+%{_libdir}/libudev.so.*
 
 %files devel
 /usr/share/man/man3/*
@@ -1237,10 +1244,11 @@ fi
 /usr/include/systemd/sd-id128.h
 /usr/include/systemd/sd-bus.h
 /usr/include/systemd/sd-login.h
-/usr/lib64/libudev.so
-/usr/lib64/libsystemd.so
-/usr/lib64/pkgconfig/libsystemd.pc
-/usr/lib64/pkgconfig/libudev.pc
+/usr/include/systemd/sd-path.h
+%{_libdir}/libudev.so
+%{_libdir}/libsystemd.so
+%{_libdir}/pkgconfig/libsystemd.pc
+%{_libdir}/pkgconfig/libudev.pc
 
 %files udev
 %ghost %dir /var/lib/systemd/backlight
@@ -1265,7 +1273,6 @@ fi
 %dir /usr/lib/udev
 %dir /usr/lib/kernel
 %dir /usr/lib/modules-load.d
-%dir %{_systemddir}/boot
 %{_systemddir}/systemd-timesyncd
 %{_systemddir}/systemd-growfs
 %{_systemddir}/systemd-modules-load
@@ -1329,9 +1336,12 @@ fi
 %{_systemddir}/system-generators/systemd-hibernate-resume-generator
 %{_systemddir}/system-generators/systemd-gpt-auto-generator
 %{_systemddir}/ntp-units.d/80-systemd-timesync.list
+%if 0%{?have_gnu_efi}
+%dir %{_systemddir}/boot
 %dir %{_systemddir}/boot/efi
 %{_systemddir}/boot/efi/systemd-boot%{efi_arch}.efi
 %{_systemddir}/boot/efi/linux%{efi_arch}.efi.stub
+%endif
 %{_systemddir}/network/99-default.link
 %dir /usr/lib/kernel/install.d
 /usr/lib/kernel/install.d/20-grubby.install
@@ -1344,6 +1354,7 @@ fi
 /usr/lib/udev/cdrom_id
 /usr/lib/udev/mtd_probe
 /usr/lib/udev/scsi_id
+/usr/lib/udev/fido_id
 %dir /usr/lib/udev/hwdb.d
 %{_udevhwdbdir}/20-bluetooth-vendor-product.hwdb
 %{_udevhwdbdir}/70-touchpad.hwdb
@@ -1363,6 +1374,7 @@ fi
 %{_udevhwdbdir}/70-joystick.hwdb
 %{_udevhwdbdir}/60-sensor.hwdb
 %{_udevhwdbdir}/70-mouse.hwdb
+%{_udevhwdbdir}/60-input-id.hwdb
 %{_udevrulesdir}/40-openEuler.rules
 %{_udevrulesdir}/40-elevator.rules
 %{_udevrulesdir}/73-idrac.rules
@@ -1381,7 +1393,6 @@ fi
 %{_udevrulesdir}/60-persistent-v4l.rules
 %{_udevrulesdir}/70-joystick.rules
 %{_udevrulesdir}/70-power-switch.rules
-%{_udevrulesdir}/60-block-scheduler.rules
 %{_udevrulesdir}/60-persistent-storage.rules
 %{_udevrulesdir}/80-net-setup-link.rules
 %{_udevrulesdir}/60-evdev.rules
@@ -1395,6 +1406,9 @@ fi
 %{_udevrulesdir}/99-systemd.rules
 %{_udevrulesdir}/60-persistent-storage-tape.rules
 %{_udevrulesdir}/50-udev-default.rules
+%{_udevrulesdir}/60-autosuspend-chromiumos.rules
+%{_udevrulesdir}/60-fido-id.rules
+%{_udevrulesdir}/61-autosuspend-manual.rules
 /usr/lib/modprobe.d/systemd.conf
 %ghost %config(noreplace) /etc/vconsole.conf
 %dir /etc/udev
@@ -1415,11 +1429,13 @@ fi
 /usr/share/zsh/site-functions/_systemd-nspawn
 /usr/share/dbus-1/system-services/org.freedesktop.import1.service
 /usr/share/dbus-1/system-services/org.freedesktop.machine1.service
+/usr/share/dbus-1/services/org.freedesktop.systemd1.service
+/usr/share/dbus-1/system-services/org.freedesktop.systemd1.service
 /usr/share/dbus-1/system.d/org.freedesktop.import1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.machine1.conf
 /usr/share/polkit-1/actions/org.freedesktop.import1.policy
 /usr/share/polkit-1/actions/org.freedesktop.machine1.policy
-/usr/lib64/libnss_mymachines.so.2
+%{_libdir}/libnss_mymachines.so.2
 /usr/bin/machinectl
 /usr/bin/systemd-nspawn
 %{_systemddir}/systemd-import
@@ -1441,6 +1457,7 @@ fi
 %{_unitdir}/remote-fs.target.wants/var-lib-machines.mount
 %{_systemddir}/network/80-container-vz.network
 %{_systemddir}/network/80-container-ve.network
+%{_systemddir}/network/80-vm-vt.network
 /usr/lib/tmpfiles.d/systemd-nspawn.conf
 
 %files journal-remote
@@ -1478,6 +1495,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Jun 12 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-1
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:Update to release 246
+
 * Thu May 28 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-23
 - Type:enhancement
 - ID:NA
