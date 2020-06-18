@@ -11,10 +11,10 @@ Resolves: #1523233
  3 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/man/logind.conf.xml b/man/logind.conf.xml
-index 4cbfd09..c6ff5c3 100644
+index b00daf366d..a9fed78aa6 100644
 --- a/man/logind.conf.xml
 +++ b/man/logind.conf.xml
-@@ -327,7 +327,7 @@
+@@ -340,7 +340,7 @@
          user fully logs out. Takes a boolean argument. If enabled, the user may not consume IPC resources after the
          last of the user's sessions terminated. This covers System V semaphores, shared memory and message queues, as
          well as POSIX shared memory and message queues. Note that IPC objects of the root user and other system users
@@ -24,10 +24,10 @@ index 4cbfd09..c6ff5c3 100644
  
      </variablelist>
 diff --git a/src/login/logind-core.c b/src/login/logind-core.c
-index 1d21e90..2ac7860 100644
+index 4289461df6..556945be20 100644
 --- a/src/login/logind-core.c
 +++ b/src/login/logind-core.c
-@@ -34,7 +34,7 @@ void manager_reset_config(Manager *m) {
+@@ -35,7 +35,7 @@ void manager_reset_config(Manager *m) {
  
          m->n_autovts = 6;
          m->reserve_vt = 6;
@@ -37,17 +37,17 @@ index 1d21e90..2ac7860 100644
          m->user_stop_delay = 10 * USEC_PER_SEC;
  
 diff --git a/src/login/logind.conf.in b/src/login/logind.conf.in
-index 1029e29..c7346f9 100644
+index ed1084b06e..07ff0d195e 100644
 --- a/src/login/logind.conf.in
 +++ b/src/login/logind.conf.in
-@@ -32,6 +32,6 @@
- #IdleAction=ignore
+@@ -33,6 +33,6 @@
  #IdleActionSec=30min
  #RuntimeDirectorySize=10%
+ #RuntimeDirectoryInodes=400k
 -#RemoveIPC=yes
 +#RemoveIPC=no
  #InhibitorsMax=8192
  #SessionsMax=8192
 -- 
-2.19.1
+2.23.0
 

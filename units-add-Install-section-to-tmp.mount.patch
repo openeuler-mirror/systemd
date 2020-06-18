@@ -9,17 +9,17 @@ Resolves: #1667065
  1 file changed, 4 insertions(+)
 
 diff --git a/units/tmp.mount b/units/tmp.mount
-index 742d863..b558047 100644
+index 7066e52261..b3966dfd37 100644
 --- a/units/tmp.mount
 +++ b/units/tmp.mount
-@@ -22,3 +22,7 @@ What=tmpfs
+@@ -23,3 +23,7 @@ What=tmpfs
  Where=/tmp
  Type=tmpfs
- Options=mode=1777,strictatime,nosuid,nodev
+ Options=mode=1777,strictatime,nosuid,nodev,size=10%,nr_inodes=400k
 +
 +# Make 'systemctl enable tmp.mount' work:
 +[Install]
 +WantedBy=local-fs.target
 -- 
-1.8.3.1
+2.23.0
 
