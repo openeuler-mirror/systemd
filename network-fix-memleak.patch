@@ -1,0 +1,34 @@
+From 9be6ae775fb303deb49ee8e4c5013ce98dc48b93 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 5 Nov 2019 09:39:44 +0900
+Subject: [PATCH] network: fix memleak
+
+---
+ src/network/networkd-network.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/network/networkd-network.c b/src/network/networkd-network.c
+index 5e82b3c5e0..f6d02fb274 100644
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -586,6 +586,9 @@ static Network *network_free(Network *network) {
+         while ((prefix = network->static_prefixes))
+                 prefix_free(prefix);
+ 
++        while ((prefix = network->static_route_prefixes))
++                route_prefix_free(prefix);
++
+         while ((rule = network->rules))
+                 routing_policy_rule_free(rule);
+ 
+@@ -596,6 +599,7 @@ static Network *network_free(Network *network) {
+         hashmap_free(network->neighbors_by_section);
+         hashmap_free(network->address_labels_by_section);
+         hashmap_free(network->prefixes_by_section);
++        hashmap_free(network->route_prefixes_by_section);
+         hashmap_free(network->rules_by_section);
+ 
+         if (network->manager) {
+-- 
+2.23.0
+

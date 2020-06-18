@@ -1,0 +1,39 @@
+From 7e284b054ec599012f0dad6a745f6b52eba87853 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 17 Jan 2020 15:37:56 +0100
+Subject: [PATCH] tree-wide: we forgot to destroy some bus errors
+
+---
+ src/libsystemd/sd-bus/test-bus-server.c | 2 +-
+ src/locale/localed.c                    | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/libsystemd/sd-bus/test-bus-server.c b/src/libsystemd/sd-bus/test-bus-server.c
+index e38bcdcc76..82eb35e5b1 100644
+--- a/src/libsystemd/sd-bus/test-bus-server.c
++++ b/src/libsystemd/sd-bus/test-bus-server.c
+@@ -108,7 +108,7 @@ fail:
+ static int client(struct context *c) {
+         _cleanup_(sd_bus_message_unrefp) sd_bus_message *m = NULL, *reply = NULL;
+         _cleanup_(sd_bus_unrefp) sd_bus *bus = NULL;
+-        sd_bus_error error = SD_BUS_ERROR_NULL;
++        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+         int r;
+ 
+         assert_se(sd_bus_new(&bus) >= 0);
+diff --git a/src/locale/localed.c b/src/locale/localed.c
+index baf0bd102b..2031cd25ce 100644
+--- a/src/locale/localed.c
++++ b/src/locale/localed.c
+@@ -33,7 +33,7 @@ static int locale_update_system_manager(Context *c, sd_bus *bus) {
+         _cleanup_free_ char **l_unset = NULL;
+         _cleanup_strv_free_ char **l_set = NULL;
+         _cleanup_(sd_bus_message_unrefp) sd_bus_message *m = NULL;
+-        sd_bus_error error = SD_BUS_ERROR_NULL;
++        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+         size_t c_set, c_unset;
+         LocaleVariable p;
+         int r;
+-- 
+2.23.0
+

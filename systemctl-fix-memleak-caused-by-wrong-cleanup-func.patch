@@ -1,0 +1,25 @@
+From 13f697b7b1f3837d144ba6f60188bc7dc4d1fbaa Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 13 Oct 2019 00:54:34 +0900
+Subject: [PATCH] systemctl: fix memleak caused by wrong cleanup func
+
+---
+ src/systemctl/systemctl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/systemctl/systemctl.c b/src/systemctl/systemctl.c
+index 98a71c4460..738b9af536 100644
+--- a/src/systemctl/systemctl.c
++++ b/src/systemctl/systemctl.c
+@@ -7977,7 +7977,7 @@ static void help_states(void) {
+ 
+ static int help_boot_loader_entry(void) {
+         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+-        _cleanup_free_ char **l = NULL;
++        _cleanup_strv_free_ char **l = NULL;
+         sd_bus *bus;
+         char **i;
+         int r;
+-- 
+2.23.0
+

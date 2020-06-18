@@ -1,0 +1,28 @@
+From 714a199e481c294b9986b7d5160a89a65d8b375a Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 19 Sep 2019 15:20:00 +0900
+Subject: [PATCH] network: add one more section validty check
+
+Follow-up for 203d4df5732b1fdcf50db498ddeb74a934b21f87.
+---
+ src/network/networkd-network.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/network/networkd-network.c b/src/network/networkd-network.c
+index d1c4cddeb1..a2cd7f4c60 100644
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -300,6 +300,10 @@ int network_verify(Network *network) {
+                 if (section_is_invalid(prefix->section))
+                         prefix_free(prefix);
+ 
++        LIST_FOREACH_SAFE(prefixes, prefix, prefix_next, network->static_route_prefixes)
++                if (section_is_invalid(prefix->section))
++                        prefix_free(prefix);
++
+         LIST_FOREACH_SAFE(rules, rule, rule_next, network->rules)
+                 if (routing_policy_rule_section_verify(rule) < 0)
+                         routing_policy_rule_free(rule);
+-- 
+2.23.0
+

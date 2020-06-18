@@ -1,0 +1,33 @@
+From 471e126b254dccac66cb2987be3a5f58592d8932 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 5 Nov 2019 10:46:44 +0900
+Subject: [PATCH] network: fix memleak in route_prefix_free()
+
+---
+ src/network/networkd-radv.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/network/networkd-radv.c b/src/network/networkd-radv.c
+index 8d933f1901..87db34d6cc 100644
+--- a/src/network/networkd-radv.c
++++ b/src/network/networkd-radv.c
+@@ -31,7 +31,7 @@ void prefix_free(Prefix *prefix) {
+         }
+ 
+         network_config_section_free(prefix->section);
+-        prefix->radv_prefix = sd_radv_prefix_unref(prefix->radv_prefix);
++        sd_radv_prefix_unref(prefix->radv_prefix);
+ 
+         free(prefix);
+ }
+@@ -131,6 +131,7 @@ void route_prefix_free(Prefix *prefix) {
+         }
+ 
+         network_config_section_free(prefix->section);
++        sd_radv_route_prefix_unref(prefix->radv_route_prefix);
+ 
+         free(prefix);
+ }
+-- 
+2.23.0
+

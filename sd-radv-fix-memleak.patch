@@ -1,0 +1,30 @@
+From 69d7eba1880095f4a9bf9350de777fe7d370c188 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 5 Nov 2019 13:30:00 +0900
+Subject: [PATCH] sd-radv: fix memleak
+
+---
+ src/libsystemd-network/sd-radv.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/libsystemd-network/sd-radv.c b/src/libsystemd-network/sd-radv.c
+index 5c7f727faa..873a2f40f8 100644
+--- a/src/libsystemd-network/sd-radv.c
++++ b/src/libsystemd-network/sd-radv.c
+@@ -99,6 +99,13 @@ static sd_radv *radv_free(sd_radv *ra) {
+                 sd_radv_prefix_unref(p);
+         }
+ 
++        while (ra->route_prefixes) {
++                sd_radv_route_prefix *p = ra->route_prefixes;
++
++                LIST_REMOVE(prefix, ra->route_prefixes, p);
++                sd_radv_route_prefix_unref(p);
++        }
++
+         free(ra->rdnss);
+         free(ra->dnssl);
+ 
+-- 
+2.23.0
+

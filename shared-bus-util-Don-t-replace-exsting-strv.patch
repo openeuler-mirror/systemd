@@ -1,0 +1,33 @@
+From 411975ce63b28194b21b964268efaa04b19cbb37 Mon Sep 17 00:00:00 2001
+From: Kevin Kuehler <keur@xcf.berkeley.edu>
+Date: Tue, 10 Dec 2019 01:58:01 -0800
+Subject: [PATCH] shared/bus-util: Don't replace exsting strv
+
+Change the behavior of string arrays in a bus property map.  Previously,
+passing the same strv pointer to more than one map entry would result in
+the old strv being freed and overwritten. With this change, an existing
+strv pointer is appended to.
+
+This is important if we want to create one strv comprised of multiple
+dependencies. This makes it so callers don't have to create one strv per
+dependency and subsequently merge them into one strv.
+---
+ src/shared/bus-util.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shared/bus-util.c b/src/shared/bus-util.c
+index aea46d3119..10c05eba18 100644
+--- a/src/shared/bus-util.c
++++ b/src/shared/bus-util.c
+@@ -1127,7 +1127,7 @@ static int map_basic(sd_bus *bus, const char *member, sd_bus_message *m, unsigne
+                 if (r < 0)
+                         return r;
+ 
+-                return strv_free_and_replace(*p, l);
++                return strv_extend_strv(p, l, false);
+         }
+ 
+         case SD_BUS_TYPE_BOOLEAN: {
+-- 
+2.23.0
+

@@ -1,0 +1,26 @@
+From acb71754e12f98ebd01963869a297ea262494740 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 5 Nov 2019 09:36:39 +0900
+Subject: [PATCH] network: use fix invalid free function
+
+Fixes #13938.
+---
+ src/network/networkd-network.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/network/networkd-network.c b/src/network/networkd-network.c
+index 90d86f35a9..5e82b3c5e0 100644
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -306,7 +306,7 @@ int network_verify(Network *network) {
+ 
+         LIST_FOREACH_SAFE(prefixes, prefix, prefix_next, network->static_route_prefixes)
+                 if (section_is_invalid(prefix->section))
+-                        prefix_free(prefix);
++                        route_prefix_free(prefix);
+ 
+         LIST_FOREACH_SAFE(rules, rule, rule_next, network->rules)
+                 if (routing_policy_rule_section_verify(rule) < 0)
+-- 
+2.23.0
+
