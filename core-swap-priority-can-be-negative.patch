@@ -1,0 +1,115 @@
+From 7477451b691d288dad67b4c8ce9e519e9b75770d Mon Sep 17 00:00:00 2001
+From: Topi Miettinen <toiwoton@gmail.com>
+Date: Tue, 3 Dec 2019 20:36:37 +0200
+Subject: [PATCH] core: swap priority can be negative
+
+Negative priorities are useful for swap targets which should be only used as
+last resort.
+---
+ src/core/swap.c            | 10 ++++++----
+ src/core/swap.h            |  1 +
+ src/shared/fstab-util.c    | 10 +++-------
+ src/test/test-fstab-util.c |  3 +++
+ 4 files changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/src/core/swap.c b/src/core/swap.c
+index e4b018616d..03f443daec 100644
+--- a/src/core/swap.c
++++ b/src/core/swap.c
+@@ -117,7 +117,8 @@ static void swap_init(Unit *u) {
+         s->exec_context.std_output = u->manager->default_std_output;
+         s->exec_context.std_error = u->manager->default_std_error;
+ 
+-        s->parameters_proc_swaps.priority = s->parameters_fragment.priority = -1;
++        s->parameters_proc_swaps.priority = s->parameters_fragment.priority = 0;
++        s->parameters_fragment.priority_set = false;
+ 
+         s->control_command_id = _SWAP_EXEC_COMMAND_INVALID;
+ 
+@@ -433,6 +434,7 @@ static int swap_setup_unit(
+         SWAP(u)->from_proc_swaps = true;
+ 
+         p->priority = priority;
++        p->priority_set = true;
+ 
+         unit_add_to_dbus_queue(u);
+         return 0;
+@@ -766,15 +768,15 @@ static void swap_enter_activating(Swap *s) {
+         s->control_command = s->exec_command + SWAP_EXEC_ACTIVATE;
+ 
+         if (s->from_fragment) {
+-                int priority = -1;
++                int priority = 0;
+ 
+                 r = fstab_find_pri(s->parameters_fragment.options, &priority);
+                 if (r < 0)
+                         log_warning_errno(r, "Failed to parse swap priority \"%s\", ignoring: %m", s->parameters_fragment.options);
+-                else if (r == 1 && s->parameters_fragment.priority >= 0)
++                else if (r == 1 && s->parameters_fragment.priority_set)
+                         log_warning("Duplicate swap priority configuration by Priority and Options fields.");
+ 
+-                if (r <= 0 && s->parameters_fragment.priority >= 0) {
++                if (r <= 0 && s->parameters_fragment.priority_set) {
+                         if (s->parameters_fragment.options)
+                                 r = asprintf(&opts, "%s,pri=%i", s->parameters_fragment.options, s->parameters_fragment.priority);
+                         else
+diff --git a/src/core/swap.h b/src/core/swap.h
+index 389faf584d..cb24cec7aa 100644
+--- a/src/core/swap.h
++++ b/src/core/swap.h
+@@ -33,6 +33,7 @@ typedef struct SwapParameters {
+         char *what;
+         char *options;
+         int priority;
++        bool priority_set;
+ } SwapParameters;
+ 
+ struct Swap {
+diff --git a/src/shared/fstab-util.c b/src/shared/fstab-util.c
+index f90501eb92..86a57e6b2c 100644
+--- a/src/shared/fstab-util.c
++++ b/src/shared/fstab-util.c
+@@ -186,8 +186,7 @@ int fstab_extract_values(const char *opts, const char *name, char ***values) {
+ 
+ int fstab_find_pri(const char *options, int *ret) {
+         _cleanup_free_ char *opt = NULL;
+-        int r;
+-        unsigned pri;
++        int r, pri;
+ 
+         assert(ret);
+ 
+@@ -197,14 +196,11 @@ int fstab_find_pri(const char *options, int *ret) {
+         if (r == 0 || !opt)
+                 return 0;
+ 
+-        r = safe_atou(opt, &pri);
++        r = safe_atoi(opt, &pri);
+         if (r < 0)
+                 return r;
+ 
+-        if ((int) pri < 0)
+-                return -ERANGE;
+-
+-        *ret = (int) pri;
++        *ret = pri;
+         return 1;
+ }
+ 
+diff --git a/src/test/test-fstab-util.c b/src/test/test-fstab-util.c
+index 4cd504e45c..c1c7ec9114 100644
+--- a/src/test/test-fstab-util.c
++++ b/src/test/test-fstab-util.c
+@@ -100,6 +100,9 @@ static void test_fstab_find_pri(void) {
+         assert_se(fstab_find_pri("pri=11", &pri) == 1);
+         assert_se(pri == 11);
+ 
++        assert_se(fstab_find_pri("pri=-2", &pri) == 1);
++        assert_se(pri == -2);
++
+         assert_se(fstab_find_pri("opt,pri=12,opt", &pri) == 1);
+         assert_se(pri == 12);
+ 
+-- 
+2.23.0
+

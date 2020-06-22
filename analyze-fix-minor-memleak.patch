@@ -1,0 +1,25 @@
+From 81610e9609c966a33dcff15a4f3b173aa8f07e4b Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 25 Oct 2019 16:05:11 +0200
+Subject: [PATCH] analyze: fix minor memleak
+
+---
+ src/analyze/analyze.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/analyze/analyze.c b/src/analyze/analyze.c
+index 1871a4363e..2d541fe701 100644
+--- a/src/analyze/analyze.c
++++ b/src/analyze/analyze.c
+@@ -1713,7 +1713,7 @@ static void kernel_syscalls_remove(Set *s, const SyscallFilterSet *set) {
+                 if (syscall[0] == '@')
+                         continue;
+ 
+-                (void) set_remove(s, syscall);
++                free(set_remove(s, syscall));
+         }
+ }
+ 
+-- 
+2.23.0
+

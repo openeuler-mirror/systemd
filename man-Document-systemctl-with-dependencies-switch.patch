@@ -1,0 +1,39 @@
+From a602a0b44b9eb9af0027d054dd24e405a658e375 Mon Sep 17 00:00:00 2001
+From: Kevin Kuehler <keur@xcf.berkeley.edu>
+Date: Mon, 9 Dec 2019 01:40:47 -0800
+Subject: [PATCH] man: Document systemctl --with-dependencies switch
+
+---
+ man/systemctl.xml | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/man/systemctl.xml b/man/systemctl.xml
+index 3d86f7dffa..5828477e8d 100644
+--- a/man/systemctl.xml
++++ b/man/systemctl.xml
+@@ -1592,6 +1592,22 @@ Jan 12 10:46:45 example.com bluetoothd[8900]: gatt-time-server: Input/output err
+         </listitem>
+       </varlistentry>
+ 
++      <varlistentry>
++        <term><option>--with-dependencies</option></term>
++
++        <listitem>
++          <para>When used with <command>status</command>,
++          <command>cat</command>, <command>list-units</command>, and
++          <command>list-unit-files</command>, those commands print all
++          specified units and the dependencies of those units.</para>
++
++          <para>Options <option>--reverse</option>,
++          <option>--after</option>, <option>--before</option>
++          may be used to change what types of dependencies
++          are shown.</para>
++        </listitem>
++      </varlistentry>
++
+       <varlistentry>
+         <term><option>-l</option></term>
+         <term><option>--full</option></term>
+-- 
+2.23.0
+

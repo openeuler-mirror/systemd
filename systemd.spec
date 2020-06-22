@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        24
+Release:        25
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -88,6 +88,31 @@ Patch0038:      systemd-Fix-busctl-crash-on-aarch64-when-setting-out.patch
 Patch0039:      seccomp-more-comprehensive-protection-against-libsec.patch
 Patch0040:      network-fix-double-free-in-macsec_receive_channel_fr.patch
 Patch0041:      network-L2TP-fix-crash.patch
+
+Patch0042:      systemctl-fix-memleak-caused-by-wrong-cleanup-func.patch
+Patch0043:      analyze-fix-minor-memleak.patch
+Patch0044:      network-add-one-more-section-validty-check.patch
+Patch0045:      network-use-fix-invalid-free-function.patch
+Patch0046:      network-fix-memleak.patch
+Patch0047:      network-Add-support-to-advertie-ipv6-route.patch
+Patch0048:      network-fix-invalid-cleanup-function.patch
+Patch0049:      network-fix-memleak-in-route_prefix_free.patch
+Patch0050:      sd-radv-fix-memleak.patch
+Patch0051:      sd-bus-invalidate-connection-when-Hello-fails.patch
+Patch0052:      shared-bus-util-Don-t-replace-exsting-strv.patch
+Patch0053:      systemctl-Add-with-dependencies-flag.patch
+Patch0054:      man-Document-systemctl-with-dependencies-switch.patch
+Patch0055:      core-expose-swap-priority-value-via-dbus-only-if-it-.patch
+Patch0056:      tree-wide-we-forgot-to-destroy-some-bus-errors.patch
+Patch0057:      sd-bus-fix-introspection-bug-in-signal-parameter-nam.patch
+Patch0058:      core-sync-SeccompParseFlags-between-dbus-execute-and.patch
+Patch0059:      core-swap-priority-can-be-negative.patch
+Patch0060:      core-no-need-to-initialize-swap-structure-fields-if-.patch
+Patch0061:      core-initialize-priority_set-when-parsing-swap-unit-.patch
+Patch0062:      core-use-unit-based-logging-instead-of-generic-loggi.patch
+Patch0063:      core-set-error-value-correctly.patch
+Patch0064:      core-fix-re-realization-of-cgroup-siblings.patch
+Patch0065:      basic-string-table-avoid-crash-when-table-is-sparse.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1480,6 +1505,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Jun 18 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-25
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:dbus commissioning enhancement
+
 * Thu May 28 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-24
 - Type:enhancement
 - ID:NA

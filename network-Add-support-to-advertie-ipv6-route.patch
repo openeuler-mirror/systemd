@@ -1,0 +1,711 @@
+From 203d4df5732b1fdcf50db498ddeb74a934b21f87 Mon Sep 17 00:00:00 2001
+From: Susant Sahani <ssahani@vmware.com>
+Date: Sat, 14 Sep 2019 16:44:22 +0530
+Subject: [PATCH] network: Add support to advertie ipv6 route
+
+Implements https://tools.ietf.org/html/rfc4191
+
+cat veth99.network
+```
+[Match]
+Name=veth99
+
+[Network]
+DHCP=no
+IPv6PrefixDelegation=yes
+Address=2001:db8:0:1::1/64
+
+[IPv6Prefix]
+Prefix=2001:db8:0:1::4/64
+
+[IPv6RoutePrefix]
+Route=2001:db0:fff::/48
+
+```
+Wireshark
+
+```
+Frame 481: 142 bytes on wire (1136 bits), 142 bytes captured (1136 bits) on interface 0
+Ethernet II, Src: 1e:04:f8:b8:2f:d4 (1e:04:f8:b8:2f:d4), Dst: IPv6mcast_01 (33:33:00:00:00:01)
+Internet Protocol Version 6, Src: fe80::1c04:f8ff:feb8:2fd4, Dst: ff02::1
+Internet Control Message Protocol v6
+    Type: Router Advertisement (134)
+    Code: 0
+    Checksum: 0xec77 [correct]
+    [Checksum Status: Good]
+    Cur hop limit: 0
+    Flags: 0x00, Prf (Default Router Preference): Medium
+    Router lifetime (s): 0
+    Reachable time (ms): 0
+    Retrans timer (ms): 0
+    ICMPv6 Option (Source link-layer address : 1e:04:f8:b8:2f:d4)
+        Type: Source link-layer address (1)
+        Length: 1 (8 bytes)
+        Link-layer address: 1e:04:f8:b8:2f:d4 (1e:04:f8:b8:2f:d4)
+    ICMPv6 Option (MTU : 1500)
+        Type: MTU (5)
+        Length: 1 (8 bytes)
+        Reserved
+        MTU: 1500
+    ICMPv6 Option (Prefix information : 2001:db8:0:1::4/64)
+        Type: Prefix information (3)
+        Length: 4 (32 bytes)
+        Prefix Length: 64
+        Flag: 0xc0, On-link flag(L), Autonomous address-configuration flag(A)
+        Valid Lifetime: 2592000
+        Preferred Lifetime: 604800
+        Reserved
+        Prefix: 2001:db8:0:1::4
+    ICMPv6 Option (Route Information : Medium 2001:db0:fff::/48)
+        Type: Route Information (24)
+        Length: 3 (24 bytes)
+        Prefix Length: 48
+        Flag: 0x00, Route Preference: Medium
+            ...0 0... = Route Preference: Medium (0)
+            000. .000 = Reserved: 0
+        Route Lifetime: 604800
+        Prefix: 2001:db0:fff::
+```
+---
+ man/systemd.network.xml                       |  33 ++-
+ src/libsystemd-network/radv-internal.h        |  26 +++
+ src/libsystemd-network/sd-radv.c              | 130 +++++++++++-
+ src/network/networkd-network-gperf.gperf      |   2 +
+ src/network/networkd-network.c                |   1 +
+ src/network/networkd-network.h                |   3 +
+ src/network/networkd-radv.c                   | 195 +++++++++++++++++-
+ src/network/networkd-radv.h                   |   9 +
+ src/systemd/sd-radv.h                         |  10 +
+ .../fuzz-network-parser/directives.network    |   3 +
+ 10 files changed, 400 insertions(+), 12 deletions(-)
+
+diff --git a/man/systemd.network.xml b/man/systemd.network.xml
+index 155c0868b2..8ecc39ce5e 100644
+--- a/man/systemd.network.xml
++++ b/man/systemd.network.xml
+@@ -1886,7 +1886,7 @@
+     </variablelist>
+     </refsect1>
+ 
+-      <refsect1>
++    <refsect1>
+     <title>[IPv6Prefix] Section Options</title>
+     <para>One or more <literal>[IPv6Prefix]</literal> sections contain the IPv6
+     prefixes that are announced via Router Advertisements. See
+@@ -1931,6 +1931,37 @@
+     </variablelist>
+     </refsect1>
+ 
++    <refsect1>
++    <title>[IPv6RoutePrefix] Section Options</title>
++    <para>One or more <literal>[IPv6RoutePrefix]</literal> sections contain the IPv6
++    prefix routes that are announced via Router Advertisements. See
++    <ulink url="https://tools.ietf.org/html/rfc4191">RFC 4191</ulink>
++    for further details.</para>
++
++    <variablelist class='network-directives'>
++
++      <varlistentry>
++        <term><varname>Route=</varname></term>
++
++        <listitem><para>The IPv6 route that is to be distributed to hosts.
++        Similarly to configuring static IPv6 routes, the setting is
++        configured as an IPv6 prefix routes and its prefix route length,
++        separated by a<literal>/</literal> character. Use multiple
++        <literal>[IPv6PrefixRoutes]</literal> sections to configure multiple IPv6
++        prefix routes.</para></listitem>
++      </varlistentry>
++
++      <varlistentry>
++        <term><varname>LifetimeSec=</varname></term>
++
++        <listitem><para>Lifetime for the route prefix measured in
++        seconds. <varname>LifetimeSec=</varname> defaults to 604800 seconds (one week).
++        </para></listitem>
++      </varlistentry>
++
++    </variablelist>
++    </refsect1>
++
+     <refsect1>
+     <title>[Bridge] Section Options</title>
+       <para>The <literal>[Bridge]</literal> section accepts the
+diff --git a/src/libsystemd-network/radv-internal.h b/src/libsystemd-network/radv-internal.h
+index 7b09c7a66c..fb6617bedd 100644
+--- a/src/libsystemd-network/radv-internal.h
++++ b/src/libsystemd-network/radv-internal.h
+@@ -19,6 +19,7 @@ assert_cc(SD_RADV_DEFAULT_MIN_TIMEOUT_USEC <= SD_RADV_DEFAULT_MAX_TIMEOUT_USEC);
+ #define SD_RADV_MIN_DELAY_BETWEEN_RAS           3
+ #define SD_RADV_MAX_RA_DELAY_TIME_USEC          (500*USEC_PER_MSEC)
+ 
++#define SD_RADV_OPT_ROUTE_INFORMATION           24
+ #define SD_RADV_OPT_RDNSS                       25
+ #define SD_RADV_OPT_DNSSL                       31
+ 
+@@ -58,6 +59,9 @@ struct sd_radv {
+         unsigned n_prefixes;
+         LIST_HEAD(sd_radv_prefix, prefixes);
+ 
++        unsigned n_route_prefixes;
++        LIST_HEAD(sd_radv_route_prefix, route_prefixes);
++
+         size_t n_rdnss;
+         struct sd_radv_opt_dns *rdnss;
+         struct sd_radv_opt_dns *dnssl;
+@@ -98,6 +102,28 @@ struct sd_radv_prefix {
+         usec_t preferred_until;
+ };
+ 
++#define radv_route_prefix_opt__contents {       \
++        uint8_t type;                           \
++        uint8_t length;                         \
++        uint8_t prefixlen;                      \
++        uint8_t flags_reserved;                 \
++        be32_t  lifetime;                       \
++        struct in6_addr in6_addr;               \
++}
++
++struct radv_route_prefix_opt radv_route_prefix_opt__contents;
++
++struct radv_route_prefix_opt__packed radv_route_prefix_opt__contents _packed_;
++assert_cc(sizeof(struct radv_route_prefix_opt) == sizeof(struct radv_route_prefix_opt__packed));
++
++struct sd_radv_route_prefix {
++        unsigned n_ref;
++
++        struct radv_route_prefix_opt opt;
++
++        LIST_FIELDS(struct sd_radv_route_prefix, prefix);
++};
++
+ #define log_radv_full(level, error, fmt, ...) log_internal(level, error, PROJECT_FILE, __LINE__, __func__, "RADV: " fmt, ##__VA_ARGS__)
+ #define log_radv_errno(error, fmt, ...) log_radv_full(LOG_DEBUG, error, fmt, ##__VA_ARGS__)
+ #define log_radv(fmt, ...) log_radv_errno(0, fmt, ##__VA_ARGS__)
+diff --git a/src/libsystemd-network/sd-radv.c b/src/libsystemd-network/sd-radv.c
+index 185b55e1c5..d531f52326 100644
+--- a/src/libsystemd-network/sd-radv.c
++++ b/src/libsystemd-network/sd-radv.c
+@@ -116,6 +116,7 @@ static sd_radv *radv_free(sd_radv *ra) {
+ DEFINE_PUBLIC_TRIVIAL_REF_UNREF_FUNC(sd_radv, sd_radv, radv_free);
+ 
+ static int radv_send(sd_radv *ra, const struct in6_addr *dst, uint32_t router_lifetime) {
++        sd_radv_route_prefix *rt;
+         sd_radv_prefix *p;
+         struct sockaddr_in6 dst_addr = {
+                 .sin6_family = AF_INET6,
+@@ -136,9 +137,9 @@ static int radv_send(sd_radv *ra, const struct in6_addr *dst, uint32_t router_li
+                 .nd_opt_mtu_type = ND_OPT_MTU,
+                 .nd_opt_mtu_len = 1,
+         };
+-        /* Reserve iov space for RA header, linkaddr, MTU, N prefixes, RDNSS
++        /* Reserve iov space for RA header, linkaddr, MTU, N prefixes, N routes, RDNSS
+            and DNSSL */
+-        struct iovec iov[5 + ra->n_prefixes];
++        struct iovec iov[5 + ra->n_prefixes + ra->n_route_prefixes];
+         struct msghdr msg = {
+                 .msg_name = &dst_addr,
+                 .msg_namelen = sizeof(dst_addr),
+@@ -190,6 +191,9 @@ static int radv_send(sd_radv *ra, const struct in6_addr *dst, uint32_t router_li
+                 iov[msg.msg_iovlen++] = IOVEC_MAKE(&p->opt, sizeof(p->opt));
+         }
+ 
++        LIST_FOREACH(prefix, rt, ra->route_prefixes)
++                iov[msg.msg_iovlen++] = IOVEC_MAKE(&rt->opt, sizeof(rt->opt));
++
+         if (ra->rdnss)
+                 iov[msg.msg_iovlen++] = IOVEC_MAKE(ra->rdnss, ra->rdnss->length * 8);
+ 
+@@ -606,6 +610,77 @@ _public_ sd_radv_prefix *sd_radv_remove_prefix(sd_radv *ra,
+         return cur;
+ }
+ 
++_public_ int sd_radv_add_route_prefix(sd_radv *ra, sd_radv_route_prefix *p, int dynamic) {
++        char time_string_valid[FORMAT_TIMESPAN_MAX];
++        usec_t time_now, valid, valid_until;
++        _cleanup_free_ char *pretty = NULL;
++        sd_radv_route_prefix *cur;
++        int r;
++
++        assert_return(ra, -EINVAL);
++
++        if (!p)
++                return -EINVAL;
++
++        (void) in_addr_to_string(AF_INET6,
++                                 (union in_addr_union*) &p->opt.in6_addr,
++                                 &pretty);
++
++        LIST_FOREACH(prefix, cur, ra->route_prefixes) {
++                _cleanup_free_ char *addr = NULL;
++
++                r = in_addr_prefix_intersect(AF_INET6,
++                                             (union in_addr_union*) &cur->opt.in6_addr,
++                                             cur->opt.prefixlen,
++                                             (union in_addr_union*) &p->opt.in6_addr,
++                                             p->opt.prefixlen);
++                if (r < 0)
++                        return r;
++                if (r == 0)
++                        continue;
++
++                if (dynamic && cur->opt.prefixlen == p->opt.prefixlen)
++                        goto update;
++
++                (void) in_addr_to_string(AF_INET6,
++                                         (union in_addr_union*) &cur->opt.in6_addr,
++                                         &addr);
++                log_radv("IPv6 route prefix %s/%u already configured, ignoring %s/%u",
++                         strempty(addr), cur->opt.prefixlen,
++                         strempty(pretty), p->opt.prefixlen);
++
++                return -EEXIST;
++        }
++
++        p = sd_radv_route_prefix_ref(p);
++
++        LIST_APPEND(prefix, ra->route_prefixes, p);
++        ra->n_route_prefixes++;
++
++        cur = p;
++        if (!dynamic) {
++                log_radv("Added prefix %s/%u", strempty(pretty), p->opt.prefixlen);
++                return 0;
++        }
++
++ update:
++        r = sd_event_now(ra->event, clock_boottime_or_monotonic(), &time_now);
++        if (r < 0)
++                return r;
++
++        valid = be32toh(p->opt.lifetime) * USEC_PER_SEC;
++        valid_until = usec_add(valid, time_now);
++        if (valid_until == USEC_INFINITY)
++                return -EOVERFLOW;
++
++        log_radv("%s route prefix %s/%u valid %s",
++                 cur? "Updated": "Added",
++                 strempty(pretty), p->opt.prefixlen,
++                 format_timespan(time_string_valid, FORMAT_TIMESPAN_MAX, valid, USEC_PER_SEC));
++
++        return 0;
++}
++
+ _public_ int sd_radv_set_rdnss(sd_radv *ra, uint32_t lifetime,
+                                const struct in6_addr *dns, size_t n_dns) {
+         _cleanup_free_ struct sd_radv_opt_dns *opt_rdnss = NULL;
+@@ -770,3 +845,54 @@ _public_ int sd_radv_prefix_set_preferred_lifetime(sd_radv_prefix *p,
+ 
+         return 0;
+ }
++
++_public_ int sd_radv_route_prefix_new(sd_radv_route_prefix **ret) {
++        sd_radv_route_prefix *p;
++
++        assert_return(ret, -EINVAL);
++
++        p = new(sd_radv_route_prefix, 1);
++        if (!p)
++                return -ENOMEM;
++
++        *p = (sd_radv_route_prefix) {
++                .n_ref = 1,
++
++                .opt.type = SD_RADV_OPT_ROUTE_INFORMATION,
++                .opt.length = DIV_ROUND_UP(sizeof(p->opt), 8),
++                .opt.prefixlen = 64,
++
++                .opt.lifetime = htobe32(604800),
++        };
++
++        *ret = p;
++        return 0;
++}
++
++DEFINE_PUBLIC_TRIVIAL_REF_UNREF_FUNC(sd_radv_route_prefix, sd_radv_route_prefix, mfree);
++
++_public_ int sd_radv_prefix_set_route_prefix(sd_radv_route_prefix *p, const struct in6_addr *in6_addr,
++                                             unsigned char prefixlen) {
++        assert_return(p, -EINVAL);
++        assert_return(in6_addr, -EINVAL);
++
++        if (prefixlen > 128)
++                return -EINVAL;
++
++        if (prefixlen > 64)
++                /* unusual but allowed, log it */
++                log_radv("Unusual prefix length %u greater than 64", prefixlen);
++
++        p->opt.in6_addr = *in6_addr;
++        p->opt.prefixlen = prefixlen;
++
++        return 0;
++}
++
++_public_ int sd_radv_route_prefix_set_lifetime(sd_radv_route_prefix *p, uint32_t valid_lifetime) {
++        assert_return(p, -EINVAL);
++
++        p->opt.lifetime = htobe32(valid_lifetime);
++
++        return 0;
++}
+diff --git a/src/network/networkd-network-gperf.gperf b/src/network/networkd-network-gperf.gperf
+index d4d108ad25..43163a31ec 100644
+--- a/src/network/networkd-network-gperf.gperf
++++ b/src/network/networkd-network-gperf.gperf
+@@ -223,6 +223,8 @@ IPv6Prefix.OnLink,                      config_parse_prefix_flags,
+ IPv6Prefix.AddressAutoconfiguration,    config_parse_prefix_flags,                       0,                             0
+ IPv6Prefix.ValidLifetimeSec,            config_parse_prefix_lifetime,                    0,                             0
+ IPv6Prefix.PreferredLifetimeSec,        config_parse_prefix_lifetime,                    0,                             0
++IPv6RoutePrefix.Route,                  config_parse_route_prefix,                       0,                             0
++IPv6RoutePrefix.LifetimeSec,            config_parse_route_prefix_lifetime,              0,                             0
+ CAN.BitRate,                            config_parse_si_size,                            0,                             offsetof(Network, can_bitrate)
+ CAN.SamplePoint,                        config_parse_permille,                           0,                             offsetof(Network, can_sample_point)
+ CAN.RestartSec,                         config_parse_sec,                                0,                             offsetof(Network, can_restart_us)
+diff --git a/src/network/networkd-network.c b/src/network/networkd-network.c
+index 70dbd31f50..0608219429 100644
+--- a/src/network/networkd-network.c
++++ b/src/network/networkd-network.c
+@@ -458,6 +458,7 @@ int network_load_one(Manager *manager, const char *filename) {
+                               "BridgeVLAN\0"
+                               "IPv6PrefixDelegation\0"
+                               "IPv6Prefix\0"
++                              "IPv6RoutePrefix\0"
+                               "CAN\0",
+                               config_item_perf_lookup, network_network_gperf_lookup,
+                               CONFIG_PARSE_WARN, network);
+diff --git a/src/network/networkd-network.h b/src/network/networkd-network.h
+index bc760744e5..486b8c31a5 100644
+--- a/src/network/networkd-network.h
++++ b/src/network/networkd-network.h
+@@ -221,6 +221,7 @@ struct Network {
+         LIST_HEAD(Neighbor, neighbors);
+         LIST_HEAD(AddressLabel, address_labels);
+         LIST_HEAD(Prefix, static_prefixes);
++        LIST_HEAD(Prefix, static_route_prefixes);
+         LIST_HEAD(RoutingPolicyRule, rules);
+ 
+         unsigned n_static_addresses;
+@@ -230,6 +231,7 @@ struct Network {
+         unsigned n_neighbors;
+         unsigned n_address_labels;
+         unsigned n_static_prefixes;
++        unsigned n_static_route_prefixes;
+         unsigned n_rules;
+ 
+         Hashmap *addresses_by_section;
+@@ -238,6 +240,7 @@ struct Network {
+         Hashmap *neighbors_by_section;
+         Hashmap *address_labels_by_section;
+         Hashmap *prefixes_by_section;
++        Hashmap *route_prefixes_by_section;
+         Hashmap *rules_by_section;
+ 
+         /* All kinds of DNS configuration */
+diff --git a/src/network/networkd-radv.c b/src/network/networkd-radv.c
+index 25321aefed..8972c661ae 100644
+--- a/src/network/networkd-radv.c
++++ b/src/network/networkd-radv.c
+@@ -101,16 +101,100 @@ static int prefix_new_static(Network *network, const char *filename,
+         return 0;
+ }
+ 
++int route_prefix_new(Prefix **ret) {
++        _cleanup_(prefix_freep) Prefix *prefix = NULL;
++
++        prefix = new0(Prefix, 1);
++        if (!prefix)
++                return -ENOMEM;
++
++        if (sd_radv_route_prefix_new(&prefix->radv_route_prefix) < 0)
++                return -ENOMEM;
++
++        *ret = TAKE_PTR(prefix);
++
++        return 0;
++}
++
++void route_prefix_free(Prefix *prefix) {
++        if (!prefix)
++                return;
++
++        if (prefix->network) {
++                LIST_REMOVE(prefixes, prefix->network->static_route_prefixes, prefix);
++                assert(prefix->network->n_static_route_prefixes > 0);
++                prefix->network->n_static_route_prefixes--;
++
++                if (prefix->section)
++                        hashmap_remove(prefix->network->route_prefixes_by_section,
++                                       prefix->section);
++        }
++
++        network_config_section_free(prefix->section);
++
++        free(prefix);
++}
++
++static int route_prefix_new_static(Network *network, const char *filename,
++                                   unsigned section_line, Prefix **ret) {
++        _cleanup_(network_config_section_freep) NetworkConfigSection *n = NULL;
++        _cleanup_(prefix_freep) Prefix *prefix = NULL;
++        int r;
++
++        assert(network);
++        assert(ret);
++        assert(!!filename == (section_line > 0));
++
++        if (filename) {
++                r = network_config_section_new(filename, section_line, &n);
++                if (r < 0)
++                        return r;
++
++                if (section_line) {
++                        prefix = hashmap_get(network->route_prefixes_by_section, n);
++                        if (prefix) {
++                                *ret = TAKE_PTR(prefix);
++
++                                return 0;
++                        }
++                }
++        }
++
++        r = route_prefix_new(&prefix);
++        if (r < 0)
++                return r;
++
++        prefix->network = network;
++        LIST_APPEND(prefixes, network->static_route_prefixes, prefix);
++        network->n_static_route_prefixes++;
++
++        if (filename) {
++                prefix->section = TAKE_PTR(n);
++
++                r = hashmap_ensure_allocated(&network->route_prefixes_by_section, &network_config_hash_ops);
++                if (r < 0)
++                        return r;
++
++                r = hashmap_put(network->route_prefixes_by_section, prefix->section, prefix);
++                if (r < 0)
++                        return r;
++        }
++
++        *ret = TAKE_PTR(prefix);
++
++        return 0;
++}
++
+ int config_parse_prefix(const char *unit,
+-                const char *filename,
+-                unsigned line,
+-                const char *section,
+-                unsigned section_line,
+-                const char *lvalue,
+-                int ltype,
+-                const char *rvalue,
+-                void *data,
+-                void *userdata) {
++                        const char *filename,
++                        unsigned line,
++                        const char *section,
++                        unsigned section_line,
++                        const char *lvalue,
++                        int ltype,
++                        const char *rvalue,
++                        void *data,
++                        void *userdata) {
+ 
+         Network *network = userdata;
+         _cleanup_(prefix_free_or_set_invalidp) Prefix *p = NULL;
+@@ -234,6 +318,90 @@ int config_parse_prefix_lifetime(const char *unit,
+         return 0;
+ }
+ 
++int config_parse_route_prefix(const char *unit,
++                              const char *filename,
++                              unsigned line,
++                              const char *section,
++                              unsigned section_line,
++                              const char *lvalue,
++                              int ltype,
++                              const char *rvalue,
++                              void *data,
++                              void *userdata) {
++
++        Network *network = userdata;
++        _cleanup_(prefix_free_or_set_invalidp) Prefix *p = NULL;
++        uint8_t prefixlen = 64;
++        union in_addr_union in6addr;
++        int r;
++
++        assert(filename);
++        assert(section);
++        assert(lvalue);
++        assert(rvalue);
++        assert(data);
++
++        r = route_prefix_new_static(network, filename, section_line, &p);
++        if (r < 0)
++                return r;
++
++        r = in_addr_prefix_from_string(rvalue, AF_INET6, &in6addr, &prefixlen);
++        if (r < 0) {
++                log_syntax(unit, LOG_ERR, filename, line, r, "Route prefix is invalid, ignoring assignment: %s", rvalue);
++                return 0;
++        }
++
++        if (sd_radv_prefix_set_route_prefix(p->radv_route_prefix, &in6addr.in6, prefixlen) < 0)
++                return -EADDRNOTAVAIL;
++
++        log_syntax(unit, LOG_INFO, filename, line, r, "Found route prefix %s", rvalue);
++
++        p = NULL;
++
++        return 0;
++}
++
++int config_parse_route_prefix_lifetime(const char *unit,
++                                       const char *filename,
++                                       unsigned line,
++                                       const char *section,
++                                       unsigned section_line,
++                                       const char *lvalue,
++                                       int ltype,
++                                       const char *rvalue,
++                                       void *data,
++                                       void *userdata) {
++        Network *network = userdata;
++        _cleanup_(prefix_free_or_set_invalidp) Prefix *p = NULL;
++        usec_t usec;
++        int r;
++
++        assert(filename);
++        assert(section);
++        assert(lvalue);
++        assert(rvalue);
++        assert(data);
++
++        r = route_prefix_new_static(network, filename, section_line, &p);
++        if (r < 0)
++                return r;
++
++        r = parse_sec(rvalue, &usec);
++        if (r < 0) {
++                log_syntax(unit, LOG_ERR, filename, line, r, "Roure lifetime is invalid, ignoring assignment: %s", rvalue);
++                return 0;
++        }
++
++        /* a value of 0xffffffff represents infinity */
++        r = sd_radv_route_prefix_set_lifetime(p->radv_route_prefix, DIV_ROUND_UP(usec, USEC_PER_SEC));
++        if (r < 0)
++                return r;
++
++        p = NULL;
++
++        return 0;
++}
++
+ static int radv_get_ip6dns(Network *network, struct in6_addr **dns,
+                            size_t *n_dns) {
+         _cleanup_free_ struct in6_addr *addresses = NULL;
+@@ -438,6 +606,15 @@ int radv_configure(Link *link) {
+                         if (r < 0)
+                                 return r;
+                 }
++
++                LIST_FOREACH(prefixes, p, link->network->static_route_prefixes) {
++                        r = sd_radv_add_route_prefix(link->radv, p->radv_route_prefix, false);
++                        if (r == -EEXIST)
++                                continue;
++                        if (r < 0)
++                                return r;
++                }
++
+         }
+ 
+         return radv_emit_dns(link);
+diff --git a/src/network/networkd-radv.h b/src/network/networkd-radv.h
+index 45be083bfe..2f60b285ae 100644
+--- a/src/network/networkd-radv.h
++++ b/src/network/networkd-radv.h
+@@ -26,8 +26,10 @@ struct Prefix {
+         NetworkConfigSection *section;
+ 
+         sd_radv_prefix *radv_prefix;
++        sd_radv_route_prefix *radv_route_prefix;
+ 
+         LIST_FIELDS(Prefix, prefixes);
++        LIST_FIELDS(Prefix, route_prefixes);
+ };
+ 
+ int prefix_new(Prefix **ret);
+@@ -35,6 +37,11 @@ void prefix_free(Prefix *prefix);
+ 
+ DEFINE_NETWORK_SECTION_FUNCTIONS(Prefix, prefix_free);
+ 
++int route_prefix_new(Prefix **ret);
++void route_prefix_free(Prefix *prefix);
++
++DEFINE_NETWORK_SECTION_FUNCTIONS(Prefix, route_prefix_free);
++
+ int radv_emit_dns(Link *link);
+ int radv_configure(Link *link);
+ 
+@@ -48,3 +55,5 @@ CONFIG_PARSER_PROTOTYPE(config_parse_prefix_flags);
+ CONFIG_PARSER_PROTOTYPE(config_parse_prefix_lifetime);
+ CONFIG_PARSER_PROTOTYPE(config_parse_radv_dns);
+ CONFIG_PARSER_PROTOTYPE(config_parse_radv_search_domains);
++CONFIG_PARSER_PROTOTYPE(config_parse_route_prefix);
++CONFIG_PARSER_PROTOTYPE(config_parse_route_prefix_lifetime);
+diff --git a/src/systemd/sd-radv.h b/src/systemd/sd-radv.h
+index 93861b9d24..f085231934 100644
+--- a/src/systemd/sd-radv.h
++++ b/src/systemd/sd-radv.h
+@@ -37,6 +37,7 @@ _SD_BEGIN_DECLARATIONS;
+ 
+ typedef struct sd_radv sd_radv;
+ typedef struct sd_radv_prefix sd_radv_prefix;
++typedef struct sd_radv_route_prefix sd_radv_route_prefix;
+ 
+ /* Router Advertisement */
+ int sd_radv_new(sd_radv **ret);
+@@ -59,6 +60,7 @@ int sd_radv_set_managed_information(sd_radv *ra, int managed);
+ int sd_radv_set_other_information(sd_radv *ra, int other);
+ int sd_radv_set_preference(sd_radv *ra, unsigned preference);
+ int sd_radv_add_prefix(sd_radv *ra, sd_radv_prefix *p, int dynamic);
++int sd_radv_add_route_prefix(sd_radv *ra, sd_radv_route_prefix *p, int dynamic);
+ sd_radv_prefix *sd_radv_remove_prefix(sd_radv *ra, const struct in6_addr *prefix,
+                                       unsigned char prefixlen);
+ int sd_radv_set_rdnss(sd_radv *ra, uint32_t lifetime,
+@@ -80,8 +82,16 @@ int sd_radv_prefix_set_valid_lifetime(sd_radv_prefix *p,
+ int sd_radv_prefix_set_preferred_lifetime(sd_radv_prefix *p,
+                                           uint32_t preferred_lifetime);
+ 
++int sd_radv_route_prefix_new(sd_radv_route_prefix **ret);
++sd_radv_route_prefix *sd_radv_route_prefix_ref(sd_radv_route_prefix *ra);
++sd_radv_route_prefix *sd_radv_route_prefix_unref(sd_radv_route_prefix *ra);
++
++int sd_radv_prefix_set_route_prefix(sd_radv_route_prefix *p, const struct in6_addr *in6_addr, unsigned char prefixlen);
++int sd_radv_route_prefix_set_lifetime(sd_radv_route_prefix *p, uint32_t valid_lifetime);
++
+ _SD_DEFINE_POINTER_CLEANUP_FUNC(sd_radv, sd_radv_unref);
+ _SD_DEFINE_POINTER_CLEANUP_FUNC(sd_radv_prefix, sd_radv_prefix_unref);
++_SD_DEFINE_POINTER_CLEANUP_FUNC(sd_radv_route_prefix, sd_radv_route_prefix_unref);
+ 
+ _SD_END_DECLARATIONS;
+ 
+diff --git a/test/fuzz/fuzz-network-parser/directives.network b/test/fuzz/fuzz-network-parser/directives.network
+index 848d4bd187..b688d37d08 100644
+--- a/test/fuzz/fuzz-network-parser/directives.network
++++ b/test/fuzz/fuzz-network-parser/directives.network
+@@ -174,6 +174,9 @@ OnLink=
+ PreferredLifetimeSec=
+ AddressAutoconfiguration=
+ ValidLifetimeSec=
++[IPv6RoutePrefix]
++Route=
++LifetimeSec=
+ [BridgeVLAN]
+ EgressUntagged=
+ VLAN=
+-- 
+2.23.0
+

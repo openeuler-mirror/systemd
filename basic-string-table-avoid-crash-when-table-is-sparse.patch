@@ -1,0 +1,27 @@
+From aa73f181e92ce991cff4e6890822764698befc90 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Thu, 27 Feb 2020 21:28:54 +0100
+Subject: [PATCH] basic/string-table: avoid crash when table is sparse
+
+Generated _from_string() would crash when invoked on a table with some
+holes.
+---
+ src/basic/string-table.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/basic/string-table.h b/src/basic/string-table.h
+index 2d3cf81435..96924778f5 100644
+--- a/src/basic/string-table.h
++++ b/src/basic/string-table.h
+@@ -44,7 +44,7 @@ ssize_t string_table_lookup(const char * const *table, size_t len, const char *k
+                 char *s;                                                \
+                 if (i < 0 || i > max)                                   \
+                         return -ERANGE;                                 \
+-                if (i < (type) ELEMENTSOF(name##_table)) {              \
++                if (i < (type) ELEMENTSOF(name##_table) && name##_table[i]) { \
+                         s = strdup(name##_table[i]);                    \
+                         if (!s)                                         \
+                                 return -ENOMEM;                         \
+-- 
+2.23.0
+

@@ -1,0 +1,42 @@
+From 6d9e0ca400133aeffa4a53c707db43b3e6c98c7b Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 9 Jan 2020 17:01:14 +0100
+Subject: [PATCH] core: expose swap priority value via dbus only if it is set
+
+---
+ src/core/dbus-swap.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/dbus-swap.c b/src/core/dbus-swap.c
+index 353fa20132..57c8c42091 100644
+--- a/src/core/dbus-swap.c
++++ b/src/core/dbus-swap.c
+@@ -12,16 +12,23 @@
+ #include "unit.h"
+ 
+ static int swap_get_priority(Swap *s) {
+-        if (s->from_proc_swaps)
++        assert(s);
++
++        if (s->from_proc_swaps && s->parameters_proc_swaps.priority_set)
+                 return s->parameters_proc_swaps.priority;
+-        if (s->from_fragment)
++
++        if (s->from_fragment && s->parameters_fragment.priority_set)
+                 return s->parameters_fragment.priority;
++
+         return -1;
+ }
+ 
+ static const char *swap_get_options(Swap *s) {
++        assert(s);
++
+         if (s->from_fragment)
+                 return s->parameters_fragment.options;
++
+         return NULL;
+ }
+ 
+-- 
+2.23.0
+

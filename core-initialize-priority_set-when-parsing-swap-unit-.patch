@@ -1,0 +1,99 @@
+From eb34a981d67165ec346c69aba53168facc556b64 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 9 Jan 2020 17:02:56 +0100
+Subject: [PATCH] core: initialize priority_set when parsing swap unit files
+
+Fixes: #14524
+---
+ src/core/load-fragment-gperf.gperf.m4 |  2 +-
+ src/core/load-fragment.c              | 48 +++++++++++++++++++++++++++
+ src/core/load-fragment.h              |  1 +
+ 3 files changed, 50 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/load-fragment-gperf.gperf.m4 b/src/core/load-fragment-gperf.gperf.m4
+index de08f7d067..c1f8ac7bb2 100644
+--- a/src/core/load-fragment-gperf.gperf.m4
++++ b/src/core/load-fragment-gperf.gperf.m4
+@@ -435,7 +435,7 @@ Automount.DirectoryMode,         config_parse_mode,                  0,
+ Automount.TimeoutIdleSec,        config_parse_sec_fix_0,             0,                             offsetof(Automount, timeout_idle_usec)
+ m4_dnl
+ Swap.What,                       config_parse_unit_path_printf,      0,                             offsetof(Swap, parameters_fragment.what)
+-Swap.Priority,                   config_parse_int,                   0,                             offsetof(Swap, parameters_fragment.priority)
++Swap.Priority,                   config_parse_swap_priority,         0,                             0
+ Swap.Options,                    config_parse_unit_string_printf,    0,                             offsetof(Swap, parameters_fragment.options)
+ Swap.TimeoutSec,                 config_parse_sec_fix_0,             0,                             offsetof(Swap, timeout_usec)
+ EXEC_CONTEXT_CONFIG_ITEMS(Swap)m4_dnl
+diff --git a/src/core/load-fragment.c b/src/core/load-fragment.c
+index 1679e047dd..8f9a2f64db 100644
+--- a/src/core/load-fragment.c
++++ b/src/core/load-fragment.c
+@@ -5129,6 +5129,54 @@ int config_parse_crash_chvt(
+         return 0;
+ }
+
++int config_parse_swap_priority(
++                const char *unit,
++                const char *filename,
++                unsigned line,
++                const char *section,
++                unsigned section_line,
++                const char *lvalue,
++                int ltype,
++                const char *rvalue,
++                void *data,
++                void *userdata) {
++
++        Swap *s = userdata;
++        int r, priority;
++
++        assert(s);
++        assert(filename);
++        assert(lvalue);
++        assert(rvalue);
++        assert(data);
++
++        if (isempty(rvalue)) {
++                s->parameters_fragment.priority = -1;
++                s->parameters_fragment.priority_set = false;
++                return 0;
++        }
++
++        r = safe_atoi(rvalue, &priority);
++        if (r < 0) {
++                log_syntax(unit, LOG_ERR, filename, line, r, "Invalid swap pririty '%s', ignoring.", rvalue);
++                return 0;
++        }
++
++        if (priority < -1) {
++                log_syntax(unit, LOG_ERR, filename, line, 0, "Sorry, swap priorities smaller than -1 may only be assigned by the kernel itself, ignoring: %s", rvalue);
++                return 0;
++        }
++
++        if (priority > 32767) {
++                log_syntax(unit, LOG_ERR, filename, line, 0, "Swap priority out of range, ignoring: %s", rvalue);
++                return 0;
++        }
++
++        s->parameters_fragment.priority = priority;
++        s->parameters_fragment.priority_set = true;
++        return 0;
++}
++
+ int config_parse_timeout_abort(
+                 const char* unit,
+                 const char *filename,
+diff --git a/src/core/load-fragment.h b/src/core/load-fragment.h
+index b81887d510..28613ef5b3 100644
+--- a/src/core/load-fragment.h
++++ b/src/core/load-fragment.h
+@@ -121,6 +121,7 @@ CONFIG_PARSER_PROTOTYPE(config_parse_status_unit_format);
+ CONFIG_PARSER_PROTOTYPE(config_parse_output_restricted);
+ CONFIG_PARSER_PROTOTYPE(config_parse_crash_chvt);
+ CONFIG_PARSER_PROTOTYPE(config_parse_timeout_abort);
++CONFIG_PARSER_PROTOTYPE(config_parse_swap_priority);
+ 
+ /* gperf prototypes */
+ const struct ConfigPerfItem* load_fragment_gperf_lookup(const char *key, GPERF_LEN_TYPE length);
+-- 
+2.23.0
+

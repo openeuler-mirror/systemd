@@ -1,0 +1,28 @@
+From 6fca66a7f125607864850ac9a4d6cc56a27594dd Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 9 Jan 2020 17:04:25 +0100
+Subject: [PATCH] core: set error value correctly
+
+---
+ src/core/swap.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/swap.c b/src/core/swap.c
+index d4f6db6ddc..225488282e 100644
+--- a/src/core/swap.c
++++ b/src/core/swap.c
+@@ -777,8 +777,10 @@ static void swap_enter_activating(Swap *s) {
+                                 r = asprintf(&opts, "%s,pri=%i", s->parameters_fragment.options, s->parameters_fragment.priority);
+                         else
+                                 r = asprintf(&opts, "pri=%i", s->parameters_fragment.priority);
+-                        if (r < 0)
++                        if (r < 0) {
++                                r = -ENOMEM;
+                                 goto fail;
++                        }
+                 }
+         }
+ 
+-- 
+2.23.0
+
