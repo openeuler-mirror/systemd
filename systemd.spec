@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        25
+Release:        26
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -113,6 +113,7 @@ Patch0062:      core-use-unit-based-logging-instead-of-generic-loggi.patch
 Patch0063:      core-set-error-value-correctly.patch
 Patch0064:      core-fix-re-realization-of-cgroup-siblings.patch
 Patch0065:      basic-string-table-avoid-crash-when-table-is-sparse.patch
+Patch0066:      journal-fix-buffer-overrun-when-urlifying.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1505,6 +1506,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Jul 7 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-26
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:fix buffer overrun when urlifying
+
 * Thu Jun 18 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-25
 - Type:enhancement
 - ID:NA
