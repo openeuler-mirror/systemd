@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        1
+Release:        2
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,7 +63,7 @@ Patch0012:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
 Patch0013:      sd-bus-properly-initialize-containers.patch
 Patch0014:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
 Patch0015:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
-
+Patch0016:      journal-fix-buffer-overrun-when-urlifying.patch
 ## The patch of 0026~0029 resolve the pid1 memory leaks
 #Patch0034:      revert-pid1-drop-unit-caches-only-based-on-mtime.patch
 #Patch0035:      revert-analyze-add-unit-files-to-dump-the-unit-fragm.patch
@@ -1495,6 +1495,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Jul 7 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-2
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:fix buffer overrun when urlifying.
+
 * Fri Jun 12 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-1
 - Type:enhancement
 - ID:NA
