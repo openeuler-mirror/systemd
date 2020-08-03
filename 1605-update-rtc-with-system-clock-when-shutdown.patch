@@ -10,7 +10,7 @@ Subject: [PATCH] Module: modification summary
 
 diff --git a/units/hwclock-save.service.in b/units/hwclock-save.service.in
 new file mode 100644
-index 0000000000..db33418932
+index 0000000..db33418
 --- /dev/null
 +++ b/units/hwclock-save.service.in
 @@ -0,0 +1,19 @@
@@ -34,7 +34,7 @@ index 0000000000..db33418932
 +WantedBy=default.target
 +
 diff --git a/units/meson.build b/units/meson.build
-index c641900c66..63fc331921 100644
+index aa2ed11..9992389 100644
 --- a/units/meson.build
 +++ b/units/meson.build
 @@ -220,6 +220,8 @@ in_units = [

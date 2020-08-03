@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        2
+Release:        3
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,12 +63,6 @@ Patch0012:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
 Patch0013:      sd-bus-properly-initialize-containers.patch
 Patch0014:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
 Patch0015:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
-Patch0016:      journal-fix-buffer-overrun-when-urlifying.patch
-## The patch of 0026~0029 resolve the pid1 memory leaks
-#Patch0034:      revert-pid1-drop-unit-caches-only-based-on-mtime.patch
-#Patch0035:      revert-analyze-add-unit-files-to-dump-the-unit-fragm.patch
-#Patch0036:      revert-pid1-use-a-cache-for-all-unit-aliases.patch
-#Patch0037:      revert-shared-unit-file-add-a-function-to-validate-u.patch
 
 #openEuler
 Patch9001:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -884,7 +878,7 @@ fi
 %dir %{_systemddir}/user-environment-generators
 %{_systemddir}/systemd-shutdown
 %{_systemddir}/systemd-portabled
-%{_systemddir}/libsystemd-shared-245.so
+%{_systemddir}/libsystemd-shared-246.so
 %{_systemddir}/systemd-reply-password
 %dir %{_systemddir}/system-generators
 %dir %{_systemddir}/system
@@ -1223,9 +1217,7 @@ fi
 %{_libdir}/libnss_systemd.so.2
 %{_libdir}/libnss_resolve.so.2
 %{_libdir}/libnss_myhostname.so.2
-%{_libdir}/libsystemd.so.0
 %{_libdir}/libsystemd.so.*
-%{_libdir}/libudev.so.1
 %{_libdir}/libudev.so.*
 
 %files devel
@@ -1375,6 +1367,9 @@ fi
 %{_udevhwdbdir}/60-sensor.hwdb
 %{_udevhwdbdir}/70-mouse.hwdb
 %{_udevhwdbdir}/60-input-id.hwdb
+%{_udevhwdbdir}/60-autosuspend-chromiumos.hwdb
+%{_udevhwdbdir}/60-autosuspend.hwdb
+%{_udevrulesdir}/60-autosuspend.rules
 %{_udevrulesdir}/40-openEuler.rules
 %{_udevrulesdir}/40-elevator.rules
 %{_udevrulesdir}/73-idrac.rules
@@ -1406,9 +1401,7 @@ fi
 %{_udevrulesdir}/99-systemd.rules
 %{_udevrulesdir}/60-persistent-storage-tape.rules
 %{_udevrulesdir}/50-udev-default.rules
-%{_udevrulesdir}/60-autosuspend-chromiumos.rules
 %{_udevrulesdir}/60-fido-id.rules
-%{_udevrulesdir}/61-autosuspend-manual.rules
 /usr/lib/modprobe.d/systemd.conf
 %ghost %config(noreplace) /etc/vconsole.conf
 %dir /etc/udev
@@ -1495,6 +1488,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Aug 01 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-3
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:Update to real release 246
+
 * Tue Jul 7 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-2
 - Type:enhancement
 - ID:NA
