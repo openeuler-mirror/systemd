@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        3
+Release:        4
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,6 +63,7 @@ Patch0012:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
 Patch0013:      sd-bus-properly-initialize-containers.patch
 Patch0014:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
 Patch0015:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
+Patch0016:      sd-bus-fix-error-handling-on-readv.patch
 
 #openEuler
 Patch9001:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1488,6 +1489,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Sep 9 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-4
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:fix error handling on readv
+
 * Mon Aug 01 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-3
 - Type:enhancement
 - ID:NA
