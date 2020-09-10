@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        4
+Release:        5
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -549,6 +549,8 @@ setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/ &>/de
 # This will fix up enablement of any preset services that got installed
 # before systemd due to rpm ordering problems:
 # https://bugzilla.redhat.com/show_bug.cgi?id=1647172
+echo "DefaultTasksMax=85%" >> /etc/systemd/system.conf
+
 if [ $1 -eq 1 ] ; then
         systemctl preset-all &>/dev/null || :
 fi
@@ -1489,6 +1491,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Sep 9 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-5
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:set default tasks max to 85%
+
 * Wed Sep 9 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-4
 - Type:enhancement
 - ID:NA
