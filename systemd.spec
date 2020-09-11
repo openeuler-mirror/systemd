@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        5
+Release:        6
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -66,10 +66,6 @@ Patch0015:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0016:      sd-bus-fix-error-handling-on-readv.patch
 
 #openEuler
-Patch9001:      1509-fix-journal-file-descriptors-leak-problems.patch
-Patch9002:      1602-activation-service-must-be-restarted-when-reactivated.patch
-Patch9003:      1605-systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
-Patch9004:      1619-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
 Patch9005:      systemd-change-time-log-level.patch
 Patch9006:      fix-capsh-drop-but-ping-success.patch
 Patch9007:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
@@ -278,7 +274,11 @@ CONFIGURE_OPTS=(
         -Db_ndebug=false
         -Dman=true
         -Dversion-tag=v%{version}-%{release}
-	-Ddefault-hierarchy=legacy
+        -Ddefault-hierarchy=legacy
+        -Ddefault-dnssec=no
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1867830
+        -Ddefault-mdns=no
+        -Ddefault-llmnr=resolve
 )
 
 %meson "${CONFIGURE_OPTS[@]}"
@@ -549,7 +549,7 @@ setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/ &>/de
 # This will fix up enablement of any preset services that got installed
 # before systemd due to rpm ordering problems:
 # https://bugzilla.redhat.com/show_bug.cgi?id=1647172
-echo "DefaultTasksMax=85%" >> /etc/systemd/system.conf
+echo "DefaultTasksMax=80%" >> /etc/systemd/system.conf
 
 if [ $1 -eq 1 ] ; then
         systemctl preset-all &>/dev/null || :
@@ -1491,6 +1491,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Sep 11 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-6
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:delete unneed patches
+
 * Wed Sep 9 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-5
 - Type:enhancement
 - ID:NA
