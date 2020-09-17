@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        6
+Release:        7
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -48,6 +48,7 @@ Source105:	rule_generator.functions
 Source106:	write_net_rules
 Source107:	detect_virt
 
+Patch0000:      rebase-to-bded6ff0d0da905a82884ccccbe729af42cc207d.patch
 Patch0001:      1605-update-rtc-with-system-clock-when-shutdown.patch
 Patch0002:      1603-udev-add-actions-while-rename-netif-failed.patch
 Patch0003:      fix-two-VF-virtual-machines-have-same-mac-address.patch
@@ -63,12 +64,9 @@ Patch0012:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
 Patch0013:      sd-bus-properly-initialize-containers.patch
 Patch0014:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
 Patch0015:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
-Patch0016:      sd-bus-fix-error-handling-on-readv.patch
-
-#openEuler
-Patch9005:      systemd-change-time-log-level.patch
-Patch9006:      fix-capsh-drop-but-ping-success.patch
-Patch9007:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+Patch0016:      systemd-change-time-log-level.patch
+Patch0017:      fix-capsh-drop-but-ping-success.patch
+Patch0018:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -114,8 +112,8 @@ Recommends:     %{name}-help
 
 Provides:       %{name}-pam
 Provides:       %{name}-rpm-config
-Obsoletes:      %{name}-pam
-Obsoletes:      %{name}-rpm-config
+Obsoletes:      %{name}-pam < 243
+Obsoletes:      %{name}-rpm-config < 243
 
 %description
 systemd is a system and service manager that runs as PID 1 and starts
@@ -689,7 +687,6 @@ fi
 
 %files -f %{name}.lang
 %doc %{_pkgdocdir}
-%exclude /usr/lib/systemd/tests
 %exclude %{_pkgdocdir}/LICENSE.*
 %license LICENSE.GPL2 LICENSE.LGPL2.1
 %ghost %dir %attr(0755,-,-) /etc/systemd/system/basic.target.wants
@@ -836,6 +833,7 @@ fi
 /usr/bin/systemctl
 /usr/bin/journalctl
 /usr/bin/systemd-analyze
+/usr/bin/systemd-dissect
 /usr/bin/loginctl
 /usr/bin/timedatectl
 /usr/bin/systemd-sysusers
@@ -848,6 +846,7 @@ fi
 %dir /usr/lib/sysctl.d
 %dir /usr/lib/systemd
 %dir /usr/lib/sysusers.d
+/usr/lib/pam.d/systemd-user
 /usr/lib/sysusers.d/systemd.conf
 /usr/lib/sysusers.d/basic.conf
 /usr/lib/systemd/system/hwclock-save.service
@@ -894,7 +893,6 @@ fi
 %dir %{_systemddir}/user-preset
 %{_systemddir}/systemd-coredump
 %{_systemddir}/resolv.conf
-%{_systemddir}/systemd-dissect
 %{_systemddir}/systemd-veritysetup
 %{_systemddir}/systemd-network-generator
 %{_systemddir}/systemd-time-wait-sync
@@ -1110,6 +1108,7 @@ fi
 %{_unitdir}/systemd-journald@.socket
 %{_unitdir}/systemd-userdbd.service
 %{_unitdir}/systemd-userdbd.socket
+%{_unitdir}/usb-gadget.target
 %{_unitdir}/modprobe@.service
 %{_systemddir}/system-generators/systemd-fstab-generator
 %{_systemddir}/system-generators/systemd-sysv-generator
@@ -1491,6 +1490,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Sep 17 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-7
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:delete unneed patches and rebase to bded6f
+
 * Fri Sep 11 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-6
 - Type:enhancement
 - ID:NA
