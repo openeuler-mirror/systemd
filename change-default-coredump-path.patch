@@ -1,0 +1,25 @@
+From 77ea5b071789c43443bbcc5c4be88d72cdd3b1a0 Mon Sep 17 00:00:00 2001
+From: Yangyang Shen <shenyangyang4@huawei.com>
+Date: Sat, 26 Sep 2020 18:53:43 +0800
+Subject: [PATCH] change default coredump path
+
+---
+ sysctl.d/50-coredump.conf.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/sysctl.d/50-coredump.conf.in b/sysctl.d/50-coredump.conf.in
+index da76fd7..06b3a87 100644
+--- a/sysctl.d/50-coredump.conf.in
++++ b/sysctl.d/50-coredump.conf.in
+@@ -13,7 +13,7 @@
+ # the core dump.
+ #
+ # See systemd-coredump(8) and core(5).
+-kernel.core_pattern=|@rootlibexecdir@/systemd-coredump %P %u %g %s %t %c %h
++kernel.core_pattern=@rootlibexecdir@/core-%e-%p-%t
+ 
+ # Also dump processes executing a set-user-ID/set-group-ID program that is
+ # owned by a user/group other than the real user/group ID of the process, or
+-- 
+2.23.0
+
