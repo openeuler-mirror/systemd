@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        8
+Release:        9
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1493,7 +1493,13 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Thu Sep 17 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-7
+* Sun Sep 27 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-9
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:modify the last modification
+
+* Sat Sep 26 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-8
 - Type:enhancement
 - ID:NA
 - SUG:NA
