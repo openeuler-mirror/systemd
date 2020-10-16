@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        9
+Release:        10
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -68,7 +68,7 @@ Patch0016:      systemd-change-time-log-level.patch
 Patch0017:      fix-capsh-drop-but-ping-success.patch
 Patch0018:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 %ifarch aarch64
-Patch0019:	change-default-coredump-path.patch
+Patch0019:	sysctl-set-kernel.core_pipe_limit-16.patch
 %endif
 
 BuildRequires:  gcc, gcc-c++
@@ -1493,6 +1493,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Oct 16 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-10
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:modify the last modification with upstream patch, set kernel.core_pipe_limit=16
+
 * Sun Sep 27 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-9
 - Type:enhancement
 - ID:NA
