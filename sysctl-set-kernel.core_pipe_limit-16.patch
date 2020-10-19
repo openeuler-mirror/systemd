@@ -1,0 +1,51 @@
+From 2a9b9323cd844baae3229e9dba67e478bee70654 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 12 Oct 2020 16:31:42 +0200
+Subject: [PATCH 042/100] sysctl: set kernel.core_pipe_limit=16
+
+We need to make sure that our coredump pattern handler manages to read
+process metadata from /proc/$PID/ before the kernel reaps the crashed
+process. By default the kernel will reap the process as soon as it can.
+By setting kernel.core_pipe_limit to a non-zero the kernel will wait for
+userspace to finish before reaping.
+
+We'll set the value to 16, which allows 16 crashes to be
+processed in parallel. This matches the MaxConnections= setting in
+systemd-coredump.socket.
+
+See: #17301
+
+(This doesn't close 17301, since we probably should also gracefully
+handle if /proc/$PID/ vanished already while our coredump handler runs,
+just in case people loclly set the sysctl back to zero. i.e. we should
+collect what we can and rather issue an incomplete log record than
+none.)
+---
+ sysctl.d/50-coredump.conf.in | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/sysctl.d/50-coredump.conf.in b/sysctl.d/50-coredump.conf.in
+index da76fd71d6..4338756efd 100644
+--- a/sysctl.d/50-coredump.conf.in
++++ b/sysctl.d/50-coredump.conf.in
+@@ -15,6 +15,17 @@
+ # See systemd-coredump(8) and core(5).
+ kernel.core_pattern=|@rootlibexecdir@/systemd-coredump %P %u %g %s %t %c %h
+ 
++# Allow that 16 coredumps are dispatched in parallel by the kernel. We want to
++# be able to collect process metadata from /proc/%P/ while processing
++# coredumps, and thus need to make sure the crashed processes are not reaped
++# until we finished collecting what we need. The kernel default for this sysctl
++# is "0" which means the kernel doesn't wait for userspace processes to finish
++# processing before reaping the crashed processes — by setting this higher the
++# kernel will delay reaping until we are done, but only for the specified
++# number of crashes in parallel. The value of 16 is chosen to match
++# systemd-coredump.socket's MaxConnections= value.
++kernel.core_pipe_limit=16
++
+ # Also dump processes executing a set-user-ID/set-group-ID program that is
+ # owned by a user/group other than the real user/group ID of the process, or
+ # a program that has file capabilities. ("2" is called "suidsafe" in core(5)).
+-- 
+2.23.0
+
