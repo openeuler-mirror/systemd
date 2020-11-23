@@ -11,7 +11,7 @@ Resolves: #1670126
  1 file changed, 1 insertion(+)
 
 diff --git a/rules/meson.build b/rules/meson.build
-index 1da958b..043313a 100644
+index 0fb5c6a..a2dbf2b 100644
 --- a/rules/meson.build
 +++ b/rules/meson.build
 @@ -1,6 +1,7 @@
@@ -20,8 +20,8 @@ index 1da958b..043313a 100644
  rules = files('''
 +        40-elevator.rules
          60-block.rules
-         60-block-scheduler.rules
          60-cdrom_id.rules
+         60-drm.rules
 -- 
-2.19.1
+2.23.0
 
