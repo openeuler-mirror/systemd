@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        26
+Release:        28
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -44,7 +44,6 @@ Source105:	rule_generator.functions
 Source106:	write_net_rules
 Source107:	detect_virt
 
-Patch0001:      0001-udev-use-bfq-as-the-default-scheduler.patch 
 Patch0002:      0001-udev-ignore-error-caused-by-device-disconnection.patch
 Patch0003:      0001-core-dont-check-error-parameter-of-get_name_owner_handler.patch
 Patch0004:      0001-core-dont-check-potentially-NULL-error.patch
@@ -1140,7 +1139,6 @@ fi
 %{_unitdir}/multi-user.target.wants/systemd-update-utmp-runlevel.service
 %{_unitdir}/systemd-hostnamed.service.d/disable-privatedevices.conf
 %{_unitdir}/sockets.target.wants/systemd-coredump.socket
-%{_unitdir}/sockets.target.wants/systemd-journald-audit.socket
 %{_unitdir}/sockets.target.wants/systemd-journald-dev-log.socket
 %{_unitdir}/sockets.target.wants/systemd-journald.socket
 %{_unitdir}/sockets.target.wants/systemd-initctl.socket
@@ -1409,7 +1407,6 @@ fi
 %{_udevrulesdir}/60-persistent-v4l.rules
 %{_udevrulesdir}/70-joystick.rules
 %{_udevrulesdir}/70-power-switch.rules
-%{_udevrulesdir}/60-block-scheduler.rules
 %{_udevrulesdir}/60-persistent-storage.rules
 %{_udevrulesdir}/80-net-setup-link.rules
 %{_udevrulesdir}/60-evdev.rules
@@ -1506,6 +1503,19 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Nov 25 2020 shenyangyang <shenyangyang4@huawei.com> - 243-28
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:don't enable systemd-journald-audit.socket by default
+
+* Mon Nov 23 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-27
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:add elevator= kernel command line parameter and don't enable bfq
+       by default
+
 * Tue Jul 7 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-26
 - Type:enhancement
 - ID:NA

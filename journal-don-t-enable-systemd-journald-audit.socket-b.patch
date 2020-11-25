@@ -7,9 +7,24 @@ Subject: [PATCH] journal: don't enable systemd-journald-audit.socket
 Resolves: #1699287
 
 ---
+ units/meson.build                 | 3 +--
  units/systemd-journald.service.in | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ 2 files changed, 2 insertions(+), 3 deletions(-)
 
+diff --git a/units/meson.build b/units/meson.build
+index e105ade..48c621d 100644
+--- a/units/meson.build
++++ b/units/meson.build
+@@ -88,8 +88,7 @@ units = [
+          'sockets.target.wants/'],
+         ['systemd-journal-gatewayd.socket',     'ENABLE_REMOTE HAVE_MICROHTTPD'],
+         ['systemd-journal-remote.socket',       'ENABLE_REMOTE HAVE_MICROHTTPD'],
+-        ['systemd-journald-audit.socket',       '',
+-         'sockets.target.wants/'],
++        ['systemd-journald-audit.socket',       ''],
+         ['systemd-journald-dev-log.socket',     '',
+          'sockets.target.wants/'],
+         ['systemd-journald.socket',             '',
 diff --git a/units/systemd-journald.service.in b/units/systemd-journald.service.in
 index 089bc38..7436619 100644
 --- a/units/systemd-journald.service.in
@@ -24,5 +39,5 @@ index 089bc38..7436619 100644
  SystemCallArchitectures=native
  SystemCallErrorNumber=EPERM
 -- 
-2.19.1
+2.23.0
 
