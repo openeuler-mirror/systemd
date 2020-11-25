@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        7
+Release:        8
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1095,7 +1095,6 @@ fi
 %{_unitdir}/multi-user.target.wants/systemd-update-utmp-runlevel.service
 %{_unitdir}/systemd-hostnamed.service.d/disable-privatedevices.conf
 %{_unitdir}/sockets.target.wants/systemd-coredump.socket
-%{_unitdir}/sockets.target.wants/systemd-journald-audit.socket
 %{_unitdir}/sockets.target.wants/systemd-journald-dev-log.socket
 %{_unitdir}/sockets.target.wants/systemd-journald.socket
 %{_unitdir}/sockets.target.wants/systemd-initctl.socket
@@ -1490,6 +1489,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Nov 25 2020 shenyangyang <shenyangyang4@huawei.com> - 246-8
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:don't enable systemd-journald-audit.socket by default
+
 * Thu Sep 17 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-7
 - Type:enhancement
 - ID:NA
