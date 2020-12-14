@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        28
+Release:        29
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1139,6 +1139,7 @@ fi
 %{_unitdir}/multi-user.target.wants/systemd-update-utmp-runlevel.service
 %{_unitdir}/systemd-hostnamed.service.d/disable-privatedevices.conf
 %{_unitdir}/sockets.target.wants/systemd-coredump.socket
+%{_unitdir}/sockets.target.wants/systemd-journald-audit.socket
 %{_unitdir}/sockets.target.wants/systemd-journald-dev-log.socket
 %{_unitdir}/sockets.target.wants/systemd-journald.socket
 %{_unitdir}/sockets.target.wants/systemd-initctl.socket
@@ -1503,6 +1504,14 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Dec 14 2020 shenyangyang <shenyangyang4@huawei.com> - 243-29
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:revert don't enable systemd-journald-audit.socket by default
+       that may cause reboot problem if update systemd with out dracut -f
+       from LTS-20.03
+
 * Wed Nov 25 2020 shenyangyang <shenyangyang4@huawei.com> - 243-28
 - Type:enhancement
 - ID:NA
