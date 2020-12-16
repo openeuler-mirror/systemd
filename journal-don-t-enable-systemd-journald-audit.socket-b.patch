@@ -7,26 +7,11 @@ Subject: [PATCH] journal: don't enable systemd-journald-audit.socket
 Resolves: #1699287
 
 ---
- units/meson.build                 | 3 +--
  units/systemd-journald.service.in | 2 +-
- 2 files changed, 2 insertions(+), 3 deletions(-)
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/units/meson.build b/units/meson.build
-index 4eb09a3..ccea8a6 100644
---- a/units/meson.build
-+++ b/units/meson.build
-@@ -110,8 +110,7 @@ units = [
-          'sysinit.target.wants/'],
-         ['systemd-journal-gatewayd.socket',     'ENABLE_REMOTE HAVE_MICROHTTPD'],
-         ['systemd-journal-remote.socket',       'ENABLE_REMOTE HAVE_MICROHTTPD'],
--        ['systemd-journald-audit.socket',       '',
--         'sockets.target.wants/'],
-+        ['systemd-journald-audit.socket',       ''],
-         ['systemd-journald-dev-log.socket',     '',
-          'sockets.target.wants/'],
-         ['systemd-journald.socket',             '',
 diff --git a/units/systemd-journald.service.in b/units/systemd-journald.service.in
-index 0cb1bfa..fa7348a 100644
+index 0cb1bfa3ca..fa7348aa79 100644
 --- a/units/systemd-journald.service.in
 +++ b/units/systemd-journald.service.in
 @@ -34,7 +34,7 @@ RestrictRealtime=yes
