@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        11
+Release:        12
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -530,12 +530,6 @@ systemd-machine-id-setup &>/dev/null || :
 systemctl daemon-reexec &>/dev/null || :
 journalctl --update-catalog &>/dev/null || :
 systemd-tmpfiles --create &>/dev/null || :
-
-# create /var/log/journal only on initial installation,
-# and only if it's writable (it won't be in rpm-ostree).
-if [ $1 -eq 1 ] && [ -w %{_localstatedir} ]; then
-    mkdir -p %{_localstatedir}/log/journal
-fi
 
 # Make sure new journal files will be owned by the "systemd-journal" group
 machine_id=$(cat /etc/machine-id 2>/dev/null)
@@ -1098,6 +1092,7 @@ fi
 %{_unitdir}/multi-user.target.wants/systemd-update-utmp-runlevel.service
 %{_unitdir}/systemd-hostnamed.service.d/disable-privatedevices.conf
 %{_unitdir}/sockets.target.wants/systemd-coredump.socket
+%{_unitdir}/sockets.target.wants/systemd-journald-audit.socket
 %{_unitdir}/sockets.target.wants/systemd-journald-dev-log.socket
 %{_unitdir}/sockets.target.wants/systemd-journald.socket
 %{_unitdir}/sockets.target.wants/systemd-initctl.socket
@@ -1492,6 +1487,13 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Dec 16 2020 shenyangyang <shenyangyang4@huawei.com> - 246-12
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:revert don't enable systemd-journald-audit.socket by default
+       and do not create /var/log/journal on initial installation
+
 * Wed Nov 25 2020 shenyangyang <shenyangyang4@huawei.com> - 246-11
 - Type:enhancement
 - ID:NA
@@ -1968,7 +1970,7 @@ fi
 - Type:bugfix
 - ID:NA
 - SUG:restart
-- DESC:do not create /var/log/journal on initial installation refer to redhat8
+- DESC:do not create /var/log/journal on initial installation
 
 * Sat Feb 02 2019 Yi Cang<cangyi@huawei.com> - 239-3.h3
 - Type:enhance
