@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        29
+Release:        30
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -575,12 +575,6 @@ systemd-machine-id-setup &>/dev/null || :
 systemctl daemon-reexec &>/dev/null || :
 journalctl --update-catalog &>/dev/null || :
 systemd-tmpfiles --create &>/dev/null || :
-
-# create /var/log/journal only on initial installation,
-# and only if it's writable (it won't be in rpm-ostree).
-if [ $1 -eq 1 ] && [ -w %{_localstatedir} ]; then
-    mkdir -p %{_localstatedir}/log/journal
-fi
 
 # Make sure new journal files will be owned by the "systemd-journal" group
 machine_id=$(cat /etc/machine-id 2>/dev/null)
@@ -1504,6 +1498,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Dec 16 2020 shenyangyang <shenyangyang4@huawei.com> - 243-30
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:do not create /var/log/journal on initial installation
+
 * Mon Dec 14 2020 shenyangyang <shenyangyang4@huawei.com> - 243-29
 - Type:enhancement
 - ID:NA
@@ -1953,7 +1953,7 @@ fi
 - Type:bugfix
 - ID:NA
 - SUG:restart
-- DESC:do not create /var/log/journal on initial installation refer to redhat8
+- DESC:do not create /var/log/journal on initial installation
 
 * Sat Feb 02 2019 Yi Cang<cangyi@huawei.com> - 239-3.h3
 - Type:enhance
