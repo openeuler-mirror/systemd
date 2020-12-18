@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        12
+Release:        13
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1487,6 +1487,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Dec 18 2020 overweight <hexiaowen@huawei.com> - 246-13
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix 40-openEuler.rules for memory offline
+
 * Wed Dec 16 2020 shenyangyang <shenyangyang4@huawei.com> - 246-12
 - Type:enhancement
 - ID:NA
