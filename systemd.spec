@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        13
+Release:        14
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -70,6 +70,8 @@ Patch0018:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 %ifarch aarch64
 Patch0019:	sysctl-set-kernel.core_pipe_limit-16.patch
 %endif
+Patch0020:      core-serialize-u-pids-until-the-processes-have-been-.patch
+Patch0021:      scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1487,6 +1489,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Jan 22 2021 fangxiuning <fangxiuning@huawei.com> - 246-14
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: fix login timeout 2 minutes
+
 * Fri Dec 18 2020 overweight <hexiaowen@huawei.com> - 246-13
 - Type:bugfix
 - ID:NA
