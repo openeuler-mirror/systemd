@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        10
+Release:        11
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -67,6 +67,8 @@ Patch0015:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0016:      systemd-change-time-log-level.patch
 Patch0017:      fix-capsh-drop-but-ping-success.patch
 Patch0018:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+Patch0019:      core-serialize-u-pids-until-the-processes-have-been-.patch 
+Patch0020:      scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch 
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1483,6 +1485,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Jan 26 2021 extinctfire <shenyining_00@126.com> - 246-11
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fix login timeout 2 minutes
+
 * Fri Dec 18 2020 overweight <hexiaowen@huawei.com> - 246-10
 - Type:bugfix
 - ID:NA
