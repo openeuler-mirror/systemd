@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        31
+Release:        32
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -113,6 +113,15 @@ Patch0063:      core-set-error-value-correctly.patch
 Patch0064:      core-fix-re-realization-of-cgroup-siblings.patch
 Patch0065:      basic-string-table-avoid-crash-when-table-is-sparse.patch
 Patch0066:      journal-fix-buffer-overrun-when-urlifying.patch
+
+Patch0071:      backport-CVE-2018-21029-resolved-check-for-IP-in-certificate-when-using-DoT-.patch
+Patch0072:      backport-CVE-2018-21029-resolved-fix-connection-failures-with-TLS-1.3-and-Gn.patch
+Patch0073:      backport-CVE-2018-21029-resolved-require-at-least-version-3.6.0-of-GnuTLS-fo.patch
+Patch0074:      backport-CVE-2018-21029-Be-more-specific-in-resolved.conf-man-page-with-rega.patch
+Patch0075:      backport-CVE-2018-21029-Implement-SNI-when-using-DNS-over-TLS.patch
+Patch0076:      backport-CVE-2018-21029-resolve-error-handling-improvements.patch
+Patch0077:      backport-CVE-2018-21029-systemd-resolved-use-hostname-for-certificate-valida.patch
+
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1498,6 +1507,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Jan 29 2021 overweight <hexiaowen@huawei.com> - 246-32
+- Type:cve
+- ID:CVE-2018-21029
+- SUG:NA
+- DESC:fix cve-2018-21029
+
 * Fri Dec 18 2020 overweight <hexiaowen@huawei.com> - 243-31
 - Type:bugfix
 - ID:NA
