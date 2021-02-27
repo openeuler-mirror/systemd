@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        11
+Release:        12
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -543,9 +543,9 @@ setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/ &>/de
 # This will fix up enablement of any preset services that got installed
 # before systemd due to rpm ordering problems:
 # https://bugzilla.redhat.com/show_bug.cgi?id=1647172
-echo "DefaultTasksMax=80%" >> /etc/systemd/system.conf
 
 if [ $1 -eq 1 ] ; then
+        echo "DefaultTasksMax=80%" >> /etc/systemd/system.conf
         systemctl preset-all &>/dev/null || :
 fi
 
@@ -1485,6 +1485,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Sat Feb 27 2021 gaoyi <ymuemc@163.com> - 246-12
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:Just configure DefaultTasksMax when install
+
 * Tue Jan 26 2021 extinctfire <shenyining_00@126.com> - 246-11
 - Type:bugfix
 - ID:NA
