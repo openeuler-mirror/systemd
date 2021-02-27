@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        12
+Release:        13
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -69,6 +69,8 @@ Patch0017:      fix-capsh-drop-but-ping-success.patch
 Patch0018:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 Patch0019:      core-serialize-u-pids-until-the-processes-have-been-.patch 
 Patch0020:      scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch 
+
+Patch6000:      backport-xdg-autostart-Lower-most-info-messages-to-debug-leve.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1485,6 +1487,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Sat Feb 27 2021 shenyangyang <shenyangyang4@huawei.com> - 246-13
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:xdg autostart Lower most info messages to debug level
+
 * Sat Feb 27 2021 gaoyi <ymuemc@163.com> - 246-12
 - Type:bugfix
 - ID:NA
