@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        14
+Release:        15
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -73,6 +73,8 @@ Patch0020:      scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch
 Patch6000:      backport-xdg-autostart-Lower-most-info-messages-to-debug-leve.patch
 Patch6001:      backport-RFC-Make-user-instance-aware-of-delegated-cgroup-controllers.patch
 Patch6002:      backport-core-Make-user-instance-aware-of-delegated-cgroup.patch
+Patch6003:      backport-udev-net_id-parse-_SUN-ACPI-index-as-a-signed-intege.patch
+Patch6004:      backport-udev-net_id-don-t-generate-slot-based-names-if-multi.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1489,6 +1491,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Mar 17 2021 shenyangyang <shenyangyang4@huawei.com> - 246-15
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:backport from upstream to solve the problem when devices claim the same slot
+
 * Wed Mar 3 2021 shenyangyang <shenyangyang4@huawei.com> - 246-14
 - Type:bugfix
 - ID:NA
