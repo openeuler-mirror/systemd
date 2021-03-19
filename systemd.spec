@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        15
+Release:        16
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -72,6 +72,9 @@ Patch0019:	sysctl-set-kernel.core_pipe_limit-16.patch
 %endif
 Patch0020:      core-serialize-u-pids-until-the-processes-have-been-.patch
 Patch0021:      scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch
+
+Patch6001:      backport-RFC-Make-user-instance-aware-of-delegated-cgroup-controllers.patch
+Patch6002:      backport-core-Make-user-instance-aware-of-delegated-cgroup.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1488,6 +1491,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Mar 3 2021 shenyangyang <shenyangyang4@huawei.com> - 246-16
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fix Failed to migrate controller cgroups from *: Permission denied
+
 * Sat Feb 27 2021 gaoyi <ymuemc@163.com> - 246-15
 - Type:bugfix
 - ID:NA
