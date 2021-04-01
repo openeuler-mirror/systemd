@@ -1,0 +1,107 @@
+From 7b7a060e83d6c7de8705904d71978ba4664f0a65 Mon Sep 17 00:00:00 2001
+From: Anita Zhang <the.anitazha@gmail.com>
+Date: Tue, 23 Mar 2021 00:49:28 -0700
+Subject: [PATCH] process-util: dont allocate max length to read
+ /proc/PID/cmdline
+
+Alternative title: Replace get_process_cmdline()'s fopen()/fread() with
+read_full_virtual_file().
+
+When RLIMIT_STACK is set to infinity:infinity, _SC_ARG_MAX will
+return 4611686018427387903 (depending on the system, but definitely
+something larger than most systems have). It's impractical to allocate this
+in one go when most cmdlines are much shorter than that.
+
+Instead use read_full_virtual_file() which seems to increase the buffer
+depending on the size of the contents.
+---
+ src/basic/process-util.c     | 28 +++-------------------------
+ src/test/test-process-util.c |  5 +++++
+ 2 files changed, 8 insertions(+), 25 deletions(-)
+
+diff --git a/src/basic/process-util.c b/src/basic/process-util.c
+index 264ecc276b..7d4301eadb 100644
+--- a/src/basic/process-util.c
++++ b/src/basic/process-util.c
+@@ -124,14 +124,10 @@ int get_process_comm(pid_t pid, char **ret) {
+ }
+ 
+ int get_process_cmdline(pid_t pid, size_t max_columns, ProcessCmdlineFlags flags, char **line) {
+-        _cleanup_fclose_ FILE *f = NULL;
+         _cleanup_free_ char *t = NULL, *ans = NULL;
+         const char *p;
+-        int r;
+         size_t k;
+-
+-        /* This is supposed to be a safety guard against runaway command lines. */
+-        size_t max_length = sc_arg_max();
++        int r;
+ 
+         assert(line);
+         assert(pid >= 0);
+@@ -147,36 +143,18 @@ int get_process_cmdline(pid_t pid, size_t max_columns, ProcessCmdlineFlags flags
+          * comm_fallback is false). Returns 0 and sets *line otherwise. */
+ 
+         p = procfs_file_alloca(pid, "cmdline");
+-        r = fopen_unlocked(p, "re", &f);
++        r = read_full_virtual_file(p, &t, &k);
+         if (r == -ENOENT)
+                 return -ESRCH;
+         if (r < 0)
+                 return r;
+ 
+-        /* We assume that each four-byte character uses one or two columns. If we ever check for combining
+-         * characters, this assumption will need to be adjusted. */
+-        if ((size_t) 4 * max_columns + 1 < max_columns)
+-                max_length = MIN(max_length, (size_t) 4 * max_columns + 1);
+-
+-        t = new(char, max_length);
+-        if (!t)
+-                return -ENOMEM;
+-
+-        k = fread(t, 1, max_length, f);
+         if (k > 0) {
+                 /* Arguments are separated by NULs. Let's replace those with spaces. */
+                 for (size_t i = 0; i < k - 1; i++)
+                         if (t[i] == '\0')
+                                 t[i] = ' ';
+-
+-                t[k] = '\0'; /* Normally, t[k] is already NUL, so this is just a guard in case of short read */
+         } else {
+-                /* We only treat getting nothing as an error. We *could* also get an error after reading some
+-                 * data, but we ignore that case, as such an error is rather unlikely and we prefer to get
+-                 * some data rather than none. */
+-                if (ferror(f))
+-                        return -errno;
+-
+                 if (!(flags & PROCESS_CMDLINE_COMM_FALLBACK))
+                         return -ENOENT;
+ 
+@@ -187,7 +165,7 @@ int get_process_cmdline(pid_t pid, size_t max_columns, ProcessCmdlineFlags flags
+                 if (r < 0)
+                         return r;
+ 
+-                mfree(t);
++                free(t);
+                 t = strjoin("[", t2, "]");
+                 if (!t)
+                         return -ENOMEM;
+diff --git a/src/test/test-process-util.c b/src/test/test-process-util.c
+index 0ebef530a0..5ca654e193 100644
+--- a/src/test/test-process-util.c
++++ b/src/test/test-process-util.c
+@@ -236,6 +236,11 @@ static void test_get_process_cmdline_harder(void) {
+                 return;
+         }
+ 
++        /* Set RLIMIT_STACK to infinity to test we don't try to allocate unncessarily large values to read
++         * the cmdline. */
++        if (setrlimit(RLIMIT_STACK, &RLIMIT_MAKE_CONST(RLIM_INFINITY)) < 0)
++                log_warning("Testing without RLIMIT_STACK=infinity");
++
+         assert_se(unlink(path) >= 0);
+ 
+         assert_se(prctl(PR_SET_NAME, "testa") >= 0);
+-- 
+2.23.0
+
