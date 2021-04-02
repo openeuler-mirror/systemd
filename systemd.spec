@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        32
+Release:        33
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -121,7 +121,7 @@ Patch0074:      backport-CVE-2018-21029-Be-more-specific-in-resolved.conf-man-pa
 Patch0075:      backport-CVE-2018-21029-Implement-SNI-when-using-DNS-over-TLS.patch
 Patch0076:      backport-CVE-2018-21029-resolve-error-handling-improvements.patch
 Patch0077:      backport-CVE-2018-21029-systemd-resolved-use-hostname-for-certificate-valida.patch
-
+Patch0078:      backport-varlink-make-userdata-pointer-inheritance-from-varli.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1507,6 +1507,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Apr 02 2021 fangxiuning <fangxiuning@huawei.com> - 246-33
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:fix userdate double free
+
 * Fri Jan 29 2021 overweight <hexiaowen@huawei.com> - 246-32
 - Type:cve
 - ID:CVE-2018-21029
