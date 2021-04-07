@@ -1,0 +1,84 @@
+From 9807fdc1da8e037ddedfa4e2c6d2728b6e60051e Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 20 Jan 2021 19:15:55 +0100
+Subject: [PATCH] varlink: make 'userdata' pointer inheritance from varlink
+ server to connection optional
+
+@keszybz's right on
+https://github.com/systemd/systemd/pull/18248#issuecomment-760798473:
+swapping out the userdata pointer of a live varlink connection is iffy.
+
+Let's fix this by making the userdata inheritance from VarlinkServer
+object to the Varlink connection object optional: we want it for most
+cases, but not all, i.e. all those cases where the calls implemented as
+varlink methods are stateless and can be answered synchronously. For the
+other cases (i.e. where we want per-connection objects that wrap the
+asynchronous operation as it goes on) let's not do such inheritance but
+initialize the userdata pointer only once we have it. THis means the
+original manager object must be manually retrieved from the
+VarlinkServer object, which in turn needs to be requested from the
+Varlink connection object.
+
+The userdata inheritance is now controlled by the
+VARLINK_INHERIT_USERDATA flag passed at VarlinkServer construction.
+
+Alternative-to: #18248
+
+---
+ src/journal/journald-server.c | 2 +-
+ src/shared/varlink.c          | 4 +++-
+ src/shared/varlink.h          | 9 +++++----
+ 3 files changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/src/journal/journald-server.c b/src/journal/journald-server.c
+index a0c2dcd..7f3c7a9 100644
+--- a/src/journal/journald-server.c
++++ b/src/journal/journald-server.c
+@@ -1968,7 +1968,7 @@ static int server_open_varlink(Server *s) {
+ 
+         assert(s);
+ 
+-        r = varlink_server_new(&s->varlink_server, VARLINK_SERVER_ROOT_ONLY);
++        r = varlink_server_new(&s->varlink_server, VARLINK_SERVER_ROOT_ONLY|VARLINK_SERVER_INHERIT_USERDATA);
+         if (r < 0)
+                 return r;
+ 
+diff --git a/src/shared/varlink.c b/src/shared/varlink.c
+index 9934316..06fb0ab 100644
+--- a/src/shared/varlink.c
++++ b/src/shared/varlink.c
+@@ -2035,7 +2035,9 @@ int varlink_server_add_connection(VarlinkServer *server, int fd, Varlink **ret)
+                 return r;
+ 
+         v->fd = fd;
+-        v->userdata = server->userdata;
++        if (server->flags & VARLINK_SERVER_INHERIT_USERDATA)
++                v->userdata = server->userdata;
++
+         if (ucred_acquired) {
+                 v->ucred = ucred;
+                 v->ucred_acquired = true;
+diff --git a/src/shared/varlink.h b/src/shared/varlink.h
+index d96fa93..1284bc8 100644
+--- a/src/shared/varlink.h
++++ b/src/shared/varlink.h
+@@ -41,11 +41,12 @@ typedef enum VarlinkMethodFlags {
+ } VarlinkMethodFlags;
+ 
+ typedef enum VarlinkServerFlags {
+-        VARLINK_SERVER_ROOT_ONLY   = 1 << 0, /* Only accessible by root */
+-        VARLINK_SERVER_MYSELF_ONLY = 1 << 1, /* Only accessible by our own UID */
+-        VARLINK_SERVER_ACCOUNT_UID = 1 << 2, /* Do per user accounting */
++        VARLINK_SERVER_ROOT_ONLY        = 1 << 0, /* Only accessible by root */
++        VARLINK_SERVER_MYSELF_ONLY      = 1 << 1, /* Only accessible by our own UID */
++        VARLINK_SERVER_ACCOUNT_UID      = 1 << 2, /* Do per user accounting */
++        VARLINK_SERVER_INHERIT_USERDATA = 1 << 3, /* Initialize Varlink connection userdata from VarlinkServer userdata */
+ 
+-        _VARLINK_SERVER_FLAGS_ALL = (1 << 3) - 1,
++        _VARLINK_SERVER_FLAGS_ALL = (1 << 4) - 1,
+ } VarlinkServerFlags;
+ 
+ typedef int (*VarlinkMethod)(Varlink *link, JsonVariant *parameters, VarlinkMethodFlags flags, void *userdata);
+-- 
+2.23.0
+
