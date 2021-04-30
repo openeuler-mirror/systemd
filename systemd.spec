@@ -19,17 +19,15 @@
 
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
-Version:        246
-Release:        15
+Version:        248
+Release:        1
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
 
 Source0:        https://github.com/systemd/systemd/archive/v%{version}/%{name}-%{version}.tar.gz
 Source3:        purge-nobody-user
-
 Source4:        yum-protect-systemd.conf
-
 Source5:        inittab
 Source6:        sysctl.conf.README
 Source7:        systemd-journal-remote.xml
@@ -39,42 +37,35 @@ Source11:       20-grubby.install
 Source12:       systemd-user
 Source13:       rc.local
 
-Source100:	udev-40-openEuler.rules
-Source101:	udev-55-persistent-net-generator.rules
-Source102:	udev-56-net-sriov-names.rules
-Source103:	udev-61-openeuler-persistent-storage.rules
-Source104:	net-set-sriov-names
-Source105:	rule_generator.functions
-Source106:	write_net_rules
-Source107:	detect_virt
+Source100:  	udev-40-openEuler.rules
+Source101:  	udev-55-persistent-net-generator.rules
+Source102:  	udev-56-net-sriov-names.rules
+Source103:  	udev-61-openeuler-persistent-storage.rules
+Source104:  	net-set-sriov-names
+Source105:  	rule_generator.functions
+Source106:  	write_net_rules
+Source107:  	detect_virt
 
-Patch0000:      rebase-to-bded6ff0d0da905a82884ccccbe729af42cc207d.patch
-Patch0001:      1605-update-rtc-with-system-clock-when-shutdown.patch
-Patch0002:      1603-udev-add-actions-while-rename-netif-failed.patch
-Patch0003:      fix-two-VF-virtual-machines-have-same-mac-address.patch
-Patch0004:      logind-set-RemoveIPC-to-false-by-default.patch
-Patch0005:      rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
-Patch0006:      unit-don-t-add-Requires-for-tmp.mount.patch
-Patch0007:      rules-add-elevator-kernel-command-line-parameter.patch
-Patch0008:      rules-add-the-rule-that-adds-elevator-kernel-command.patch
-Patch0009:      units-add-Install-section-to-tmp.mount.patch
-Patch0010:      Make-systemd-udevd.service-start-after-systemd-remou.patch
-Patch0011:      udev-virsh-shutdown-vm.patch
-Patch0012:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
-Patch0013:      sd-bus-properly-initialize-containers.patch
-Patch0014:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
-Patch0015:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
-Patch0016:      systemd-change-time-log-level.patch
-Patch0017:      fix-capsh-drop-but-ping-success.patch
-Patch0018:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
-Patch0019:      core-serialize-u-pids-until-the-processes-have-been-.patch 
-Patch0020:      scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch 
-
-Patch6000:      backport-xdg-autostart-Lower-most-info-messages-to-debug-leve.patch
-Patch6001:      backport-RFC-Make-user-instance-aware-of-delegated-cgroup-controllers.patch
-Patch6002:      backport-core-Make-user-instance-aware-of-delegated-cgroup.patch
-Patch6003:      backport-varlink-make-userdata-pointer-inheritance-from-varli.patch
-Patch6004:      backport-process-util-dont-allocate-max-length-to-read-proc-P.patch
+Patch0001:      0001-update-rtc-with-system-clock-when-shutdown.patch
+Patch0002:      0002-udev-add-actions-while-rename-netif-failed.patch
+Patch0003:      0003-fix-two-VF-virtual-machines-have-same-mac-address.patch
+Patch0004:      0004-logind-set-RemoveIPC-to-false-by-default.patch
+Patch0005:      0005-rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
+Patch0006:      0006-unit-don-t-add-Requires-for-tmp.mount.patch
+Patch0007:      0007-rules-add-elevator-kernel-command-line-parameter.patch
+#Patch0008:     0008-rules-add-the-rule-that-adds-elevator-kernel-command.patch
+Patch0009:      0009-units-add-Install-section-to-tmp.mount.patch
+Patch0010:      0010-Make-systemd-udevd.service-start-after-systemd-remou.patch
+Patch0011:      0011-udev-virsh-shutdown-vm.patch
+Patch0012:      0012-Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
+Patch0013:      0013-sd-bus-properly-initialize-containers.patch
+Patch0014:      0014-Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+Patch0015:      0015-journal-don-t-enable-systemd-journald-audit.socket-b.patch
+Patch0016:      0016-systemd-change-time-log-level.patch
+#Patch0017:      fix-capsh-drop-but-ping-success.patch
+#Patch0018:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+#Patch0019:      core-serialize-u-pids-until-the-processes-have-been-.patch 
+#Patch0020:      scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch 
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -223,6 +214,18 @@ systemd-udev-compat is a set of udev rules which conflict with NetworkManager.
 If users choose to use the network-scripts to manager the network, the package can be used
 to do somethings when down or up nics or disk.
 
+%package oomd
+Summary:       Systemd oomd feature
+Requires:       %{name} = %{version}-%{release}
+License:        LGPLv2+
+Requires(pre):    /usr/bin/getent
+Requires(post):   systemd
+Requires(preun):  systemd
+Requires(postun): systemd
+
+%description oomd
+Systemd-oomd.service, systemd-oomd - A userspace out-of-memory (OOM) killer
+
 %package_help
 
 %prep
@@ -285,6 +288,8 @@ CONFIGURE_OPTS=(
         # https://bugzilla.redhat.com/show_bug.cgi?id=1867830
         -Ddefault-mdns=no
         -Ddefault-llmnr=resolve
+        -Doomd=true
+        -Dhtml=false
 )
 
 %meson "${CONFIGURE_OPTS[@]}"
@@ -881,7 +886,7 @@ fi
 %dir %{_systemddir}/user-environment-generators
 %{_systemddir}/systemd-shutdown
 %{_systemddir}/systemd-portabled
-%{_systemddir}/libsystemd-shared-246.so
+%{_systemddir}/libsystemd-shared*.so
 %{_systemddir}/systemd-reply-password
 %dir %{_systemddir}/system-generators
 %dir %{_systemddir}/system
@@ -1215,6 +1220,32 @@ fi
 %{_libdir}/security/pam_systemd.so
 /usr/lib/rpm/macros.d/macros.systemd
 
+/usr/bin/systemd-cryptenroll
+/usr/bin/systemd-sysext
+/usr/lib/modprobe.d/README
+/usr/lib/sysctl.d/README
+/usr/lib/systemd/system/first-boot-complete.target
+/usr/lib/systemd/system/initrd-root-device.target.wants/remote-cryptsetup.target
+/usr/lib/systemd/system/initrd-root-device.target.wants/remote-veritysetup.target
+/usr/lib/systemd/system/remote-veritysetup.target
+/usr/lib/systemd/system/sysinit.target.wants/veritysetup.target
+/usr/lib/systemd/system/systemd-sysext.service
+/usr/lib/systemd/system/veritysetup-pre.target
+/usr/lib/systemd/system/veritysetup.target
+/usr/lib/systemd/user/app.slice
+/usr/lib/systemd/user/background.slice
+/usr/lib/systemd/user/session.slice
+/usr/lib/sysusers.d/README
+/usr/lib/tmpfiles.d/README
+/usr/lib/udev/dmi_memory_id
+/usr/lib/udev/hwdb.d/20-dmi-id.hwdb
+/usr/lib/udev/hwdb.d/60-autosuspend-fingerprint-reader.hwdb
+/usr/lib/udev/hwdb.d/README
+/usr/lib/udev/rules.d/70-memory.rules
+/usr/lib/udev/rules.d/README
+/usr/share/bash-completion/completions/systemd-id128
+/usr/share/zsh/site-functions/_systemd-path
+
 %files libs
 %{_libdir}/libnss_systemd.so.2
 %{_libdir}/libnss_resolve.so.2
@@ -1373,7 +1404,6 @@ fi
 %{_udevhwdbdir}/60-autosuspend.hwdb
 %{_udevrulesdir}/60-autosuspend.rules
 %{_udevrulesdir}/40-openEuler.rules
-%{_udevrulesdir}/40-elevator.rules
 %{_udevrulesdir}/73-idrac.rules
 %{_udevrulesdir}/60-block.rules
 %{_udevrulesdir}/60-input-id.rules
@@ -1485,11 +1515,22 @@ fi
 /usr/lib/udev/net-set-sriov-names
 /usr/lib/udev/detect_virt
 
+%files oomd
+/etc/systemd/oomd.conf
+/usr/bin/oomctl
+/usr/lib/systemd/system/systemd-oomd.service
+/usr/lib/systemd/systemd-oomd
+/usr/share/dbus-1/system-services/org.freedesktop.oom1.service
+/usr/share/dbus-1/system.d/org.freedesktop.oom1.conf
+
 %files help
 /usr/share/man/*/*
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri 30 Apr 2021 hexiaowen <hexiaowen@huawei.com> - 248-1
+- Rebase to version 248
+
 * Wed Mar 31 2021 fangxiuning <fangxiuning@huawei.com> - 246-15
 - Type:bugfix
 - ID:NA
