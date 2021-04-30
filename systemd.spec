@@ -1528,6 +1528,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri 30 Apr 2021 hexiaowen <hexiaowen@huawei.com> - 248-3
+- delete unused rebase-patch
+
 * Fri 30 Apr 2021 hexiaowen <hexiaowen@huawei.com> - 248-2
 - delete unused patches
 
