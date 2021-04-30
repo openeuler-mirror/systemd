@@ -37,31 +37,31 @@ Source11:       20-grubby.install
 Source12:       systemd-user
 Source13:       rc.local
 
-Source100:	udev-40-openEuler.rules
-Source101:	udev-55-persistent-net-generator.rules
-Source102:	udev-56-net-sriov-names.rules
-Source103:	udev-61-openeuler-persistent-storage.rules
-Source104:	net-set-sriov-names
-Source105:	rule_generator.functions
-Source106:	write_net_rules
-Source107:	detect_virt
+Source100:  	udev-40-openEuler.rules
+Source101:  	udev-55-persistent-net-generator.rules
+Source102:  	udev-56-net-sriov-names.rules
+Source103:  	udev-61-openeuler-persistent-storage.rules
+Source104:  	net-set-sriov-names
+Source105:  	rule_generator.functions
+Source106:  	write_net_rules
+Source107:  	detect_virt
 
 Patch0001:      0001-update-rtc-with-system-clock-when-shutdown.patch
 Patch0002:      0002-udev-add-actions-while-rename-netif-failed.patch
 Patch0003:      0003-fix-two-VF-virtual-machines-have-same-mac-address.patch
 Patch0004:      0004-logind-set-RemoveIPC-to-false-by-default.patch
 Patch0005:      0005-rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
-Patch0006:      unit-don-t-add-Requires-for-tmp.mount.patch
-Patch0007:      rules-add-elevator-kernel-command-line-parameter.patch
-#Patch0008:      rules-add-the-rule-that-adds-elevator-kernel-command.patch
-Patch0009:      units-add-Install-section-to-tmp.mount.patch
-Patch0010:      Make-systemd-udevd.service-start-after-systemd-remou.patch
-Patch0011:      udev-virsh-shutdown-vm.patch
-Patch0012:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
-Patch0013:      sd-bus-properly-initialize-containers.patch
-Patch0014:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
-Patch0015:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
-Patch0016:      systemd-change-time-log-level.patch
+Patch0006:      0006-unit-don-t-add-Requires-for-tmp.mount.patch
+Patch0007:      0007-rules-add-elevator-kernel-command-line-parameter.patch
+#Patch0008:     0008-rules-add-the-rule-that-adds-elevator-kernel-command.patch
+Patch0009:      0009-units-add-Install-section-to-tmp.mount.patch
+Patch0010:      0010-Make-systemd-udevd.service-start-after-systemd-remou.patch
+Patch0011:      0011-udev-virsh-shutdown-vm.patch
+Patch0012:      0012-Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
+Patch0013:      0013-sd-bus-properly-initialize-containers.patch
+Patch0014:      0014-Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+Patch0015:      0015-journal-don-t-enable-systemd-journald-audit.socket-b.patch
+Patch0016:      0016-systemd-change-time-log-level.patch
 #Patch0017:      fix-capsh-drop-but-ping-success.patch
 #Patch0018:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 #Patch0019:      core-serialize-u-pids-until-the-processes-have-been-.patch 
@@ -252,7 +252,7 @@ CONFIGURE_OPTS=(
         -Dpam=true
         -Dacl=true
         -Dsmack=true
-        -Dsmack=true
+        -Dgcrypt=true
         -Daudit=true
         -Delfutils=true
         -Dlibcryptsetup=true
@@ -1528,6 +1528,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri 30 Apr 2021 hexiaowen <hexiaowen@huawei.com> - 248-1
+- Rebase to version 248
+
 * Wed Mar 31 2021 fangxiuning <fangxiuning@huawei.com> - 246-15
 - Type:bugfix
 - ID:NA
