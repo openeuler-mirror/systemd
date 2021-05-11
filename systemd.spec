@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        33
+Release:        34
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -122,6 +122,8 @@ Patch0075:      backport-CVE-2018-21029-Implement-SNI-when-using-DNS-over-TLS.pa
 Patch0076:      backport-CVE-2018-21029-resolve-error-handling-improvements.patch
 Patch0077:      backport-CVE-2018-21029-systemd-resolved-use-hostname-for-certificate-valida.patch
 Patch0078:      backport-varlink-make-userdata-pointer-inheritance-from-varli.patch
+Patch0079:      backport-udev-net_id-parse-_SUN-ACPI-index-as-a-signed-intege.patch
+Patch0080:      backport-udev-net_id-don-t-generate-slot-based-names-if-multi.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -173,10 +175,10 @@ Provides:       systemd-sysv = 206
 Conflicts:      initscripts < 9.56.1
 Recommends:     %{name}-help
 
-Provides:       %{name}-pam
-Provides:       %{name}-rpm-config
-Obsoletes:      %{name}-pam
-Obsoletes:      %{name}-rpm-config
+Provides:       %{name}-pam = %{version}-%{release}
+Provides:       %{name}-rpm-config = %{version}-%{release}
+Obsoletes:      %{name}-pam <= %{version}-%{release}
+Obsoletes:      %{name}-rpm-config <= %{version}-%{release}
 
 %description
 systemd is a system and service manager that runs as PID 1 and starts
@@ -1507,6 +1509,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon May 10 2021 shenyangyang <shenyangyang4@huawei.com> - 246-34
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:backport from upstream to solve the problem when devices claim the same slot
+
 * Fri Apr 02 2021 fangxiuning <fangxiuning@huawei.com> - 246-33
 - Type:bugfix
 - ID:NA
