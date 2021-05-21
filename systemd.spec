@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        2
+Release:        4
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -65,7 +65,9 @@ Patch0016:      0016-systemd-change-time-log-level.patch
 #Patch0017:      0017-fix-capsh-drop-but-ping-success.patch
 #Patch0018:      0018-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 #Patch0019:      0019-core-serialize-u-pids-until-the-processes-have-been-.patch 
-#Patch0020:      0020-scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch 
+#Patch0020:      0020-scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch
+
+Patch6000:backport-journald-enforce-longer-line-length-limit-during-set.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1528,13 +1530,16 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Fri 30 Apr 2021 hexiaowen <hexiaowen@huawei.com> - 248-3
+* Wed May 19 2021 fangxiuning <fangxiuning@huawei.com> - 248-4
+- journald: enforce longer line length limit during "setup" phase of stream protocol
+
+* Fri Apr 30 2021 hexiaowen <hexiaowen@huawei.com> - 248-3
 - delete unused rebase-patch
 
-* Fri 30 Apr 2021 hexiaowen <hexiaowen@huawei.com> - 248-2
+* Fri Apr 30 2021 hexiaowen <hexiaowen@huawei.com> - 248-2
 - delete unused patches
 
-* Fri 30 Apr 2021 hexiaowen <hexiaowen@huawei.com> - 248-1
+* Fri Apr 30 2021 hexiaowen <hexiaowen@huawei.com> - 248-1
 - Rebase to version 248
 
 * Wed Mar 31 2021 fangxiuning <fangxiuning@huawei.com> - 246-15
