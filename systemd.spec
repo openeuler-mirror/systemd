@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        34
+Release:        35
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -157,7 +157,7 @@ Requires(post): coreutils
 Requires(post): sed
 Requires(post): acl
 Requires(post): grep
-Requires(post): openssl
+Requires(post): openssl-libs
 Requires(pre):  coreutils
 Requires(pre):  /usr/bin/getent
 Requires(pre):  /usr/sbin/groupadd
@@ -1509,6 +1509,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu May 27 2021 shenyangyang <shenyangyang4@huawei.com> - 246-35
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:change requires to openssl-libs as post scripts systemctl requires libssl.so.1.1
+
 * Mon May 10 2021 shenyangyang <shenyangyang4@huawei.com> - 246-34
 - Type:bugfix
 - ID:NA
