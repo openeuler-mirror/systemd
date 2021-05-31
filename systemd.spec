@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        36
+Release:        37
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -124,6 +124,11 @@ Patch0077:      0077-backport-CVE-2018-21029-systemd-resolved-use-hostname-for-c
 Patch0078:      0078-backport-varlink-make-userdata-pointer-inheritance-from-varli.patch
 Patch0079:      0079-backport-udev-net_id-parse-_SUN-ACPI-index-as-a-signed-intege.patch
 Patch0080:      0080-backport-udev-net_id-don-t-generate-slot-based-names-if-multi.patch
+
+Patch0081:      0081-journal-refresh-cached-credentials-of-stdout-streams.patch 
+Patch0082:      0082-journald-rework-end-of-line-marker-handling-to-use-a.patch 
+Patch0083:      0083-journald-rework-pid-change-handling.patch 
+Patch0084:      0084-journald-enforce-longer-line-length-limit-during-set.patch 
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1509,28 +1514,31 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Mon May 31 2021 overweight <hexiaowen@huawei.com> - 246-36
+* Mon May 31 2021 overweight <hexiaowen@huawei.com> - 243-37
+- fix journald: enforce longer line length limit during "setup" phase of stream protocol
+
+* Mon May 31 2021 overweight <hexiaowen@huawei.com> - 243-36
 - fix patches name and patches num
 
-* Thu May 27 2021 shenyangyang <shenyangyang4@huawei.com> - 246-35
+* Thu May 27 2021 shenyangyang <shenyangyang4@huawei.com> - 243-35
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:change requires to openssl-libs as post scripts systemctl requires libssl.so.1.1
 
-* Mon May 10 2021 shenyangyang <shenyangyang4@huawei.com> - 246-34
+* Mon May 10 2021 shenyangyang <shenyangyang4@huawei.com> - 243-34
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:backport from upstream to solve the problem when devices claim the same slot
 
-* Fri Apr 02 2021 fangxiuning <fangxiuning@huawei.com> - 246-33
+* Fri Apr 02 2021 fangxiuning <fangxiuning@huawei.com> - 243-33
 - Type:bugfix
 - ID:NA
 - SUG:NA
 - DESC:fix userdate double free
 
-* Fri Jan 29 2021 overweight <hexiaowen@huawei.com> - 246-32
+* Fri Jan 29 2021 overweight <hexiaowen@huawei.com> - 243-32
 - Type:cve
 - ID:CVE-2018-21029
 - SUG:NA
