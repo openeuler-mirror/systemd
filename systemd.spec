@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        35
+Release:        36
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -44,86 +44,86 @@ Source105:	rule_generator.functions
 Source106:	write_net_rules
 Source107:	detect_virt
 
-Patch0002:      0001-udev-ignore-error-caused-by-device-disconnection.patch
-Patch0003:      0001-core-dont-check-error-parameter-of-get_name_owner_handler.patch
-Patch0004:      0001-core-dont-check-potentially-NULL-error.patch
-Patch0005:      0001-core-shorten-code-a-bit.patch
-Patch0006:      0001-core-no-need-to-eat-up-error.patch
-Patch0007:      0001-core-create-or-remove-unit-bus-name-slots-always-together.patch
-Patch0008:      0001-core-drop-initial-ListNames-bus-call-from-PID1.patch
-Patch0009:      1605-update-rtc-with-system-clock-when-shutdown.patch
-Patch0010:      1603-udev-add-actions-while-rename-netif-failed.patch
-Patch0011:      CVE-2020-1712-1.patch
-Patch0012:      CVE-2020-1712-2.patch
-Patch0013:      CVE-2020-1712-3.patch
-Patch0014:      CVE-2020-1712-4.patch
-Patch0015:      CVE-2020-1712-5.patch
-Patch0016:      sd-journal-close-journal-files-that-were-deleted-by-.patch
-Patch0017:      pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
-Patch0018:      fix-two-VF-virtual-machines-have-same-mac-address.patch
-Patch0019:      logind-set-RemoveIPC-to-false-by-default.patch
-Patch0020:      rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
-Patch0021:      unit-don-t-add-Requires-for-tmp.mount.patch
-Patch0022:      Revert-sysctl.d-switch-net.ipv4.conf.all.rp_filter-f.patch
-Patch2023:      rules-add-elevator-kernel-command-line-parameter.patch
-Patch2024:      rules-add-the-rule-that-adds-elevator-kernel-command.patch
-Patch2025:      units-add-Install-section-to-tmp.mount.patch
-Patch0026:      Make-systemd-udevd.service-start-after-systemd-remou.patch
-Patch0027:      udev-virsh-shutdown-vm.patch
-Patch0028:      fix-fd-leak-in-no-memory-condition.patch
-Patch0029:      dbus-execute-avoid-extra-strdup.patch
-Patch0030:      Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
-Patch0031:      sd-bus-properly-initialize-containers.patch
-Patch0032:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
-Patch0033:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
+Patch0002:      0002-0001-udev-ignore-error-caused-by-device-disconnection.patch
+Patch0003:      0003-0001-core-dont-check-error-parameter-of-get_name_owner_handler.patch
+Patch0004:      0004-0001-core-dont-check-potentially-NULL-error.patch
+Patch0005:      0005-0001-core-shorten-code-a-bit.patch
+Patch0006:      0006-0001-core-no-need-to-eat-up-error.patch
+Patch0007:      0007-0001-core-create-or-remove-unit-bus-name-slots-always-together.patch
+Patch0008:      0008-0001-core-drop-initial-ListNames-bus-call-from-PID1.patch
+Patch0009:      0009-1605-update-rtc-with-system-clock-when-shutdown.patch
+Patch0010:      0010-1603-udev-add-actions-while-rename-netif-failed.patch
+Patch0011:      0011-CVE-2020-1712-1.patch
+Patch0012:      0012-CVE-2020-1712-2.patch
+Patch0013:      0013-CVE-2020-1712-3.patch
+Patch0014:      0014-CVE-2020-1712-4.patch
+Patch0015:      0015-CVE-2020-1712-5.patch
+Patch0016:      0016-sd-journal-close-journal-files-that-were-deleted-by-.patch
+Patch0017:      0017-pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
+Patch0018:      0018-fix-two-VF-virtual-machines-have-same-mac-address.patch
+Patch0019:      0019-logind-set-RemoveIPC-to-false-by-default.patch
+Patch0020:      0020-rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
+Patch0021:      0021-unit-don-t-add-Requires-for-tmp.mount.patch
+Patch0022:      0022-Revert-sysctl.d-switch-net.ipv4.conf.all.rp_filter-f.patch
+Patch0023:      0023-rules-add-elevator-kernel-command-line-parameter.patch
+Patch0024:      0024-rules-add-the-rule-that-adds-elevator-kernel-command.patch
+Patch0025:      0025-units-add-Install-section-to-tmp.mount.patch
+Patch0026:      0026-Make-systemd-udevd.service-start-after-systemd-remou.patch
+Patch0027:      0027-udev-virsh-shutdown-vm.patch
+Patch0028:      0028-fix-fd-leak-in-no-memory-condition.patch
+Patch0029:      0029-dbus-execute-avoid-extra-strdup.patch
+Patch0030:      0030-Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
+Patch0031:      0031-sd-bus-properly-initialize-containers.patch
+Patch0032:      0032-Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+Patch0033:      0033-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 
 # The patch of 0026~0029 resolve the pid1 memory leaks
-Patch0034:      revert-pid1-drop-unit-caches-only-based-on-mtime.patch
-Patch0035:      revert-analyze-add-unit-files-to-dump-the-unit-fragm.patch
-Patch0036:      revert-pid1-use-a-cache-for-all-unit-aliases.patch
-Patch0037:      revert-shared-unit-file-add-a-function-to-validate-u.patch
+Patch0034:      0034-revert-pid1-drop-unit-caches-only-based-on-mtime.patch
+Patch0035:      0035-revert-analyze-add-unit-files-to-dump-the-unit-fragm.patch
+Patch0036:      0036-revert-pid1-use-a-cache-for-all-unit-aliases.patch
+Patch0037:      0037-revert-shared-unit-file-add-a-function-to-validate-u.patch
 
-Patch0038:      systemd-Fix-busctl-crash-on-aarch64-when-setting-out.patch
-Patch0039:      seccomp-more-comprehensive-protection-against-libsec.patch
-Patch0040:      network-fix-double-free-in-macsec_receive_channel_fr.patch
-Patch0041:      network-L2TP-fix-crash.patch
+Patch0038:      0038-systemd-Fix-busctl-crash-on-aarch64-when-setting-out.patch
+Patch0039:      0039-seccomp-more-comprehensive-protection-against-libsec.patch
+Patch0040:      0040-network-fix-double-free-in-macsec_receive_channel_fr.patch
+Patch0041:      0041-network-L2TP-fix-crash.patch
 
-Patch0042:      systemctl-fix-memleak-caused-by-wrong-cleanup-func.patch
-Patch0043:      analyze-fix-minor-memleak.patch
-Patch0044:      network-add-one-more-section-validty-check.patch
-Patch0045:      network-use-fix-invalid-free-function.patch
-Patch0046:      network-fix-memleak.patch
-Patch0047:      network-Add-support-to-advertie-ipv6-route.patch
-Patch0048:      network-fix-invalid-cleanup-function.patch
-Patch0049:      network-fix-memleak-in-route_prefix_free.patch
-Patch0050:      sd-radv-fix-memleak.patch
-Patch0051:      sd-bus-invalidate-connection-when-Hello-fails.patch
-Patch0052:      shared-bus-util-Don-t-replace-exsting-strv.patch
-Patch0053:      systemctl-Add-with-dependencies-flag.patch
-Patch0054:      man-Document-systemctl-with-dependencies-switch.patch
-Patch0055:      core-expose-swap-priority-value-via-dbus-only-if-it-.patch
-Patch0056:      tree-wide-we-forgot-to-destroy-some-bus-errors.patch
-Patch0057:      sd-bus-fix-introspection-bug-in-signal-parameter-nam.patch
-Patch0058:      core-sync-SeccompParseFlags-between-dbus-execute-and.patch
-Patch0059:      core-swap-priority-can-be-negative.patch
-Patch0060:      core-no-need-to-initialize-swap-structure-fields-if-.patch
-Patch0061:      core-initialize-priority_set-when-parsing-swap-unit-.patch
-Patch0062:      core-use-unit-based-logging-instead-of-generic-loggi.patch
-Patch0063:      core-set-error-value-correctly.patch
-Patch0064:      core-fix-re-realization-of-cgroup-siblings.patch
-Patch0065:      basic-string-table-avoid-crash-when-table-is-sparse.patch
-Patch0066:      journal-fix-buffer-overrun-when-urlifying.patch
+Patch0042:      0042-systemctl-fix-memleak-caused-by-wrong-cleanup-func.patch
+Patch0043:      0043-analyze-fix-minor-memleak.patch
+Patch0044:      0044-network-add-one-more-section-validty-check.patch
+Patch0045:      0045-network-use-fix-invalid-free-function.patch
+Patch0046:      0046-network-fix-memleak.patch
+Patch0047:      0047-network-Add-support-to-advertie-ipv6-route.patch
+Patch0048:      0048-network-fix-invalid-cleanup-function.patch
+Patch0049:      0049-network-fix-memleak-in-route_prefix_free.patch
+Patch0050:      0050-sd-radv-fix-memleak.patch
+Patch0051:      0051-sd-bus-invalidate-connection-when-Hello-fails.patch
+Patch0052:      0052-shared-bus-util-Don-t-replace-exsting-strv.patch
+Patch0053:      0053-systemctl-Add-with-dependencies-flag.patch
+Patch0054:      0054-man-Document-systemctl-with-dependencies-switch.patch
+Patch0055:      0055-core-expose-swap-priority-value-via-dbus-only-if-it-.patch
+Patch0056:      0056-tree-wide-we-forgot-to-destroy-some-bus-errors.patch
+Patch0057:      0057-sd-bus-fix-introspection-bug-in-signal-parameter-nam.patch
+Patch0058:      0058-core-sync-SeccompParseFlags-between-dbus-execute-and.patch
+Patch0059:      0059-core-swap-priority-can-be-negative.patch
+Patch0060:      0060-core-no-need-to-initialize-swap-structure-fields-if-.patch
+Patch0061:      0061-core-initialize-priority_set-when-parsing-swap-unit-.patch
+Patch0062:      0062-core-use-unit-based-logging-instead-of-generic-loggi.patch
+Patch0063:      0063-core-set-error-value-correctly.patch
+Patch0064:      0064-core-fix-re-realization-of-cgroup-siblings.patch
+Patch0065:      0065-basic-string-table-avoid-crash-when-table-is-sparse.patch
+Patch0066:      0066-journal-fix-buffer-overrun-when-urlifying.patch
 
-Patch0071:      backport-CVE-2018-21029-resolved-check-for-IP-in-certificate-when-using-DoT-.patch
-Patch0072:      backport-CVE-2018-21029-resolved-fix-connection-failures-with-TLS-1.3-and-Gn.patch
-Patch0073:      backport-CVE-2018-21029-resolved-require-at-least-version-3.6.0-of-GnuTLS-fo.patch
-Patch0074:      backport-CVE-2018-21029-Be-more-specific-in-resolved.conf-man-page-with-rega.patch
-Patch0075:      backport-CVE-2018-21029-Implement-SNI-when-using-DNS-over-TLS.patch
-Patch0076:      backport-CVE-2018-21029-resolve-error-handling-improvements.patch
-Patch0077:      backport-CVE-2018-21029-systemd-resolved-use-hostname-for-certificate-valida.patch
-Patch0078:      backport-varlink-make-userdata-pointer-inheritance-from-varli.patch
-Patch0079:      backport-udev-net_id-parse-_SUN-ACPI-index-as-a-signed-intege.patch
-Patch0080:      backport-udev-net_id-don-t-generate-slot-based-names-if-multi.patch
+Patch0071:      0071-backport-CVE-2018-21029-resolved-check-for-IP-in-certificate-when-using-DoT-.patch
+Patch0072:      0072-backport-CVE-2018-21029-resolved-fix-connection-failures-with-TLS-1.3-and-Gn.patch
+Patch0073:      0073-backport-CVE-2018-21029-resolved-require-at-least-version-3.6.0-of-GnuTLS-fo.patch
+Patch0074:      0074-backport-CVE-2018-21029-Be-more-specific-in-resolved.conf-man-page-with-rega.patch
+Patch0075:      0075-backport-CVE-2018-21029-Implement-SNI-when-using-DNS-over-TLS.patch
+Patch0076:      0076-backport-CVE-2018-21029-resolve-error-handling-improvements.patch
+Patch0077:      0077-backport-CVE-2018-21029-systemd-resolved-use-hostname-for-certificate-valida.patch
+Patch0078:      0078-backport-varlink-make-userdata-pointer-inheritance-from-varli.patch
+Patch0079:      0079-backport-udev-net_id-parse-_SUN-ACPI-index-as-a-signed-intege.patch
+Patch0080:      0080-backport-udev-net_id-don-t-generate-slot-based-names-if-multi.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1509,6 +1509,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon May 31 2021 overweight <hexiaowen@huawei.com> - 246-36
+- fix patches name and patches num
+
 * Thu May 27 2021 shenyangyang <shenyangyang4@huawei.com> - 246-35
 - Type:bugfix
 - ID:NA
@@ -1632,7 +1635,7 @@ fi
 - Type:enhancement
 - ID:NA
 - SUG:NA
-- DESC:add 1603-udev-add-actions-while-rename-netif-failed.patch
+- DESC:add 0010-1603-udev-add-actions-while-rename-netif-failed.patch
 
 * Sat Feb 29 2020 openEuler Buildteam <buildteam@openeuler.org> - 243-15
 - Type:enhancement
