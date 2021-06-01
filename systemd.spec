@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        32
+Release:        33
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -114,6 +114,10 @@ Patch0064:      core-fix-re-realization-of-cgroup-siblings.patch
 Patch0065:      basic-string-table-avoid-crash-when-table-is-sparse.patch
 Patch0066:      journal-fix-buffer-overrun-when-urlifying.patch
 Patch0067:      backport-varlink-make-userdata-pointer-inheritance-from-varli.patch
+Patch0068:      journal-refresh-cached-credentials-of-stdout-streams.patch
+Patch0069:      journald-rework-end-of-line-marker-handling-to-use-a.patch
+Patch0070:      journald-rework-pid-change-handling.patch
+Patch0071:      journald-enforce-longer-line-length-limit-during-set.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1499,6 +1503,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Jun 01 2021 fangxiuning <fangxiuning@huawei.com> - 243-33
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: journald: enforce longer line length limit during "setup" phase of stream protocol
+
 * Wed Apr 07 2021 fangxiuning <fangxiuning@huawei.com> - 243-32
 - Type:bugfix
 - ID:NA
