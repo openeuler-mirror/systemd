@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        35
+Release:        36
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -118,6 +118,7 @@ Patch0068:      0068-backport-journal-refresh-cached-credentials-of-stdout-strea
 Patch0069:      0069-backport-journald-rework-end-of-line-marker-handling-to-use-a.patch
 Patch0070:      0070-backport-journald-rework-pid-change-handling.patch
 Patch0071:      0071-backport-journald-enforce-longer-line-length-limit-during-set.patch
+Patch0072:      backport-execute-Fix-migration-from-DynamicUser-yes-to-no.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1503,6 +1504,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Jun 03 2021 ExtinctFire <shenyining_00@126.com> - 243-36
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:Fix migration from DynamicUser=yes to no.
+
 * Thu Jun 03 2021 shenyangyang <shenyangyang4@huawei.com> - 243-35
 - Type:bugfix
 - ID:NA
