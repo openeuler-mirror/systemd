@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        33
+Release:        34
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -118,6 +118,7 @@ Patch0068:      journal-refresh-cached-credentials-of-stdout-streams.patch
 Patch0069:      journald-rework-end-of-line-marker-handling-to-use-a.patch
 Patch0070:      journald-rework-pid-change-handling.patch
 Patch0071:      journald-enforce-longer-line-length-limit-during-set.patch
+Patch0072:      fix-CVE-2021-33910.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1503,6 +1504,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Jul 21 2021 yangmingtai <yangmingtai@huawei.com> - 243-34
+- Type:cve
+- ID:CVE-2021-33910
+- SUG:NA
+- DESC: fix CVE-2021-33910
+
 * Tue Jun 01 2021 fangxiuning <fangxiuning@huawei.com> - 243-33
 - Type:bugfix
 - ID:NA
