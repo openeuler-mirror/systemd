@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        15
+Release:        16
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -69,6 +69,7 @@ Patch0017:      fix-capsh-drop-but-ping-success.patch
 Patch0018:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 Patch0019:      core-serialize-u-pids-until-the-processes-have-been-.patch 
 Patch0020:      scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch 
+Patch0021:      0021-fix-CVE-2021-33910.patch
 
 Patch6000:      backport-xdg-autostart-Lower-most-info-messages-to-debug-leve.patch
 Patch6001:      backport-RFC-Make-user-instance-aware-of-delegated-cgroup-controllers.patch
@@ -1491,6 +1492,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Jul 22 2021 yangmingtai <yangmingtai4@huawei.com> - 246-16
+- Type:CVE
+- ID:CVE-2021-33910
+- SUG:NA
+- DESC:fix CVE-2021-33910
+
 * Wed Mar 17 2021 shenyangyang <shenyangyang4@huawei.com> - 246-15
 - Type:bugfix
 - ID:NA
