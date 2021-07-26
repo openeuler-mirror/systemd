@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        39
+Release:        40
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -130,6 +130,7 @@ Patch0083:      0083-journald-rework-pid-change-handling.patch
 Patch0084:      0084-journald-enforce-longer-line-length-limit-during-set.patch 
 Patch0085:      backport-execute-Fix-migration-from-DynamicUser-yes-to-no.patch
 Patch0086:      0086-fix-CVE-2021-33910.patch
+Patch0087:      backport-units-restore-RemainAfterExit-yes-in-systemd-vconsol.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1515,6 +1516,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Jul 26 2021 extinctfire <shenyining_00@126.com> - 243-40
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:restore RemainAfterExit=yes in systemd-vconsole-setup.service
+
 * Wed Jul 21 2021 yangmingtai <yangmingtai@huawei.com> - 243-39
 - Type:cve
 - ID:CVE-2021-33910
