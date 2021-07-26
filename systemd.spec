@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        6
+Release:        7
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -67,6 +67,7 @@ Patch0016:      0016-systemd-change-time-log-level.patch
 #Patch0019:      0019-core-serialize-u-pids-until-the-processes-have-been-.patch 
 #Patch0020:      0020-scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch
 Patch0021:      0021-journald-enforce-longer-line-length-limit-during-set.patch
+Patch0022:	0022-fix-CVE-2021-33910.patch
 
 
 BuildRequires:  gcc, gcc-c++
@@ -1530,7 +1531,10 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Thu Jun 03 2021 shenyangyang <shenyangyang4@huawei.com> - 248-6
+* Thu Jun 03 2021 yangmingtai <yangmingtai@huawei.com> - 248-7
+- fix CVE-2021-33910
+
+* Thu Jul 22 2021 shenyangyang <shenyangyang4@huawei.com> - 248-6
 - change requires to openssl-libs as post scripts systemctl requires libssl.so.1.1
 
 * Mon May 31 2021 hexiaowen<hexiaowen@huawei.com> - 248-5
