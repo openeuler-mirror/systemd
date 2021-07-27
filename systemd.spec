@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        40
+Release:        41
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -131,6 +131,7 @@ Patch0084:      0084-journald-enforce-longer-line-length-limit-during-set.patch
 Patch0085:      backport-execute-Fix-migration-from-DynamicUser-yes-to-no.patch
 Patch0086:      0086-fix-CVE-2021-33910.patch
 Patch0087:      backport-units-restore-RemainAfterExit-yes-in-systemd-vconsol.patch
+Patch0088:      backport-udevd-don-t-kill-worker-in-manager_kill_workers-when.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1516,6 +1517,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Jul 27 2021 fangxiuning <fangxiuning@huawei.com> - 243-41
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:udevd: don't kill worker in manager_kill_worker when it's running
+
 * Mon Jul 26 2021 extinctfire <shenyining_00@126.com> - 243-40
 - Type:bugfix
 - ID:NA
