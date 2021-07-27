@@ -1,0 +1,104 @@
+From f257a8fc13b2a617d845132eb61aefde47921198 Mon Sep 17 00:00:00 2001
+From: gaoyi <ymuemc@163.com>
+Date: Fri, 19 Mar 2021 15:16:56 +0800
+Subject: [PATCH] udevd: don't kill worker in manager_kill_workers when it's
+ running
+
+If worker is running, kill worker may lead uevent unprocessed.
+---
+ src/udev/udevd.c | 23 ++++++++++++++++-------
+ 1 file changed, 16 insertions(+), 7 deletions(-)
+
+diff --git a/src/udev/udevd.c b/src/udev/udevd.c
+index cb51230..215f020 100644
+--- a/src/udev/udevd.c
++++ b/src/udev/udevd.c
+@@ -134,6 +134,7 @@ enum worker_state {
+         WORKER_RUNNING,
+         WORKER_IDLE,
+         WORKER_KILLED,
++        WORKER_KILLING,
+ };
+ 
+ struct worker {
+@@ -654,7 +655,7 @@ static int event_queue_insert(Manager *manager, sd_device *dev) {
+         return 0;
+ }
+ 
+-static void manager_kill_workers(Manager *manager) {
++static void manager_kill_workers(Manager *manager, bool force) {
+         struct worker *worker;
+         Iterator i;
+ 
+@@ -664,6 +665,11 @@ static void manager_kill_workers(Manager *manager) {
+                 if (worker->state == WORKER_KILLED)
+                         continue;
+ 
++                if (worker->state == WORKER_RUNNING && !force) {
++                        worker->state = WORKER_KILLING;
++                        continue;
++                }
++
+                 worker->state = WORKER_KILLED;
+                 (void) kill(worker->pid, SIGTERM);
+         }
+@@ -810,7 +816,7 @@ static void manager_exit(Manager *manager) {
+ 
+         /* discard queued events and kill workers */
+         event_queue_cleanup(manager, EVENT_QUEUED);
+-        manager_kill_workers(manager);
++        manager_kill_workers(manager, true);
+ 
+         assert_se(sd_event_now(manager->event, CLOCK_MONOTONIC, &usec) >= 0);
+ 
+@@ -829,7 +835,7 @@ static void manager_reload(Manager *manager) {
+                   "RELOADING=1\n"
+                   "STATUS=Flushing configuration...");
+ 
+-        manager_kill_workers(manager);
++        manager_kill_workers(manager, false);
+         manager->rules = udev_rules_free(manager->rules);
+         udev_builtin_exit();
+ 
+@@ -844,7 +850,7 @@ static int on_kill_workers_event(sd_event_source *s, uint64_t usec, void *userda
+         assert(manager);
+ 
+         log_debug("Cleanup idle workers");
+-        manager_kill_workers(manager);
++        manager_kill_workers(manager, false);
+ 
+         return 1;
+ }
+@@ -966,7 +972,10 @@ static int on_worker(sd_event_source *s, int fd, uint32_t revents, void *userdat
+                         continue;
+                 }
+ 
+-                if (worker->state != WORKER_KILLED)
++                if (worker->state == WORKER_KILLING) {
++                        worker->state = WORKER_KILLED;
++                        (void) kill(worker->pid, SIGTERM);
++                } else if (worker->state != WORKER_KILLED)
+                         worker->state = WORKER_IDLE;
+ 
+                 /* worker returned */
+@@ -1012,7 +1021,7 @@ static int on_ctrl_msg(struct udev_ctrl *uctrl, enum udev_ctrl_msg_type type, co
+                 log_debug("Received udev control message (SET_LOG_LEVEL), setting log_priority=%i", value->intval);
+                 log_set_max_level_realm(LOG_REALM_UDEV, value->intval);
+                 log_set_max_level_realm(LOG_REALM_SYSTEMD, value->intval);
+-                manager_kill_workers(manager);
++                manager_kill_workers(manager, false);
+                 break;
+         case UDEV_CTRL_STOP_EXEC_QUEUE:
+                 log_debug("Received udev control message (STOP_EXEC_QUEUE)");
+@@ -1077,7 +1086,7 @@ static int on_ctrl_msg(struct udev_ctrl *uctrl, enum udev_ctrl_msg_type type, co
+                 }
+ 
+                 key = val = NULL;
+-                manager_kill_workers(manager);
++                manager_kill_workers(manager, false);
+                 break;
+         }
+         case UDEV_CTRL_SET_CHILDREN_MAX:
+-- 
+1.8.3.1
+
