@@ -1,0 +1,30 @@
+From 9fd32ff7d363945fbf8fdae0128702b995127558 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Thu, 5 Mar 2020 07:11:09 +0100
+Subject: [PATCH] units: restore RemainAfterExit=yes in
+ systemd-vconsole-setup.service
+
+This reverts the second part of 8125e8d38e3aa099c7dce8b0161997b8842aebdc.
+The first part was reverted in 750e550eba362096d56a35104c6a32631aa67b8e.
+The problem starts when s-v-s.s is pulled in by something that is then pulled
+in by sysinit.target. Every time a unit is started, systemd recursively checks
+all dependencies, and since sysinit.target is pull in by almost anything, we'll
+start s-v-s.s over and over. In particular, plymouth-start.service currently
+has Wants=s-v-s.s and After=s-v-s.s.
+---
+ units/systemd-vconsole-setup.service.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/units/systemd-vconsole-setup.service.in b/units/systemd-vconsole-setup.service.in
+index f4178f495a..9042521c9d 100644
+--- a/units/systemd-vconsole-setup.service.in
++++ b/units/systemd-vconsole-setup.service.in
+@@ -16,4 +16,5 @@ ConditionPathExists=/dev/tty0
+ 
+ [Service]
+ Type=oneshot
++RemainAfterExit=yes
+ ExecStart=@rootlibexecdir@/systemd-vconsole-setup
+-- 
+2.23.0
+
