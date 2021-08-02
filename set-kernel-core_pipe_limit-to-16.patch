@@ -1,0 +1,33 @@
+From 283ff70372cddb8b06ca3b2c5e7b8287f81207a9 Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Fri, 30 Jul 2021 12:38:27 +0800
+Subject: [PATCH] set kernel.core_pipe_limit=16
+
+https://github.com/poettering/systemd/commit/8444f245b56d085cdcfa788e9b9c7799fc58a46b
+
+---
+ sysctl.d/50-coredump.conf.in | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/sysctl.d/50-coredump.conf.in b/sysctl.d/50-coredump.conf.in
+index 47bf847..327863d 100644
+--- a/sysctl.d/50-coredump.conf.in
++++ b/sysctl.d/50-coredump.conf.in
+@@ -10,3 +10,14 @@
+ # setting below.
+ 
+ kernel.core_pattern=|@rootlibexecdir@/systemd-coredump %P %u %g %s %t %c %h
++
++# Allow that 16 coredumps are dispatched in parallel by the kernel. We want to
++# be able to collect process metadata from /proc/%P/ while processing
++# coredumps, and thus need to make sure the crashed processes are not reaped
++# until we finished collecting what we need. The kernel default for this sysctl
++# is "0" which means the kernel doesn't wait for userspace processes to finish
++# processing before reaping the crashed processes — by setting this higher the
++# kernel will delay reaping until we are done, but only for the specified
++# number of crashes in parallel. The value of 16 is chosen to match
++# systemd-coredump.socket's MaxConnections= value.
++kernel.core_pipe_limit=16
+-- 
+2.27.0
+

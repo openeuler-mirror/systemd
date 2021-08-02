@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        39
+Release:        40
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -136,6 +136,7 @@ Patch9008:      1620-nop_job-of-a-unit-must-also-be-coldpluged-after-deserizatio
 Patch9009:      systemd-change-time-log-level.patch
 Patch9010:      fix-capsh-drop-but-ping-success.patch
 Patch9011:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+Patch9012:      set-kernel-core_pipe_limit-to-16.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1507,6 +1508,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Aug 02 2021 jiazhenyuan <jiazhenyuan@uniontech.com> - 243-40
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:set kernel.core_pipe_limit=16
+
 * Tue Jul 27 2021 fangxiuning <fangxiuning@huawei.com> - 243-39
 - Type:bugfix
 - ID:NA
