@@ -1,0 +1,34 @@
+From a59b0a9f768f6e27b25f4f1bab6de08842e78d74 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michal=20Sekleta=CC=81r?= <msekleta@redhat.com>
+Date: Thu, 5 Nov 2020 17:55:25 +0100
+Subject: [PATCH] basic/stat-util: make mtime check stricter and use entire
+ timestamp
+
+Note that st_mtime member of struct stat is defined as follows,
+
+ #define st_mtime st_mtim.tv_sec
+
+Hence we omitted checking nanosecond part of the timestamp (struct
+timespec) and possibly would miss modifications that happened within the
+same second.
+---
+ src/basic/stat-util.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/basic/stat-util.c b/src/basic/stat-util.c
+index 4595ba7..b44d75c 100644
+--- a/src/basic/stat-util.c
++++ b/src/basic/stat-util.c
+@@ -394,7 +394,8 @@ bool stat_inode_unmodified(const struct stat *a, const struct stat *b) {
+         return a && b &&
+                 (a->st_mode & S_IFMT) != 0 && /* We use the check for .st_mode if the structure was ever initialized */
+                 ((a->st_mode ^ b->st_mode) & S_IFMT) == 0 &&  /* same inode type */
+-                a->st_mtime == b->st_mtime &&
++                a->st_mtim.tv_sec == b->st_mtim.tv_sec &&
++                a->st_mtim.tv_nsec == b->st_mtim.tv_nsec &&
+                 (!S_ISREG(a->st_mode) || a->st_size == b->st_size) && /* if regular file, compare file size */
+                 a->st_dev == b->st_dev &&
+                 a->st_ino == b->st_ino &&
+-- 
+2.23.0
+
