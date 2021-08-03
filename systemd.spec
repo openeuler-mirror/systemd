@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        40
+Release:        41
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -122,6 +122,9 @@ Patch0072:      backport-execute-Fix-migration-from-DynamicUser-yes-to-no.patch
 Patch0073:      0073-fix-CVE-2021-33910.patch
 Patch0074:      backport-units-restore-RemainAfterExit-yes-in-systemd-vconsol.patch
 Patch0075:      backport-udevd-don-t-kill-worker-in-manager_kill_workers-when.patch
+Patch0076:      backport-stat-util-add-stat_inode_unmodified-helper-that-chec.patch
+Patch0077:      backport-basic-stat-util-make-mtime-check-stricter-and-use-en.patch
+Patch0078:      backport-udev-make-algorithm-that-selects-highest-priority-de.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1508,6 +1511,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Aug 03 2021 yangmingtai <yangmingtai@huawei.com> - 243-41
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:udevd: fix broken symbolic links when same link for different devices
+
 * Mon Aug 02 2021 jiazhenyuan <jiazhenyuan@uniontech.com> - 243-40
 - Type:bugfix
 - ID:NA
