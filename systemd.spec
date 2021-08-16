@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        44
+Release:        45
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -136,6 +136,7 @@ Patch0088:      backport-udevd-don-t-kill-worker-in-manager_kill_workers-when.pa
 Patch0089:      backport-stat-util-add-stat_inode_unmodified-helper-that-chec.patch
 Patch0090:      backport-basic-stat-util-make-mtime-check-stricter-and-use-en.patch
 Patch0091:      backport-udev-make-algorithm-that-selects-highest-priority-de.patch
+Patch0092:      backport-tentatively-ignore-FORCERENEW-command.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1523,6 +1524,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Aug 16 2021 yangmingtai <yangmingtai@huawei.com> - 243-45
+- Type:CVE
+- ID:CVE-2020-13529
+- SUG:NA
+- DESC:fix CVE-2020-13529
+
 * Tue Aug 10 2021 yangmingtai <yangmingtai@huawei.com> - 243-44
 - Type:bugfix
 - ID:NA
