@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        7
+Release:        8
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -657,6 +657,7 @@ grep -q -E '^KEYMAP="?fi-latin[19]"?' /etc/vconsole.conf 2>/dev/null &&
 if [ -f "/usr/lib/udev/rules.d/50-udev-default.rules" ]; then
      sed -i 's/KERNEL=="kvm", GROUP="kvm", MODE="0666"/KERNEL=="kvm", GROUP="kvm", MODE="0660"/g' /usr/lib/udev/rules.d/50-udev-default.rules
 fi
+%{_bindir}/systemctl daemon-reload &>/dev/null || :
 
 %preun udev
 %systemd_preun %udev_services
@@ -1531,6 +1532,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Aug 16 2021 yangmingtai <yangmingtai@huawei.com> - 248-8
+- udev: exec daemon-reload after installation
+
 * Thu Jun 03 2021 yangmingtai <yangmingtai@huawei.com> - 248-7
 - fix CVE-2021-33910
 
