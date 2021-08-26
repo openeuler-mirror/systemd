@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        8
+Release:        9
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -62,8 +62,8 @@ Patch0013:      0013-sd-bus-properly-initialize-containers.patch
 Patch0014:      0014-Revert-core-one-step-back-again-for-nspawn-we-actual.patch
 Patch0015:      0015-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0016:      0016-systemd-change-time-log-level.patch
-#Patch0017:      0017-fix-capsh-drop-but-ping-success.patch
-#Patch0018:      0018-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+Patch0017:      0017-fix-capsh-drop-but-ping-success.patch
+Patch0018:      0018-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 #Patch0019:      0019-core-serialize-u-pids-until-the-processes-have-been-.patch 
 #Patch0020:      0020-scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch
 Patch0021:      0021-journald-enforce-longer-line-length-limit-during-set.patch
@@ -1532,6 +1532,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Aug 26 2021 xujing <xujing99@huawei.com> - 248-9
+- enable some patches to fix bugs
+
 * Mon Aug 16 2021 yangmingtai <yangmingtai@huawei.com> - 248-8
 - udev: exec daemon-reload after installation
 

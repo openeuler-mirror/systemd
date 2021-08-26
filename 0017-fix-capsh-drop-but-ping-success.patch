@@ -18,12 +18,12 @@ index 41bd1f9..4d9bef8 100644
 @@ -36,7 +36,7 @@ net.ipv4.conf.all.promote_secondaries = 1
  #   #define GID_T_MAX (((gid_t)~0U) >> 1)
  # That's not so bad because values between 2^31 and 2^32-1 are reserved on
- # systemd-based systems anyway: https://systemd.io/UIDS-GIDS.html#summary
+ # systemd-based systems anyway: https://systemd.io/UIDS-GIDS#summary
 --net.ipv4.ping_group_range = 0 2147483647
 +net.ipv4.ping_group_range = 1 0
  
  # Fair Queue CoDel packet scheduler to fight bufferbloat
- net.core.default_qdisc = fq_codel
+ -net.core.default_qdisc = fq_codel
 -- 
 1.8.3.1
 
