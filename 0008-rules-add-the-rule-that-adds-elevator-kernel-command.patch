@@ -11,11 +11,11 @@ Resolves: #1670126
  1 file changed, 1 insertion(+)
 
 diff --git a/rules.d/meson.build b/rules.d/meson.build
-index 120fe7f..8dcadbc 100644
+index 62026fd..4a3c32f 100644
 --- a/rules.d/meson.build
 +++ b/rules.d/meson.build
-@@ -1,6 +1,7 @@
- # SPDX-License-Identifier: LGPL-2.1+
+@@ -5,6 +5,7 @@ install_data(
+         install_dir : udevrulesdir)
  
  rules = files('''
 +        40-elevator.rules

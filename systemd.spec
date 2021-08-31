@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        9
+Release:        10
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -53,7 +53,7 @@ Patch0004:      0004-logind-set-RemoveIPC-to-false-by-default.patch
 Patch0005:      0005-rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
 Patch0006:      0006-unit-don-t-add-Requires-for-tmp.mount.patch
 Patch0007:      0007-rules-add-elevator-kernel-command-line-parameter.patch
-#Patch0008:     0008-rules-add-the-rule-that-adds-elevator-kernel-command.patch
+Patch0008:      0008-rules-add-the-rule-that-adds-elevator-kernel-command.patch
 Patch0009:      0009-units-add-Install-section-to-tmp.mount.patch
 Patch0010:      0010-Make-systemd-udevd.service-start-after-systemd-remou.patch
 Patch0011:      0011-udev-virsh-shutdown-vm.patch
@@ -64,10 +64,8 @@ Patch0015:      0015-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0016:      0016-systemd-change-time-log-level.patch
 Patch0017:      0017-fix-capsh-drop-but-ping-success.patch
 Patch0018:      0018-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
-#Patch0019:      0019-core-serialize-u-pids-until-the-processes-have-been-.patch 
-#Patch0020:      0020-scope-on-unified-make-sure-to-unwatch-all-PIDs-once-.patch
-Patch0021:      0021-journald-enforce-longer-line-length-limit-during-set.patch
-Patch0022:	0022-fix-CVE-2021-33910.patch
+Patch0019:      0019-journald-enforce-longer-line-length-limit-during-set.patch
+Patch0020:      0020-fix-CVE-2021-33910.patch
 
 
 BuildRequires:  gcc, gcc-c++
@@ -1408,6 +1406,7 @@ fi
 %{_udevhwdbdir}/60-autosuspend.hwdb
 %{_udevrulesdir}/60-autosuspend.rules
 %{_udevrulesdir}/40-openEuler.rules
+%{_udevrulesdir}/40-elevator.rules
 %{_udevrulesdir}/73-idrac.rules
 %{_udevrulesdir}/60-block.rules
 %{_udevrulesdir}/60-input-id.rules
@@ -1532,7 +1531,10 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Thu Aug 26 2021 xujing <17826839720@163.com> - 248-9
+* Mon Aug 30 2021 yangmingtai <yangmingtai@huawei.com> - 248-10
+- enable some patches and delete unused patches
+
+* Thu Aug 26 2021 xujing <xujing99@huawei.com> - 248-9
 - enable some patches to fix bugs
 
 * Mon Aug 16 2021 yangmingtai <yangmingtai@huawei.com> - 248-8
