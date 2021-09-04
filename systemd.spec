@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        10
+Release:        11
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -86,6 +86,7 @@ BuildRequires:  gnu-efi gnu-efi-devel
 BuildRequires:  valgrind-devel
 %endif
 BuildRequires:  util-linux
+BuildRequires:  chrpath
 
 Requires:       %{name}-libs = %{version}-%{release}
 Requires(post): coreutils
@@ -401,6 +402,19 @@ install -m 0755 %{SOURCE105} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE106} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE107} %{buildroot}/usr/lib/udev
 
+# remove rpath info
+for file in $(find %{buildroot}/ -executable -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
+do
+        if [ ! -u "$file" ]; then
+                if [ -w "$file" ]; then
+                        chrpath -d $file
+                fi
+        fi
+done
+# add rpath path /usr/lib/systemd in ld.so.conf.d
+mkdir -p %{buildroot}%{_sysconfdir}/ld.so.conf.d
+echo "/usr/lib/systemd" > %{buildroot}%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
+
 %check
 %ninja_test -C %{_vpath_builddir}
 
@@ -537,10 +551,14 @@ getent group systemd-resolve &>/dev/null || groupadd -r -g 193 systemd-resolve 2
 getent passwd systemd-resolve &>/dev/null || useradd -r -u 193 -l -g systemd-resolve -d / -s /sbin/nologin -c "systemd Resolver" systemd-resolve &>/dev/null || :
 
 %post
+/sbin/ldconfig
 systemd-machine-id-setup &>/dev/null || :
 systemctl daemon-reexec &>/dev/null || :
 journalctl --update-catalog &>/dev/null || :
 systemd-tmpfiles --create &>/dev/null || :
+
+%postun
+/sbin/ldconfig
 
 # Make sure new journal files will be owned by the "systemd-journal" group
 machine_id=$(cat /etc/machine-id 2>/dev/null)
@@ -1218,6 +1236,7 @@ fi
 %config(noreplace) /etc/rc.d/init.d/README
 %dir /etc/xdg/systemd
 %config(noreplace) /etc/xdg/systemd/user
+%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
 
 %{_libdir}/security/pam_systemd.so
 /usr/lib/rpm/macros.d/macros.systemd
@@ -1531,6 +1550,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Sat Sep 4 2021 yangmingtai <yangmingtai@huawei.com> - 248-11
+- systemd delete rpath
+
 * Mon Aug 30 2021 yangmingtai <yangmingtai@huawei.com> - 248-10
 - enable some patches and delete unused patches
 
