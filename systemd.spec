@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        11
+Release:        12
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -557,8 +557,6 @@ systemctl daemon-reexec &>/dev/null || :
 journalctl --update-catalog &>/dev/null || :
 systemd-tmpfiles --create &>/dev/null || :
 
-%postun
-/sbin/ldconfig
 
 # Make sure new journal files will be owned by the "systemd-journal" group
 machine_id=$(cat /etc/machine-id 2>/dev/null)
@@ -577,6 +575,9 @@ if [ $1 -eq 1 ] ; then
         echo "DefaultTasksMax=80%" >> /etc/systemd/system.conf
         systemctl preset-all &>/dev/null || :
 fi
+
+%postun
+/sbin/ldconfig
 
 %post libs
 %{?ldconfig}
@@ -1550,6 +1551,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Sep 6 2021 yangmingtai <yangmingtai@huawei.com> - 248-12
+- move postun to correct position
+
 * Sat Sep 4 2021 yangmingtai <yangmingtai@huawei.com> - 248-11
 - systemd delete rpath
 
