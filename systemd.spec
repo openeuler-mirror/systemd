@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        40
+Release:        41
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -125,6 +125,7 @@ Patch0075:	backport-stat-util-add-stat_inode_unmodified-helper-that-chec.patch
 Patch0076:	backport-basic-stat-util-make-mtime-check-stricter-and-use-en.patch
 Patch0077:	backport-udev-make-algorithm-that-selects-highest-priority-de.patch
 Patch0078:	backport-tentatively-ignore-FORCERENEW-command.patch
+Patch0079:	backport-network-add-missing-link-network-checks.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1512,6 +1513,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Aug 16 2021 yangmingtai <yangmingtai@huawei.com> - 243-41
+- fix network coredump after install cloud-init
+
 * Mon Aug 16 2021 yangmingtai <yangmingtai@huawei.com> - 243-40
 - Type:CVE
 - ID:CVE-2020-13529
