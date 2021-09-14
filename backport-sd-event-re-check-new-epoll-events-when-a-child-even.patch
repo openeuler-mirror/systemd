@@ -218,13 +218,13 @@ index 5d0e057..65db799 100644
  
                          case WAKEUP_SIGNAL_DATA:
 -                                r = process_signal(e, ev_queue[i].data.ptr, ev_queue[i].events);
-+                                r = process_signal(e, e->event_queue[i].data.ptr, e->event_queue[i].events, &min_priority);
++                                r = process_signal(e, ev_queue[i].data.ptr, ev_queue[i].events, &min_priority);
                                  break;
  
                          case WAKEUP_INOTIFY_DATA:
 -                                r = event_inotify_data_read(e, ev_queue[i].data.ptr, ev_queue[i].events);
-+                                r = event_inotify_data_read(e, e->event_queue[i].data.ptr, e->event_queue[i].events, thresh
-+old);
++                                r = event_inotify_data_read(e, ev_queue[i].data.ptr, ev_queue[i].events, threshold);
++
                                  break;
  
                          default:
