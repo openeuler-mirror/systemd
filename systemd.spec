@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        44
+Release:        45
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -127,6 +127,7 @@ Patch0077:      backport-basic-stat-util-make-mtime-check-stricter-and-use-en.pa
 Patch0078:      backport-udev-make-algorithm-that-selects-highest-priority-de.patch
 Patch0079:      backport-tentatively-ignore-FORCERENEW-command.patch
 Patch0080:      backport-network-add-missing-link-network-checks.patch
+Patch0081:      backport-sd-event-re-check-new-epoll-events-when-a-child-even.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1514,6 +1515,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Sep 14 2021 fangxiuning <fangxiuning@huawei.com> - 243-45
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:sd-event: re-check new epoll events when a child event is queued
+
 * Thu Sep 9 2021 yangmingtai <yangmingtai@huawei.com> - 243-44
 - fix network coredump after install cloud-init 
 
