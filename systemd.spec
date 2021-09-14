@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        45
+Release:        46
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1515,6 +1515,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Sep 14 2021 fangxiuning <fangxiuning@huawei.com> - 243-46
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:sd-event: fix typo erro
+
 * Tue Sep 14 2021 fangxiuning <fangxiuning@huawei.com> - 243-45
 - Type:bugfix
 - ID:NA
