@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        12
+Release:        13
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -66,7 +66,7 @@ Patch0017:      0017-fix-capsh-drop-but-ping-success.patch
 Patch0018:      0018-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 Patch0019:      0019-journald-enforce-longer-line-length-limit-during-set.patch
 Patch0020:      0020-fix-CVE-2021-33910.patch
-
+Patch0021:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1551,6 +1551,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Sep 16 2021 ExtinctFire <shenyining_00@126.com> - 248-13
+- core: fix free undefined pointer when strdup failed in the first loop
+
 * Mon Sep 6 2021 yangmingtai <yangmingtai@huawei.com> - 248-12
 - move postun to correct position
 
