@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        46
+Release:        47
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -138,6 +138,7 @@ Patch0090:      backport-basic-stat-util-make-mtime-check-stricter-and-use-en.pa
 Patch0091:      backport-udev-make-algorithm-that-selects-highest-priority-de.patch
 Patch0092:      backport-tentatively-ignore-FORCERENEW-command.patch
 Patch0093:      backport-network-add-missing-link-network-checks.patch
+Patch0094:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1525,6 +1526,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Sep 16 2021 ExtinctFire <shenyining_00@126.com> - 243-47
+- core: fix free undefined pointer when strdup failed in the first loop
+
 * Thu Sep 9 2021 yangmingtai <yangmingtai@huawei.com> - 243-46
 - fix network coredump after install cloud-init
 
