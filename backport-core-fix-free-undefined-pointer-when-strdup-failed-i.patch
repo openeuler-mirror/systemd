@@ -1,0 +1,33 @@
+From 1509274359979079e3e61899ce12fc8b0f0958d9 Mon Sep 17 00:00:00 2001
+From: xujing <17826839720@163.com>
+Date: Wed, 8 Sep 2021 14:26:20 +0800
+Subject: [PATCH] core: fix free undefined pointer when strdup failed in the
+ first loop
+
+---
+ src/core/load-fragment.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/load-fragment.c b/src/core/load-fragment.c
+index 92815b1dbaea..1c8159a23550 100644
+--- a/src/core/load-fragment.c
++++ b/src/core/load-fragment.c
+@@ -800,7 +800,7 @@ int config_parse_exec(
+                 if (!separate_argv0) {
+                         char *w = NULL;
+ 
+-                        if (!GREEDY_REALLOC(n, nbufsize, nlen + 2))
++                        if (!GREEDY_REALLOC0(n, nbufsize, nlen + 2))
+                                 return log_oom();
+ 
+                         w = strdup(path);
+@@ -832,7 +832,7 @@ int config_parse_exec(
+                                 p += 2;
+                                 p += strspn(p, WHITESPACE);
+ 
+-                                if (!GREEDY_REALLOC(n, nbufsize, nlen + 2))
++                                if (!GREEDY_REALLOC0(n, nbufsize, nlen + 2))
+                                         return log_oom();
+ 
+                                 w = strdup(";");
+
