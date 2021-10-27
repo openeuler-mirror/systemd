@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        48
+Release:        49
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -139,6 +139,7 @@ Patch0092:      backport-tentatively-ignore-FORCERENEW-command.patch
 Patch0093:      backport-network-add-missing-link-network-checks.patch
 Patch0094:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
 Patch0095:      backport-sd-event-re-check-new-epoll-events-when-a-child-even.patch
+Patch0096:	backport-test-adapt-to-the-new-capsh-format.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1526,6 +1527,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Oct 27 2021 shenyangyang <shenyangyang4@huawei.com> - 243-49
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC:adapt to the new capsh format for test
+
 * Fri Oct 08 2021 fangxiuning <fangxiuning@huawei.com> - 243-48
 - Type:bugfix
 - ID:NA
