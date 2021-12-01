@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        13
+Release:        14
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -68,8 +68,10 @@ Patch0019:      0019-journald-enforce-longer-line-length-limit-during-set.patch
 Patch0020:      0020-fix-CVE-2021-33910.patch
 Patch0021:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
 
+#openEuler
+Patch9000:      disable-systemd-timesyncd-networkd-resolved-homed-us.patch 
 
-BuildRequires:  gcc, gcc-c++
+BuildRequires:  gcc, gcc-c++, rsync
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
 BuildRequires:  audit-libs-devel, cryptsetup-devel, dbus-devel, libacl-devel
 BuildRequires:  gobject-introspection-devel, libblkid-devel, xz-devel, xz
@@ -1552,6 +1554,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Dec 01 2021 licunlong <licunlong1@huawei.com> - 248-14
+- disable systemd-{timesyncd, networkd, resolved} by default
+
 * Thu Sep 16 2021 ExtinctFire <shenyining_00@126.com> - 248-13
 - core: fix free undefined pointer when strdup failed in the first loop
 
@@ -1570,10 +1575,10 @@ fi
 * Mon Aug 16 2021 yangmingtai <yangmingtai@huawei.com> - 248-8
 - udev: exec daemon-reload after installation
 
-* Thu Jun 03 2021 yangmingtai <yangmingtai@huawei.com> - 248-7
+* Thu Jul 22 2021 yangmingtai <yangmingtai@huawei.com> - 248-7
 - fix CVE-2021-33910
 
-* Thu Jul 22 2021 shenyangyang <shenyangyang4@huawei.com> - 248-6
+* Thu Jun 03 2021 shenyangyang <shenyangyang4@huawei.com> - 248-6
 - change requires to openssl-libs as post scripts systemctl requires libssl.so.1.1
 
 * Mon May 31 2021 hexiaowen<hexiaowen@huawei.com> - 248-5
