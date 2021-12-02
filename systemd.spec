@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        48
+Release:        49
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -155,6 +155,7 @@ Patch9009:      systemd-change-time-log-level.patch
 Patch9010:      fix-capsh-drop-but-ping-success.patch
 Patch9011:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 Patch9012:      set-kernel-core_pipe_limit-to-16.patch
+Patch9013:      disable-systemd-timesyncd-networkd-resolved-by-defau.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1527,6 +1528,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Dec 01 2021 licunlong <licunlong1@huawei.com> - 243-49
+- disable systemd-{timesyncd, networkd, resolved} by default
+
 * Thu Sep 28 2021 shenyangyang <shenyangyang4@huawei.com> - 243-48
 - adapt to the new capsh format for test
 
