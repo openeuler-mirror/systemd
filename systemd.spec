@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        49
+Release:        50
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -140,6 +140,7 @@ Patch0092:      backport-tentatively-ignore-FORCERENEW-command.patch
 Patch0093:      backport-network-add-missing-link-network-checks.patch
 Patch0094:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
 Patch0095:	backport-test-adapt-to-the-new-capsh-format.patch
+Patch0096:	backport-sd-event-re-check-new-epoll-events-when-a-child-even.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1528,6 +1529,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Fri Dec 3 2021 yangmingtai <yangmingtai@huawei.com> - 243-50
+- re-check new epoll events when a child event is queued
+
 * Wed Dec 01 2021 licunlong <licunlong1@huawei.com> - 243-49
 - disable systemd-{timesyncd, networkd, resolved} by default
 
