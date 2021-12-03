@@ -1,0 +1,33 @@
+From 8324f588b88566e077aae9b5814a4ee721f8368c Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Wed, 1 Dec 2021 17:04:40 +0800
+Subject: [PATCH] disable systemd-{timesyncd, networkd, resolved} by default
+
+---
+ presets/90-systemd.preset | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/presets/90-systemd.preset b/presets/90-systemd.preset
+index 11960e5..b16164a 100644
+--- a/presets/90-systemd.preset
++++ b/presets/90-systemd.preset
+@@ -15,9 +15,6 @@ enable remote-cryptsetup.target
+ enable machines.target
+ 
+ enable getty@.service
+-enable systemd-timesyncd.service
+-enable systemd-networkd.service
+-enable systemd-resolved.service
+ 
+ disable console-getty.service
+ disable debug-shell.service
+@@ -34,3 +31,6 @@ disable syslog.socket
+ disable systemd-journal-gatewayd.*
+ disable systemd-journal-remote.*
+ disable systemd-journal-upload.*
++disable systemd-timesyncd.service
++disable systemd-networkd.service
++disable systemd-resolved.service
+-- 
+2.23.0
+
