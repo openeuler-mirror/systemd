@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        246
-Release:        16
+Release:        17
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -76,6 +76,7 @@ Patch6001:      backport-RFC-Make-user-instance-aware-of-delegated-cgroup-contro
 Patch6002:      backport-core-Make-user-instance-aware-of-delegated-cgroup.patch
 Patch6003:      backport-udev-net_id-parse-_SUN-ACPI-index-as-a-signed-intege.patch
 Patch6004:      backport-udev-net_id-don-t-generate-slot-based-names-if-multi.patch
+Patch6005:      backport-sd-event-re-check-new-epoll-events-when-a-child-even.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1492,6 +1493,12 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Dec 15 2021 fangxiuning <fangxiuning@huawei.com> - 246-17
+- Type:bugfix
+- ID:NA
+- SUG:NA
+- DESC: sd-event: re-check new epoll events when a child event is queued
+
 * Thu Jul 22 2021 yangmingtai <yangmingtai4@huawei.com> - 246-16
 - Type:CVE
 - ID:CVE-2021-33910
