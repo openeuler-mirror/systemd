@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        1
+Release:        2
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -108,9 +108,7 @@ Provides:       systemd-sysv = 206
 Conflicts:      initscripts < 9.56.1
 Recommends:     %{name}-help
 
-Provides:       %{name}-pam
 Provides:       %{name}-rpm-config
-Obsoletes:      %{name}-pam < 243
 Obsoletes:      %{name}-rpm-config < 243
 
 %description
@@ -1714,6 +1712,9 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
++* Tue Dec 27 2021 yangmingtai <yangmingtai@huawei.com> - 249-2
++- delete useless Provides and Obsoletes
+
 * Wed Dec 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-1
 - systemd update to v249
 
