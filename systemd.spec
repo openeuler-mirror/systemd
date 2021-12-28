@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        248
-Release:        14
+Release:        15
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1554,6 +1554,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Dec 28 2021 licunlong <licunlong1@huawei.com> - 248-15
+- fix typo: disable not denable.
+
 * Wed Dec 01 2021 licunlong <licunlong1@huawei.com> - 248-14
 - disable systemd-{timesyncd, networkd, resolved} by default
 

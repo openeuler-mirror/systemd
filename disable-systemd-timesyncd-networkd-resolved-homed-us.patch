@@ -30,11 +30,11 @@ index d260874..2a7396c 100644
  disable systemd-journal-remote.*
  disable systemd-journal-upload.*
 +disable systemd-timesyncd.service
-+denable systemd-networkd.service
-+denable systemd-resolved.service
-+denable systemd-homed.service
-+denable systemd-userdbd.socket
-+denable systemd-pstore.service
++disable systemd-networkd.service
++disable systemd-resolved.service
++disable systemd-homed.service
++disable systemd-userdbd.socket
++disable systemd-pstore.service
 -- 
 2.23.0
 
