@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        2
+Release:        3
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,6 +63,9 @@ Patch0014:      0014-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0015:      0015-systemd-change-time-log-level.patch
 Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+%ifarch riscv64
+Patch0018:      0018-extend_timeout_for_riscv.patch
+%endif
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -351,7 +354,11 @@ CONFIGURE_OPTS=(
         -Dkmod=true
         -Dxkbcommon=true
         -Dblkid=true
+        %ifarch riscv64
+        -Dseccomp=false
+        %else
         -Dseccomp=true
+        %endif
         -Dima=true
         -Dselinux=true
         -Dapparmor=false
@@ -1339,14 +1346,18 @@ fi
 /usr/lib/systemd/user/session.slice
 /usr/lib/sysusers.d/README
 /usr/lib/tmpfiles.d/README
+%ifnarch riscv64
 /usr/lib/udev/dmi_memory_id
+%endif
 /usr/lib/udev/hwdb.d/20-dmi-id.hwdb
 /usr/lib/udev/hwdb.d/60-autosuspend-fingerprint-reader.hwdb
 /usr/lib/udev/hwdb.d/README
 /usr/lib/udev/hwdb.d/60-seat.hwdb
 /usr/lib/udev/hwdb.d/80-ieee1394-unit-function.hwdb
 /usr/lib/udev/rules.d/81-net-dhcp.rules
+%ifnarch riscv64
 /usr/lib/udev/rules.d/70-memory.rules
+%endif
 /usr/lib/udev/rules.d/README
 /usr/share/bash-completion/completions/systemd-id128
 /usr/share/zsh/site-functions/_systemd-path
@@ -1712,6 +1723,11 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
+* Fri Dec 31 2021 lvxiaoqian <xiaoqian@nj.iscas.ac.cn> - 249-3
+- increase test timeout for riscv
+  update configure flag for riscv
+  there is no dmi_memory_id and 70-memory.rules created for riscv, these two files are created for x86, x86_64, aarch64, arm, ia64, mips
+
 +* Tue Dec 27 2021 yangmingtai <yangmingtai@huawei.com> - 249-2
 +- delete useless Provides and Obsoletes
 
