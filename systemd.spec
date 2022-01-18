@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        44
+Release:        45
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -129,6 +129,15 @@ Patch0079:	backport-network-add-missing-link-network-checks.patch
 Patch0080:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
 Patch0081:      backport-test-adapt-to-the-new-capsh-format.patch
 Patch0082:      backport-sd-event-re-check-new-epoll-events-when-a-child-even.patch
+Patch0083:      backport-0001-CVE-2021-3997-rm-rf-add-new-flag-REMOVE_CHMOD.patch
+Patch0084:      backport-0002-CVE-2021-3997-btrfs-util-add-helper-that-abstracts-might-be-btrfs-.patch
+Patch0085:      backport-0003-CVE-2021-3997-rm-rf-fstatat-might-fail-if-containing-dir-has-limit.patch
+Patch0086:      backport-0004-CVE-2021-3997-rm-rf-refactor-rm_rf_children-split-out-body-of-dire.patch
+Patch0087:      backport-0005-CVE-2021-3997-rm-rf-optionally-fsync-after-removing-directory-tree.patch
+Patch0088:      backport-0006-CVE-2021-3997-tmpfiles-st-may-have-been-used-uninitialized.patch
+Patch0089:      backport-0007-CVE-2021-3997-shared-rm_rf-refactor-rm_rf_children_inner-to-shorte.patch
+Patch0090:      backport-0008-CVE-2021-3997-shared-rm_rf-refactor-rm_rf-to-shorten-code-a-bit.patch
+Patch0091:      backport-0009-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories-instead-of.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1516,6 +1525,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Jan 18 2021 yangmingtai <yangmingtai@huawei.com> - 243-45
+- CVE:fix CVE-2021-3997
+
 * Fri Nov 27 2021 fangxiuning <fangxiuning@huawei.com> - 243-44
 - Type:bugfix
 - ID:NA
