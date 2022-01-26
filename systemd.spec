@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        51
+Release:        52
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -150,6 +150,9 @@ Patch0102:      backport-0006-CVE-2021-3997-tmpfiles-st-may-have-been-used-unini
 Patch0103:      backport-0007-CVE-2021-3997-shared-rm_rf-refactor-rm_rf_children_inner-to-shorte.patch
 Patch0104:      backport-0008-CVE-2021-3997-shared-rm_rf-refactor-rm_rf-to-shorten-code-a-bit.patch
 Patch0105:      backport-0009-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories-instead-of.patch
+Patch0106:      backport-cgroup-Also-set-blkio.bfq.weight.patch
+Patch0107:      backport-dbus-socket-fix-check-of-Listen-arguments.patch
+Patch0108:      backport-udevadm-fix-tag-match-help-description.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1538,6 +1541,11 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Jan 26 2021 yangmingtai <yangmingtai@huawei.com> - 243-52
+- fix some issue: 1.fix set blkio.bfq.weight 
+                  2.udevadm fix --tag-match
+                  3.fix check of Listen* arguments
+
 * Tue Jan 18 2021 yangmingtai <yangmingtai@huawei.com> - 243-51
 - CVE:fix CVE-2021-3997
 

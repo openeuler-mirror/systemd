@@ -1,0 +1,34 @@
+From 35e7a62ca32a30169a94693b831e53c832251984 Mon Sep 17 00:00:00 2001
+From: Pavel Hrdina <phrdina@redhat.com>
+Date: Wed, 25 Nov 2020 09:05:36 +0100
+Subject: [PATCH] cgroup: Also set blkio.bfq.weight
+
+Commit [1] added a workaround when unified cgroups are used but missed
+legacy cgroups where there is the same issue.
+
+[1] <https://github.com/systemd/systemd/commit/2dbc45aea747f25cc1c3848fded2ec0062f96bcf>
+
+Signed-off-by: Pavel Hrdina <phrdina@redhat.com>
+---
+ src/core/cgroup.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/core/cgroup.c b/src/core/cgroup.c
+index b9d84dcca9..fe7c80fdbc 100644
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -1244,6 +1244,11 @@ static void cgroup_context_apply(
+                         xsprintf(buf, "%" PRIu64 "\n", weight);
+                         (void) set_attribute_and_warn(u, "blkio", "blkio.weight", buf);
+ 
++                        /* FIXME: drop this when distro kernels properly support BFQ through "blkio.weight"
++                         * See also: https://github.com/systemd/systemd/pull/13335 */
++                        xsprintf(buf, "%" PRIu64 "\n", weight);
++                        (void) set_attribute_and_warn(u, "blkio", "blkio.bfq.weight", buf);
++
+                         if (has_io) {
+                                 CGroupIODeviceWeight *w;
+ 
+-- 
+2.27.0
+

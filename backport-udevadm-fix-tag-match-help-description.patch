@@ -1,0 +1,39 @@
+From d27e6aee5050da17bc9531fb62ac11aba4b15ceb Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 7 Jun 2021 16:08:45 +0200
+Subject: [PATCH] udevadm: fix --tag-match help + description
+
+---
+ man/udevadm.xml            | 2 +-
+ src/udev/udevadm-trigger.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/man/udevadm.xml b/man/udevadm.xml
+index 531a88d8a3..90adc64543 100644
+--- a/man/udevadm.xml
++++ b/man/udevadm.xml
+@@ -332,7 +332,7 @@
+         </varlistentry>
+         <varlistentry>
+           <term><option>-g</option></term>
+-          <term><option>--tag-match=<replaceable>PROPERTY</replaceable></option></term>
++          <term><option>--tag-match=<replaceable>TAG</replaceable></option></term>
+           <listitem>
+             <para>Trigger events for devices with a matching tag. When this option is specified multiple times,
+             then each matching result is ANDed, that is, devices which have all specified tags are triggered.</para>
+diff --git a/src/udev/udevadm-trigger.c b/src/udev/udevadm-trigger.c
+index dc68f38d03..984ec1b84b 100644
+--- a/src/udev/udevadm-trigger.c
++++ b/src/udev/udevadm-trigger.c
+@@ -222,7 +222,7 @@ static int help(void) {
+                "  -a --attr-match=FILE[=VALUE]      Trigger devices with a matching attribute\n"
+                "  -A --attr-nomatch=FILE[=VALUE]    Exclude devices with a matching attribute\n"
+                "  -p --property-match=KEY=VALUE     Trigger devices with a matching property\n"
+-               "  -g --tag-match=KEY=VALUE          Trigger devices with a matching property\n"
++               "  -g --tag-match=TAG                Trigger devices with a matching tag\n"
+                "  -y --sysname-match=NAME           Trigger devices with this /sys path\n"
+                "     --name-match=NAME              Trigger devices with this /dev name\n"
+                "  -b --parent-match=NAME            Trigger devices with that parent device\n"
+-- 
+2.27.0
+

@@ -1,0 +1,33 @@
+From aeecab3804aae973577f36880af4b7799e4eb7d5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Wed, 23 Jun 2021 18:10:57 +0200
+Subject: [PATCH] dbus-socket: fix check of Listen* arguments
+
+We checked the wrong field, which was always NULL here, so we would always
+reject the assignment. We would also print the wrong string in the error
+message:
+
+$ sudo systemd-run --socket-property ListenFIFO=/tmp/fifo3 cat
+Failed to start transient socket unit: Invalid socket path: FIFO
+---
+ src/core/dbus-socket.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/dbus-socket.c b/src/core/dbus-socket.c
+index 61c2f1a199..f45a5c16eb 100644
+--- a/src/core/dbus-socket.c
++++ b/src/core/dbus-socket.c
+@@ -383,8 +383,8 @@ static int bus_socket_set_transient_property(
+                                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Unknown Socket type: %s", t);
+ 
+                         if (p->type != SOCKET_SOCKET) {
+-                                if (!path_is_valid(p->path))
+-                                        return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid socket path: %s", t);
++                                if (!path_is_valid(a))
++                                        return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Invalid socket path: %s", a);
+ 
+                                 p->path = strdup(a);
+                                 if (!p->path)
+-- 
+2.27.0
+
