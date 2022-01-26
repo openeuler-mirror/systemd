@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        52
+Release:        53
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -153,6 +153,9 @@ Patch0105:      backport-0009-CVE-2021-3997-shared-rm-rf-loop-over-nested-direct
 Patch0106:      backport-cgroup-Also-set-blkio.bfq.weight.patch
 Patch0107:      backport-dbus-socket-fix-check-of-Listen-arguments.patch
 Patch0108:      backport-udevadm-fix-tag-match-help-description.patch
+Patch0109:      backport-fix-ConditionDirectoryNotEmpty-when-it-comes-to-a-No.patch
+Patch0110:      backport-fix-ConditionPathIsReadWrite-when-path-does-not-exis.patch
+Patch0111:      backport-fix-DirectoryNotEmpty-when-it-comes-to-a-Non-directo.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1541,6 +1544,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Jan 26 2021 yangmingtai <yangmingtai@huawei.com> - 243-53
+- fix ConditionDirectoryNotEmpty,ConditionPathIsReadWrite and DirectoryNotEmpty
+
 * Wed Jan 26 2021 yangmingtai <yangmingtai@huawei.com> - 243-52
 - fix some issue: 1.fix set blkio.bfq.weight 
                   2.udevadm fix --tag-match
