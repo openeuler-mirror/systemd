@@ -1,0 +1,33 @@
+From 7c4c9948d02ceda903ed4e4deea0d0084612625a Mon Sep 17 00:00:00 2001
+From: jiangchuangang <jiangchuangang@huawei.com>
+Date: Tue, 30 Nov 2021 15:25:27 +0800
+Subject: [PATCH] fix ConditionPathIsReadWrite when path does not exist.
+
+---
+ src/shared/condition.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/shared/condition.c b/src/shared/condition.c
+index bbe137a..8d460f9 100644
+--- a/src/shared/condition.c
++++ b/src/shared/condition.c
+@@ -667,11 +667,15 @@ static int condition_test_path_is_mount_point(Condition *c) {
+ }
+ 
+ static int condition_test_path_is_read_write(Condition *c) {
++        int r;
++
+         assert(c);
+         assert(c->parameter);
+         assert(c->type == CONDITION_PATH_IS_READ_WRITE);
+ 
+-        return path_is_read_only_fs(c->parameter) <= 0;
++        r = path_is_read_only_fs(c->parameter);
++
++        return r <= 0 && r != -ENOENT;
+ }
+ 
+ static int condition_test_directory_not_empty(Condition *c) {
+-- 
+2.27.0
+
