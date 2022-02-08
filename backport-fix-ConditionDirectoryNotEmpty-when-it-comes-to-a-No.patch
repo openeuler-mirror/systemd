@@ -1,0 +1,26 @@
+From 193105f2d0408e2d96265935174b3cf0f100ef2e Mon Sep 17 00:00:00 2001
+From: jiangchuangang <jiangchuangang@huawei.com>
+Date: Mon, 29 Nov 2021 22:30:37 +0800
+Subject: [PATCH] fix ConditionDirectoryNotEmpty when it comes to a
+ Non-directory file
+
+---
+ src/shared/condition.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shared/condition.c b/src/shared/condition.c
+index 6e769e9d59..a86f2b9ffb 100644
+--- a/src/shared/condition.c
++++ b/src/shared/condition.c
+@@ -931,7 +931,7 @@ static int condition_test_directory_not_empty(Condition *c, char **env) {
+         assert(c->type == CONDITION_DIRECTORY_NOT_EMPTY);
+ 
+         r = dir_is_empty(c->parameter);
+-        return r <= 0 && r != -ENOENT;
++        return r <= 0 && !IN_SET(r, -ENOENT, -ENOTDIR);
+ }
+ 
+ static int condition_test_file_not_empty(Condition *c, char **env) {
+-- 
+2.27.0
+
