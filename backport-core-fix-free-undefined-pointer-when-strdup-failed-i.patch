@@ -16,8 +16,8 @@ index 92815b1dbaea..1c8159a23550 100644
                  if (!separate_argv0) {
                          char *w = NULL;
  
--                        if (!GREEDY_REALLOC(n, nbufsize, nlen + 2))
-+                        if (!GREEDY_REALLOC0(n, nbufsize, nlen + 2))
+-                        if (!GREEDY_REALLOC(n, nlen + 2))
++                        if (!GREEDY_REALLOC0(n, nlen + 2))
                                  return log_oom();
  
                          w = strdup(path);
@@ -25,8 +25,8 @@ index 92815b1dbaea..1c8159a23550 100644
                                  p += 2;
                                  p += strspn(p, WHITESPACE);
  
--                                if (!GREEDY_REALLOC(n, nbufsize, nlen + 2))
-+                                if (!GREEDY_REALLOC0(n, nbufsize, nlen + 2))
+-                                if (!GREEDY_REALLOC(n, nlen + 2))
++                                if (!GREEDY_REALLOC0(n, nlen + 2))
                                          return log_oom();
  
                                  w = strdup(";");

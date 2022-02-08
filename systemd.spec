@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        3
+Release:        4
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,6 +63,14 @@ Patch0014:      0014-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0015:      0015-systemd-change-time-log-level.patch
 Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+
+#backport
+Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
+Patch6001:      backport-fix-ConditionDirectoryNotEmpty-when-it-comes-to-a-No.patch
+Patch6002:      backport-fix-ConditionPathIsReadWrite-when-path-does-not-exis.patch
+Patch6003:      backport-fix-DirectoryNotEmpty-when-it-comes-to-a-Non-directo.patch
+
+#openEuler
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1208,6 +1216,7 @@ fi
 %{_unitdir}/multi-user.target.wants/systemd-ask-password-wall.path
 %{_unitdir}/multi-user.target.wants/systemd-update-utmp-runlevel.service
 %{_unitdir}/systemd-hostnamed.service.d/disable-privatedevices.conf
+%{_unitdir}/sockets.target.wants/systemd-coredump.socket
 %{_unitdir}/sockets.target.wants/systemd-journald-dev-log.socket
 %{_unitdir}/sockets.target.wants/systemd-journald.socket
 %{_unitdir}/sockets.target.wants/systemd-initctl.socket
@@ -1449,7 +1458,6 @@ fi
 %{_unitdir}/systemd-udev-trigger.service.d/systemd-udev-trigger-no-reload.conf
 %{_unitdir}/sockets.target.wants/systemd-udevd-control.socket
 %{_unitdir}/sockets.target.wants/systemd-udevd-kernel.socket
-%{_unitdir}/sockets.target.wants/systemd-coredump.socket
 %{_systemddir}/system-generators/systemd-cryptsetup-generator
 %{_systemddir}/system-generators/systemd-hibernate-resume-generator
 %{_systemddir}/system-generators/systemd-gpt-auto-generator
@@ -1697,6 +1705,9 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
+* Tue Feb 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-4
+- fix ConditionDirectoryNotEmpty,ConditionPathIsReadWrite and DirectoryNotEmpty
+
 * Tue Feb 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-3
 - do not make systemd-cpredump sub packages
 
