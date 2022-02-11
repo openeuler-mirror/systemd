@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        2
+Release:        4
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,6 +63,14 @@ Patch0014:      0014-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0015:      0015-systemd-change-time-log-level.patch
 Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+
+#backport
+Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
+Patch6001:      backport-fix-ConditionDirectoryNotEmpty-when-it-comes-to-a-No.patch
+Patch6002:      backport-fix-ConditionPathIsReadWrite-when-path-does-not-exis.patch
+Patch6003:      backport-fix-DirectoryNotEmpty-when-it-comes-to-a-Non-directo.patch
+
+#openEuler
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -285,18 +293,6 @@ Requires:       %{name} = %{version}-%{release}
 
 %description pam
 Systemd PAM module registers the session with systemd-logind.
-
-%package coredump
-Summary:        Systemd tools for coredump management
-License:        LGPLv2+
-Requires:       %{name} = %{version}-%{release}
-%systemd_requires
-Provides:       systemd:%{_bindir}/coredumpctl
-
-%description coredump
-Systemd tools to store and manage coredumps.
-
-This package contains systemd-coredump, coredumpctl.
 
 %package portable
 Summary:        Systemd tools for portable services
@@ -650,7 +646,6 @@ getent group kvm &>/dev/null || groupadd -r -g 36 kvm &>/dev/null || :
 getent group render &>/dev/null || groupadd -r render &>/dev/null || :
 getent group systemd-journal &>/dev/null || groupadd -r -g 190 systemd-journal 2>&1 || :
 
-%pre coredump
 getent group systemd-coredump &>/dev/null || groupadd -r systemd-coredump 2>&1 || :
 getent passwd systemd-coredump &>/dev/null || useradd -r -l -g systemd-coredump -d / -s /sbin/nologin -c "systemd Core Dumper" systemd-coredump &>/dev/null || :
 
@@ -885,6 +880,7 @@ fi
 %ghost %attr(0700,root,root) %dir /var/lib/private
 %dir /var/lib/systemd
 %dir /var/lib/systemd/catalog
+%ghost %dir /var/lib/systemd/coredump
 %ghost %dir /var/lib/systemd/linger
 %ghost /var/lib/systemd/catalog/database
 %ghost %dir /var/lib/private/systemd
@@ -989,6 +985,7 @@ fi
 /usr/bin/systemd-sysusers
 /usr/bin/systemd-tty-ask-password-agent
 /usr/bin/busctl
+/usr/bin/coredumpctl
 %dir /usr/lib/environment.d
 %dir /usr/lib/binfmt.d
 %dir /usr/lib/tmpfiles.d
@@ -1036,6 +1033,7 @@ fi
 %dir %{_systemddir}/user-generators
 %{_systemddir}/systemd
 %dir %{_systemddir}/user-preset
+%{_systemddir}/systemd-coredump
 %{_systemddir}/systemd-veritysetup
 %{_systemddir}/systemd-network-generator
 %{_systemddir}/systemd-binfmt
@@ -1044,6 +1042,8 @@ fi
 %{_unitdir}/systemd-binfmt.service
 %{_unitdir}/systemd-machine-id-commit.service
 %dir %{_unitdir}/basic.target.wants
+%{_unitdir}/systemd-coredump.socket
+%{_unitdir}/systemd-coredump@.service
 %{_unitdir}/ctrl-alt-del.target
 %{_unitdir}/systemd-tmpfiles-setup.service
 %{_unitdir}/rpcbind.target
@@ -1216,6 +1216,7 @@ fi
 %{_unitdir}/multi-user.target.wants/systemd-ask-password-wall.path
 %{_unitdir}/multi-user.target.wants/systemd-update-utmp-runlevel.service
 %{_unitdir}/systemd-hostnamed.service.d/disable-privatedevices.conf
+%{_unitdir}/sockets.target.wants/systemd-coredump.socket
 %{_unitdir}/sockets.target.wants/systemd-journald-dev-log.socket
 %{_unitdir}/sockets.target.wants/systemd-journald.socket
 %{_unitdir}/sockets.target.wants/systemd-initctl.socket
@@ -1276,6 +1277,7 @@ fi
 %{_systemddir}/user/xdg-desktop-autostart.target
 /usr/lib/sysctl.d/50-default.conf
 /usr/lib/sysctl.d/50-pid-max.conf
+/usr/lib/sysctl.d/50-coredump.conf
 /usr/lib/tmpfiles.d/systemd-tmp.conf
 /usr/lib/tmpfiles.d/systemd-nologin.conf
 /usr/lib/tmpfiles.d/systemd.conf
@@ -1305,6 +1307,7 @@ fi
 %dir /etc/systemd/user
 %config(noreplace) /etc/systemd/logind.conf
 %config(noreplace) /etc/systemd/journald.conf
+%config(noreplace) /etc/systemd/coredump.conf
 %dir /etc/systemd/system
 %config(noreplace) /etc/systemd/system.conf
 %ghost %config(noreplace) /etc/X11/xorg.conf.d/00-keyboard.conf
@@ -1677,16 +1680,6 @@ fi
 %files pam
 %{_libdir}/security/pam_systemd.so
 
-%files coredump
-%defattr(-,root,root)
-%{_bindir}/coredumpctl
-%{_prefix}/lib/systemd/systemd-coredump
-%{_unitdir}/systemd-coredump*
-%{_unitdir}/sockets.target.wants/systemd-coredump.socket
-%{_sysctldir}/50-coredump.conf
-%config(noreplace) %{_sysconfdir}/systemd/coredump.conf
-%dir %{_localstatedir}/lib/systemd/coredump
-
 %files portable
 %defattr(-,root,root)
 %{_bindir}/portablectl
@@ -1712,8 +1705,14 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
-+* Tue Dec 27 2021 yangmingtai <yangmingtai@huawei.com> - 249-2
-+- delete useless Provides and Obsoletes
+* Tue Feb 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-4
+- fix ConditionDirectoryNotEmpty,ConditionPathIsReadWrite and DirectoryNotEmpty
+
+* Tue Feb 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-3
+- do not make systemd-cpredump sub packages
+
+* Tue Dec 27 2021 yangmingtai <yangmingtai@huawei.com> - 249-2
+- delete useless Provides and Obsoletes
 
 * Wed Dec 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-1
 - systemd update to v249
@@ -1736,10 +1735,10 @@ fi
 * Mon Aug 16 2021 yangmingtai <yangmingtai@huawei.com> - 248-8
 - udev: exec daemon-reload after installation
 
-* Thu Jun 03 2021 yangmingtai <yangmingtai@huawei.com> - 248-7
+* Fri Jul 22 2021 yangmingtai <yangmingtai@huawei.com> - 248-7
 - fix CVE-2021-33910
 
-* Thu Jul 22 2021 shenyangyang <shenyangyang4@huawei.com> - 248-6
+* Thu Jun 03 2021 shenyangyang <shenyangyang4@huawei.com> - 248-6
 - change requires to openssl-libs as post scripts systemctl requires libssl.so.1.1
 
 * Mon May 31 2021 hexiaowen<hexiaowen@huawei.com> - 248-5
