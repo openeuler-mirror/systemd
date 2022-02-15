@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        4
+Release:        5
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -69,8 +69,13 @@ Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.pa
 Patch6001:      backport-fix-ConditionDirectoryNotEmpty-when-it-comes-to-a-No.patch
 Patch6002:      backport-fix-ConditionPathIsReadWrite-when-path-does-not-exis.patch
 Patch6003:      backport-fix-DirectoryNotEmpty-when-it-comes-to-a-Non-directo.patch
-
-#openEuler
+Patch6004:      backport-CVE-2021-3997-rm-rf-refactor-rm_rf_children-split-out-body-of-dire.patch
+Patch6005:      backport-CVE-2021-3997-rm-rf-optionally-fsync-after-removing-directory-tree.patch
+Patch6006:      backport-CVE-2021-3997-tmpfiles-st-may-have-been-used-uninitialized.patch
+Patch6007:      backport-CVE-2021-3997-shared-rm_rf-refactor-rm_rf_children_inner-to-shorte.patch
+Patch6008:      backport-CVE-2021-3997-shared-rm_rf-refactor-rm_rf-to-shorten-code-a-bit.patch
+Patch6009:      backport-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories-instead-of.patch
+patch6010:      backport-fix-CVE-2021-33910.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1705,6 +1710,9 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
+* Tue Feb 15 2021 yangmingtai <yangmingtai@huawei.com> - 249-5
+- fix CVE-2021-3997 and CVE-2021-33910
+
 * Tue Feb 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-4
 - fix ConditionDirectoryNotEmpty,ConditionPathIsReadWrite and DirectoryNotEmpty
 
