@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        5
+Release:        6
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,6 +63,7 @@ Patch0014:      0014-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0015:      0015-systemd-change-time-log-level.patch
 Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+patch0018:      0018-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -1710,6 +1711,9 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
+* Tue Feb 15 2021 yangmingtai <yangmingtai@huawei.com> - 249-6
+- nop_job of a unit must also be coldpluged after deserization
+
 * Tue Feb 15 2021 yangmingtai <yangmingtai@huawei.com> - 249-5
 - fix CVE-2021-3997 and CVE-2021-33910
 
