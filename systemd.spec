@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        50
+Release:        51
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -149,6 +149,21 @@ Patch0102:      backport-0006-CVE-2021-3997-tmpfiles-st-may-have-been-used-unini
 Patch0103:      backport-0007-CVE-2021-3997-shared-rm_rf-refactor-rm_rf_children_inner-to-shorte.patch
 Patch0104:      backport-0008-CVE-2021-3997-shared-rm_rf-refactor-rm_rf-to-shorten-code-a-bit.patch
 Patch0105:      backport-0009-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories-instead-of.patch
+Patch0106:      backport-0001-CVE-2020-13776-user-util-Allow-names-starting-with-a-digit.patch
+Patch0107:      backport-0002-CVE-2020-13776-user-util-switch-order-of-checks-in-valid_user_group.patch
+Patch0108:      backport-0003-CVE-2020-13776-user-util-rework-how-we-validate-user-names.patch
+Patch0109:      backport-0004-CVE-2020-13776-docs-add-a-longer-document-explaining-our-rules-on-u.patch
+Patch0110:      backport-0005-CVE-2020-13776-docs-hook-up-the-new-USER_NAMES-document-everywhere.patch
+Patch0111:      backport-0006-CVE-2020-13776-catalog-add-entry-for-SD_MESSAGE_UNSAFE_USER_NAME.patch
+Patch0112:      backport-0007-CVE-2020-13776-basic-user-util-always-use-base-10-for-user-group-nu.patch
+Patch0113:      backport-0008-CVE-2020-13776-parse-util-sometimes-it-is-useful-to-check-if-a-stri.patch
+Patch0114:      backport-0009-CVE-2020-13776-basic-parse-util-add-safe_atoux64.patch
+Patch0115:      backport-0010-CVE-2020-13776-parse-util-allow-tweaking-how-to-parse-integers.patch
+Patch0116:      backport-0011-CVE-2020-13776-parse-util-allow-0-as-alternative-to-0-and-0.patch
+Patch0117:      backport-0012-CVE-2020-13776-parse-util-make-return-parameter-optional-in-safe_at.patch
+Patch0118:      backport-0013-CVE-2020-13776-parse-util-rewrite-parse_mode-on-top-of-safe_atou_fu.patch
+Patch0119:      backport-0014-CVE-2020-13776-user-util-be-stricter-in-parse_uid.patch
+Patch0120:      backport-0015-CVE-2020-13776-parse-util-also-parse-integers-prefixed-with-0b-and-.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1536,6 +1551,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Feb 16 2021 yangmingtai <yangmingtai@huawei.com> - 243-51
+- fix CVE-2020-13776
+
 * Tue Jan 18 2021 yangmingtai <yangmingtai@huawei.com> - 243-50
 - CVE:fix CVE-2021-3997
 
