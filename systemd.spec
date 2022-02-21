@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        4
+Release:        7
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -37,14 +37,14 @@ Source11:       20-grubby.install
 Source12:       systemd-user
 Source13:       rc.local
 
-Source100:  	udev-40-openEuler.rules
-Source101:  	udev-55-persistent-net-generator.rules
-Source102:  	udev-56-net-sriov-names.rules
-Source103:  	udev-61-openeuler-persistent-storage.rules
-Source104:  	net-set-sriov-names
-Source105:  	rule_generator.functions
-Source106:  	write_net_rules
-Source107:  	detect_virt
+Source100:      udev-40-openEuler.rules
+Source101:      udev-55-persistent-net-generator.rules
+Source102:      udev-56-net-sriov-names.rules
+Source103:      udev-61-openeuler-persistent-storage.rules
+Source104:      net-set-sriov-names
+Source105:      rule_generator.functions
+Source106:      write_net_rules
+Source107:      detect_virt
 
 Patch0001:      0001-update-rtc-with-system-clock-when-shutdown.patch
 Patch0002:      0002-udev-add-actions-while-rename-netif-failed.patch
@@ -63,14 +63,20 @@ Patch0014:      0014-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0015:      0015-systemd-change-time-log-level.patch
 Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+patch0018:      0018-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
 Patch6001:      backport-fix-ConditionDirectoryNotEmpty-when-it-comes-to-a-No.patch
 Patch6002:      backport-fix-ConditionPathIsReadWrite-when-path-does-not-exis.patch
 Patch6003:      backport-fix-DirectoryNotEmpty-when-it-comes-to-a-Non-directo.patch
-
-#openEuler
+Patch6004:      backport-CVE-2021-3997-rm-rf-refactor-rm_rf_children-split-out-body-of-dire.patch
+Patch6005:      backport-CVE-2021-3997-rm-rf-optionally-fsync-after-removing-directory-tree.patch
+Patch6006:      backport-CVE-2021-3997-tmpfiles-st-may-have-been-used-uninitialized.patch
+Patch6007:      backport-CVE-2021-3997-shared-rm_rf-refactor-rm_rf_children_inner-to-shorte.patch
+Patch6008:      backport-CVE-2021-3997-shared-rm_rf-refactor-rm_rf-to-shorten-code-a-bit.patch
+Patch6009:      backport-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories-instead-of.patch
+patch6010:      backport-fix-CVE-2021-33910.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -204,20 +210,6 @@ Obsoletes:      %{name}-journal-gateway < 227-7
 %description journal-remote
 Programs to forward journal entries over the network, using encrypted HTTP,
 and to write journal files from serialized journal contents.
-
-%package udev-compat
-Summary:       Udev rules compatibility with NetworkManager
-Requires:       %{name} = %{version}-%{release}
-License:        LGPLv2+
-Requires(pre):    /usr/bin/getent
-Requires(post):   systemd
-Requires(preun):  systemd
-Requires(postun): systemd
-
-%description udev-compat
-systemd-udev-compat is a set of udev rules which conflict with NetworkManager.
-If users choose to use the network-scripts to manager the network, the package can be used
-to do somethings when down or up nics or disk.
 
 %package oomd
 Summary:       Systemd oomd feature
@@ -499,13 +491,6 @@ install -m 0644 %{SOURCE13} %{buildroot}%{_sysconfdir}/rc.d/rc.local
 ln -s rc.d/rc.local %{buildroot}%{_sysconfdir}/rc.local
 
 install -m 0644 %{SOURCE100} %{buildroot}/%{_udevrulesdir}/40-openEuler.rules
-install -m 0644 %{SOURCE101} %{buildroot}/%{_udevrulesdir}/55-persistent-net-generator.rules
-install -m 0644 %{SOURCE102} %{buildroot}/%{_udevrulesdir}/56-net-sriov-names.rules
-install -m 0644 %{SOURCE103} %{buildroot}/%{_udevrulesdir}/61-openeuler-persistent-storage.rules
-install -m 0755 %{SOURCE104} %{buildroot}/usr/lib/udev
-install -m 0755 %{SOURCE105} %{buildroot}/usr/lib/udev
-install -m 0755 %{SOURCE106} %{buildroot}/usr/lib/udev
-install -m 0755 %{SOURCE107} %{buildroot}/usr/lib/udev
 
 # remove rpath info
 for file in $(find %{buildroot}/ -executable -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
@@ -1600,15 +1585,6 @@ fi
 %config(noreplace) /etc/systemd/journal-remote.conf
 %config(noreplace) /etc/systemd/journal-upload.conf
 
-%files udev-compat
-%{_udevrulesdir}/55-persistent-net-generator.rules
-%{_udevrulesdir}/56-net-sriov-names.rules
-%{_udevrulesdir}/61-openeuler-persistent-storage.rules
-/usr/lib/udev/rule_generator.functions
-/usr/lib/udev/write_net_rules
-/usr/lib/udev/net-set-sriov-names
-/usr/lib/udev/detect_virt
-
 %files oomd
 /etc/systemd/oomd.conf
 /usr/bin/oomctl
@@ -1705,6 +1681,15 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
+* Tue Feb 15 2021 yangmingtai <yangmingtai@huawei.com> - 249-7
+- disable rename function of net interface
+
+* Tue Feb 15 2021 yangmingtai <yangmingtai@huawei.com> - 249-6
+- nop_job of a unit must also be coldpluged after deserization
+
+* Tue Feb 15 2021 yangmingtai <yangmingtai@huawei.com> - 249-5
+- fix CVE-2021-3997 and CVE-2021-33910
+
 * Tue Feb 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-4
 - fix ConditionDirectoryNotEmpty,ConditionPathIsReadWrite and DirectoryNotEmpty
 
@@ -1735,7 +1720,7 @@ fi
 * Mon Aug 16 2021 yangmingtai <yangmingtai@huawei.com> - 248-8
 - udev: exec daemon-reload after installation
 
-* Fri Jul 22 2021 yangmingtai <yangmingtai@huawei.com> - 248-7
+* Thu Jul 22 2021 yangmingtai <yangmingtai@huawei.com> - 248-7
 - fix CVE-2021-33910
 
 * Thu Jun 03 2021 shenyangyang <shenyangyang4@huawei.com> - 248-6
