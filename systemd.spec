@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        7
+Release:        8
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -76,7 +76,8 @@ Patch6006:      backport-CVE-2021-3997-tmpfiles-st-may-have-been-used-uninitiali
 Patch6007:      backport-CVE-2021-3997-shared-rm_rf-refactor-rm_rf_children_inner-to-shorte.patch
 Patch6008:      backport-CVE-2021-3997-shared-rm_rf-refactor-rm_rf-to-shorten-code-a-bit.patch
 Patch6009:      backport-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories-instead-of.patch
-patch6010:      backport-fix-CVE-2021-33910.patch
+Patch6010:      backport-fix-CVE-2021-33910.patch
+Patch6011:      backport-temporarily-disable-test-seccomp.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -389,6 +390,23 @@ CONFIGURE_OPTS=(
         -Ddefault-llmnr=resolve
         -Doomd=true
         -Dhtml=false
+        -Dlibbpf=false
+        -Dlibfido2=false
+        -Dlibidn=false
+        -Dopenssl=false
+        -Dpwquality=false
+        -Dtpm2=false
+        -Dzstd=false
+        -Dbpf-framework=false
+        -Dhomed=false
+        -Drepart=false
+        -Dlegacy-pkla=false
+        -Dcompat-mutable-uid-boundaries=false
+        -Dvalgrind=false
+        -Dfexecve=false
+        -Dstandalone-binaries=false
+        -Dstatic-libsystemd=false
+        -Dstatic-libudev=false
 )
 
 %meson "${CONFIGURE_OPTS[@]}"
@@ -1681,19 +1699,22 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
-* Tue Feb 15 2021 yangmingtai <yangmingtai@huawei.com> - 249-7
+* Tue Feb 22 2022 xujing <xujing99@huawei.com> - 249-8
+- temporarily disable test-seccomp and ensure some features disabled
+
+* Tue Feb 15 2022 yangmingtai <yangmingtai@huawei.com> - 249-7
 - disable rename function of net interface
 
-* Tue Feb 15 2021 yangmingtai <yangmingtai@huawei.com> - 249-6
+* Tue Feb 15 2022 yangmingtai <yangmingtai@huawei.com> - 249-6
 - nop_job of a unit must also be coldpluged after deserization
 
-* Tue Feb 15 2021 yangmingtai <yangmingtai@huawei.com> - 249-5
+* Tue Feb 15 2022 yangmingtai <yangmingtai@huawei.com> - 249-5
 - fix CVE-2021-3997 and CVE-2021-33910
 
-* Tue Feb 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-4
+* Tue Feb 8 2022 yangmingtai <yangmingtai@huawei.com> - 249-4
 - fix ConditionDirectoryNotEmpty,ConditionPathIsReadWrite and DirectoryNotEmpty
 
-* Tue Feb 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-3
+* Tue Feb 8 2022 yangmingtai <yangmingtai@huawei.com> - 249-3
 - do not make systemd-cpredump sub packages
 
 * Tue Dec 27 2021 yangmingtai <yangmingtai@huawei.com> - 249-2
