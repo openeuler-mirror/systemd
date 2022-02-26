@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        50
+Release:        51
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -154,6 +154,7 @@ Patch0104:      backport-0012-CVE-2020-13776-parse-util-make-return-parameter-op
 Patch0105:      backport-0013-CVE-2020-13776-parse-util-rewrite-parse_mode-on-top-of-safe_atou_fu.patch
 Patch0106:      backport-0014-CVE-2020-13776-user-util-be-stricter-in-parse_uid.patch
 Patch0107:      backport-0015-CVE-2020-13776-parse-util-also-parse-integers-prefixed-with-0b-and-.patch
+Patch0108:      backport-udev-rename-the-persistent-link-for-ATA-devices.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1541,10 +1542,14 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Wed Feb 16 2021 yangmingtai <yangmingtai@huawei.com> - 243-50
+* Fri Feb 26 2022 jiangchuangang <jiangchuangang@huawei.com> - 243-51
+- add backport-udev-rename-the-persistent-link-for-ATA-devices.patch
+  for the link of ATA devices
+
+* Wed Feb 16 2022 yangmingtai <yangmingtai@huawei.com> - 243-50
 - fix CVE-2020-13776
 
-* Tue Jan 18 2021 yangmingtai <yangmingtai@huawei.com> - 243-49
+* Tue Jan 18 2022 yangmingtai <yangmingtai@huawei.com> - 243-49
 - CVE:fix CVE-2021-3997
 
 * Wed Oct 27 2021 ExtinctFire <shenyining_00@126.com> - 243-48
