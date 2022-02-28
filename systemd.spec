@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        54
+Release:        55
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -171,6 +171,7 @@ Patch0123:      backport-0012-CVE-2020-13776-parse-util-make-return-parameter-op
 Patch0124:      backport-0013-CVE-2020-13776-parse-util-rewrite-parse_mode-on-top-of-safe_atou_fu.patch
 Patch0125:      backport-0014-CVE-2020-13776-user-util-be-stricter-in-parse_uid.patch
 Patch0126:      backport-0015-CVE-2020-13776-parse-util-also-parse-integers-prefixed-with-0b-and-.patch
+Patch0127:      backport-udev-rename-the-persistent-link-for-ATA-devices.patch
 
 
 #openEuler
@@ -1560,18 +1561,22 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Wed Feb 16 2021 yangmingtai <yangmingtai@huawei.com> - 243-54
+* Mon Feb 28 2022 yangmingtai <yangmingtai@huawei.com> - 243-54
+- add backport-udev-rename-the-persistent-link-for-ATA-devices.patch
+  for the link of ATA devices
+
+* Wed Feb 16 2022 yangmingtai <yangmingtai@huawei.com> - 243-54
 - fix CVE-2020-13776
 
-* Wed Jan 26 2021 yangmingtai <yangmingtai@huawei.com> - 243-53
+* Wed Jan 26 2022 yangmingtai <yangmingtai@huawei.com> - 243-53
 - fix ConditionDirectoryNotEmpty,ConditionPathIsReadWrite and DirectoryNotEmpty
 
-* Wed Jan 26 2021 yangmingtai <yangmingtai@huawei.com> - 243-52
+* Wed Jan 26 2022 yangmingtai <yangmingtai@huawei.com> - 243-52
 - fix some issue: 1.fix set blkio.bfq.weight 
                   2.udevadm fix --tag-match
                   3.fix check of Listen* arguments
 
-* Tue Jan 18 2021 yangmingtai <yangmingtai@huawei.com> - 243-51
+* Tue Jan 18 2022 yangmingtai <yangmingtai@huawei.com> - 243-51
 - CVE:fix CVE-2021-3997
 
 * Fri Dec 3 2021 yangmingtai <yangmingtai@huawei.com> - 243-50
