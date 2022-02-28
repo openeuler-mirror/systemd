@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        51
+Release:        52
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -179,6 +179,7 @@ Patch9009:      systemd-change-time-log-level.patch
 Patch9010:      fix-capsh-drop-but-ping-success.patch
 Patch9011:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 Patch9012:      set-kernel-core_pipe_limit-to-16.patch
+Patch9013:      backport-udev-rename-the-persistent-link-for-ATA-devices.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1551,10 +1552,14 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Wed Feb 16 2021 yangmingtai <yangmingtai@huawei.com> - 243-51
+* Mon Feb 28 2022 wangyuhang <wangyuhang27@huawei.com> - 243-52
+- add backport-udev-rename-the-persistent-link-for-ATA-devices.patch
+  for the link of ATA devices
+
+* Wed Feb 16 2022 yangmingtai <yangmingtai@huawei.com> - 243-51
 - fix CVE-2020-13776
 
-* Tue Jan 18 2021 yangmingtai <yangmingtai@huawei.com> - 243-50
+* Tue Jan 18 2022 yangmingtai <yangmingtai@huawei.com> - 243-50
 - CVE:fix CVE-2021-3997
 
 * Wed Oct 27 2021 shenyangyang <shenyangyang4@huawei.com> - 243-49
