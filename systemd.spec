@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        9
+Release:        10
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -78,6 +78,7 @@ Patch6008:      backport-CVE-2021-3997-shared-rm_rf-refactor-rm_rf-to-shorten-co
 Patch6009:      backport-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories-instead-of.patch
 Patch6010:      backport-fix-CVE-2021-33910.patch
 Patch6011:      backport-temporarily-disable-test-seccomp.patch
+Patch6012:      backport-revert-core-map-io.bfq.weight-to-1.1000.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1699,6 +1700,9 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
+* Tue Mar 1 2022 yangmingtai <yangmingtai@huawei.com> - 249-10
+- revert :core map io.bfq.weight to 1..1000
+
 * Tue Mar 1 2022 duyiwei <duyiwei@kylinos.cn> - 249-9
 - change %systemd_requires to %{?systemd_requires}
 
