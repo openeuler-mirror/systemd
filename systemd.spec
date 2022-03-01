@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        8
+Release:        9
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -291,7 +291,7 @@ Systemd PAM module registers the session with systemd-logind.
 Summary:        Systemd tools for portable services
 License:        LGPLv2+
 Requires:       %{name} = %{version}-%{release}
-%systemd_requires
+%{?systemd_requires}
 
 %description portable
 Systemd tools to manage portable services. The feature is still
@@ -307,7 +307,7 @@ https://systemd.io/PORTABLE_SERVICES
 Summary:        Systemd tools for userdbd services
 License:        LGPLv2+
 Requires:       %{name} = %{version}-%{release}
-%systemd_requires
+%{?systemd_requires}
 
 %description userdbd
 systemd-userdbd is a system service that multiplexes user/group lookups to 
@@ -318,7 +318,7 @@ Most of systemd-userdbd's functionality is accessible through the userdbctl(1) c
 Summary:        Systemd tools for pstore services
 License:        LGPLv2+
 Requires:       %{name} = %{version}-%{release}
-%systemd_requires
+%{?systemd_requires}
 
 %description pstore
 systemd-pstore.service is a system service that archives the contents 
@@ -1699,6 +1699,9 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
+* Tue Mar 1 2022 duyiwei <duyiwei@kylinos.cn> - 249-9
+- change %systemd_requires to %{?systemd_requires}
+
 * Tue Feb 22 2022 xujing <xujing99@huawei.com> - 249-8
 - temporarily disable test-seccomp and ensure some features disabled
 
