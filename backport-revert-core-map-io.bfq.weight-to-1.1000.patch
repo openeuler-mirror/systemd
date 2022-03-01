@@ -1,0 +1,90 @@
+From 04bee6cd5439a4efb0faaf56ea245d44f3e99781 Mon Sep 17 00:00:00 2001
+From: y30009332 <yangmingtai@huawei.com>
+Date: Tue, 1 Mar 2022 16:54:46 +0800
+Subject: [PATCH] revert :core map io.bfq.weight to 1..1000
+Reason:systemd-248 map io.bfq.weight to 1..1000, example 600 map to 60,
+In order to maintain compatibility with v243, revert the commit and use 
+the v243 scheme
+
+Reference:https://github.com/systemd/systemd/commit/68c1ac1568910037a224c301d5c871af73493c16
+---
+ src/core/cgroup.c | 35 ++++++++++++++++-------------------
+ 1 file changed, 16 insertions(+), 19 deletions(-)
+
+diff --git a/src/core/cgroup.c b/src/core/cgroup.c
+index 2cbb789978..e5c4a605a6 100644
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -1194,23 +1194,6 @@ static int cgroup_apply_devices(Unit *u) {
+         return r;
+ }
+ 
+-static void set_io_weight(Unit *u, const char *controller, uint64_t weight) {
+-        char buf[8+DECIMAL_STR_MAX(uint64_t)+1];
+-        const char *p;
+-
+-        p = strjoina(controller, ".weight");
+-        xsprintf(buf, "default %" PRIu64 "\n", weight);
+-        (void) set_attribute_and_warn(u, controller, p, buf);
+-
+-        /* FIXME: drop this when distro kernels properly support BFQ through "io.weight"
+-         * See also: https://github.com/systemd/systemd/pull/13335 and
+-         * https://github.com/torvalds/linux/commit/65752aef0a407e1ef17ec78a7fc31ba4e0b360f9.
+-         * The range is 1..1000 apparently. */
+-        p = strjoina(controller, ".bfq.weight");
+-        xsprintf(buf, "%" PRIu64 "\n", (weight + 9) / 10);
+-        (void) set_attribute_and_warn(u, controller, p, buf);
+-}
+-
+ static void cgroup_apply_bpf_foreign_program(Unit *u) {
+         assert(u);
+ 
+@@ -1303,6 +1286,7 @@ static void cgroup_context_apply(
+          * controller), and in case of containers we want to leave control of these attributes to the container manager
+          * (and we couldn't access that stuff anyway, even if we tried if proper delegation is used). */
+         if ((apply_mask & CGROUP_MASK_IO) && !is_local_root) {
++                char buf[8+DECIMAL_STR_MAX(uint64_t)+1];
+                 bool has_io, has_blockio;
+                 uint64_t weight;
+ 
+@@ -1322,7 +1306,13 @@ static void cgroup_context_apply(
+                 } else
+                         weight = CGROUP_WEIGHT_DEFAULT;
+ 
+-                set_io_weight(u, "io", weight);
++                xsprintf(buf, "default %" PRIu64 "\n", weight);
++                (void) set_attribute_and_warn(u, "io", "io.weight", buf);
++
++                /* FIXME: drop this when distro kernels properly support BFQ through "io.weight"
++                 * See also: https://github.com/systemd/systemd/pull/13335 */
++                xsprintf(buf, "%" PRIu64 "\n", weight);
++                (void) set_attribute_and_warn(u, "io", "io.bfq.weight", buf);
+ 
+                 if (has_io) {
+                         CGroupIODeviceLatency *latency;
+@@ -1377,6 +1367,7 @@ static void cgroup_context_apply(
+                 /* Applying a 'weight' never makes sense for the host root cgroup, and for containers this should be
+                  * left to our container manager, too. */
+                 if (!is_local_root) {
++                        char buf[DECIMAL_STR_MAX(uint64_t)+1];
+                         uint64_t weight;
+ 
+                         if (has_io) {
+@@ -1392,7 +1383,13 @@ static void cgroup_context_apply(
+                         else
+                                 weight = CGROUP_BLKIO_WEIGHT_DEFAULT;
+ 
+-                        set_io_weight(u, "blkio", weight);
++                        xsprintf(buf, "%" PRIu64 "\n", weight);
++                        (void) set_attribute_and_warn(u, "blkio", "blkio.weight", buf);
++
++                        /* FIXME: drop this when distro kernels properly support BFQ through "blkio.weight"
++                         * See also: https://github.com/systemd/systemd/pull/13335 */
++                        xsprintf(buf, "%" PRIu64 "\n", weight);
++                        (void) set_attribute_and_warn(u, "blkio", "blkio.bfq.weight", buf);
+ 
+                         if (has_io) {
+                                 CGroupIODeviceWeight *w;
+-- 
+2.27.0
+
