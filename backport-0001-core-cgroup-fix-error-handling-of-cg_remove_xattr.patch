@@ -1,0 +1,41 @@
+From 0cddb53c85588fbfb8043f622895c7bd15819198 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 5 Aug 2021 03:13:48 +0900
+Subject: [PATCH 1/2] core/cgroup: fix error handling of cg_remove_xattr()
+
+---
+ src/core/cgroup.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/cgroup.c b/src/core/cgroup.c
+index e5fd6672bb..83bd97327d 100644
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -717,13 +717,13 @@ void cgroup_oomd_xattr_apply(Unit *u, const char *cgroup_path) {
+ 
+         if (c->moom_preference != MANAGED_OOM_PREFERENCE_AVOID) {
+                 r = cg_remove_xattr(SYSTEMD_CGROUP_CONTROLLER, cgroup_path, "user.oomd_avoid");
+-                if (r != -ENODATA)
++                if (r < 0 && r != -ENODATA)
+                         log_unit_debug_errno(u, r, "Failed to remove oomd_avoid flag on control group %s, ignoring: %m", cgroup_path);
+         }
+ 
+         if (c->moom_preference != MANAGED_OOM_PREFERENCE_OMIT) {
+                 r = cg_remove_xattr(SYSTEMD_CGROUP_CONTROLLER, cgroup_path, "user.oomd_omit");
+-                if (r != -ENODATA)
++                if (r < 0 && r != -ENODATA)
+                         log_unit_debug_errno(u, r, "Failed to remove oomd_omit flag on control group %s, ignoring: %m", cgroup_path);
+         }
+ }
+@@ -755,7 +755,7 @@ static void cgroup_xattr_apply(Unit *u) {
+                         log_unit_debug_errno(u, r, "Failed to set delegate flag on control group %s, ignoring: %m", u->cgroup_path);
+         } else {
+                 r = cg_remove_xattr(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path, "trusted.delegate");
+-                if (r != -ENODATA)
++                if (r < 0 && r != -ENODATA)
+                         log_unit_debug_errno(u, r, "Failed to remove delegate flag on control group %s, ignoring: %m", u->cgroup_path);
+         }
+ 
+-- 
+2.27.0
+
