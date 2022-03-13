@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        3
+Release:        4
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,9 +63,6 @@ Patch0014:      0014-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0015:      0015-systemd-change-time-log-level.patch
 Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
-%ifarch riscv64
-Patch0018:      0018-extend_timeout_for_riscv.patch
-%endif
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -532,7 +529,11 @@ mkdir -p %{buildroot}%{_sysconfdir}/ld.so.conf.d
 echo "/usr/lib/systemd" > %{buildroot}%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
 
 %check
-%ninja_test -C %{_vpath_builddir}
+%meson_test \
+%ifarch riscv64
+        -t 10 \
+%endif
+        -C %{_vpath_builddir}
 
 #############################################################################################
 #  -*- Mode: rpm-spec; indent-tabs-mode: nil -*- */
@@ -1723,6 +1724,9 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
+* Sun Mar 13 2022 wangyangdahai <admin@you2.top> - 249-4
+- replace ninja_test to meson_test, for using test timeout multiple
+
 * Fri Dec 31 2021 lvxiaoqian <xiaoqian@nj.iscas.ac.cn> - 249-3
 - increase test timeout for riscv
   update configure flag for riscv
