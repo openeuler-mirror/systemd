@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        10
+Release:        11
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -79,6 +79,8 @@ Patch6009:      backport-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories
 Patch6010:      backport-fix-CVE-2021-33910.patch
 Patch6011:      backport-temporarily-disable-test-seccomp.patch
 Patch6012:      backport-revert-core-map-io.bfq.weight-to-1.1000.patch
+Patch6013:      backport-0001-core-cgroup-fix-error-handling-of-cg_remove_xattr.patch
+Patch6014:      backport-0002-core-wrap-cgroup-path-with-empty_to_root-in-log-mess.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1700,6 +1702,9 @@ fi
 %{_unitdir}/systemd-userdbd.socket
 
 %changelog
+* Thu Mar 10 2022 xujing <xujing99@huawei.com> - 249-11
+- core: use empty_to_root for cgroup path in log messages
+
 * Tue Mar 1 2022 yangmingtai <yangmingtai@huawei.com> - 249-10
 - revert :core map io.bfq.weight to 1..1000
 
