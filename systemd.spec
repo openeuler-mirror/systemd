@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        12
+Release:        13
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -79,8 +79,11 @@ Patch6009:      backport-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories
 Patch6010:      backport-fix-CVE-2021-33910.patch
 Patch6011:      backport-temporarily-disable-test-seccomp.patch
 Patch6012:      backport-revert-core-map-io.bfq.weight-to-1.1000.patch
-Patch6013:      backport-0001-core-cgroup-fix-error-handling-of-cg_remove_xattr.patch
-Patch6014:      backport-0002-core-wrap-cgroup-path-with-empty_to_root-in-log-mess.patch
+Patch6013:      backport-core-cgroup-fix-error-handling-of-cg_remove_xattr.patch
+Patch6014:      backport-core-wrap-cgroup-path-with-empty_to_root-in-log-mess.patch
+Patch6015:      backport-Bump-the-max-number-of-inodes-for-dev-to-a-million.patch
+Patch6016:      backport-Bump-the-max-number-of-inodes-for-tmp-to-a-million-t.patch
+Patch6017:      backport-unit-escape.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1482,6 +1485,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Thu Mar 17 2022 xujing <xujing99@huawei.com> - 249-13
+- allow more inodes in /dev an /tmp
+
 * Fri Mar 11 2022 yangmingtai <yangmingtai@huawei.com> - 249-12
 - disable some features
 

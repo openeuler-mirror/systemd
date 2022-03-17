@@ -1,0 +1,26 @@
+From 6e4d122ad1db11ca898de183f898f731c4839d4a Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 23 Feb 2022 01:29:42 +0900
+Subject: [PATCH] unit: escape %
+
+Fixes #22601.
+---
+ units/tmp.mount | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/units/tmp.mount b/units/tmp.mount
+index 4e1bb8de24..734acea237 100644
+--- a/units/tmp.mount
++++ b/units/tmp.mount
+@@ -22,7 +22,7 @@ After=swap.target
+ What=tmpfs
+ Where=/tmp
+ Type=tmpfs
+-Options=mode=1777,strictatime,nosuid,nodev,size=50%,nr_inodes=1m
++Options=mode=1777,strictatime,nosuid,nodev,size=50%%,nr_inodes=1m
+ 
+ # Make 'systemctl enable tmp.mount' work:
+ [Install]
+-- 
+2.27.0
+
