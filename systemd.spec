@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        13
+Release:        14
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,7 +63,8 @@ Patch0014:      0014-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0015:      0015-systemd-change-time-log-level.patch
 Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
-patch0018:      0018-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
+Patch0018:      0018-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
+Patch0019:      0019-pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -1485,6 +1486,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Thu Mar 17 2022 xujing <xujing99@huawei.com> - 249-14
+- pid1 bump DefaultTasksMax to 80% of the kernel pid.max value
+
 * Thu Mar 17 2022 xujing <xujing99@huawei.com> - 249-13
 - allow more inodes in /dev an /tmp
 
