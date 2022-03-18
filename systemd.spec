@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        14
+Release:        15
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -85,6 +85,8 @@ Patch6014:      backport-core-wrap-cgroup-path-with-empty_to_root-in-log-mess.pa
 Patch6015:      backport-Bump-the-max-number-of-inodes-for-dev-to-a-million.patch
 Patch6016:      backport-Bump-the-max-number-of-inodes-for-tmp-to-a-million-t.patch
 Patch6017:      backport-unit-escape.patch
+Patch6018:      backport-udev-rename-type-name-e.g.-struct-worker-Worker.patch
+Patch6019:      backport-udev-run-the-main-process-workers-and-spawned-comman.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1486,6 +1488,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Fri Mar 18 2022 yangmingtai <yangmingtai@huawei.com> - 249-15
+- fix systemctl reload systemd-udevd failed
+
 * Thu Mar 17 2022 xujing <xujing99@huawei.com> - 249-14
 - pid1 bump DefaultTasksMax to 80% of the kernel pid.max value
 
