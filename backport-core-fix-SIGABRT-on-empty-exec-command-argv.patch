@@ -1,0 +1,100 @@
+From 29500cf8c47e6eb0518d171d62aa8213020c9152 Mon Sep 17 00:00:00 2001
+From: Henri Chain <henri.chain@enioka.com>
+Date: Tue, 5 Oct 2021 13:10:31 +0200
+Subject: [PATCH 1/2] core: fix SIGABRT on empty exec command argv
+
+This verifies that the argv part of any exec_command parameters that
+are sent through dbus is not empty at deserialization time.
+
+There is an additional check in service.c service_verify() that again
+checks if all exec_commands are correctly populated, after the service
+has been loaded, whether through dbus or otherwise.
+
+Fixes #20933.
+---
+ src/core/dbus-execute.c    |  4 ++++
+ src/core/service.c         | 10 ++++++++++
+ test/units/testsuite-23.sh | 31 +++++++++++++++++++++++++++++++
+ 3 files changed, 45 insertions(+)
+
+diff --git a/src/core/dbus-execute.c b/src/core/dbus-execute.c
+index 488de1242a..5665656b7b 100644
+--- a/src/core/dbus-execute.c
++++ b/src/core/dbus-execute.c
+@@ -1423,6 +1423,10 @@ int bus_set_transient_exec_command(
+                 if (r < 0)
+                         return r;
+ 
++                if (strv_isempty(argv))
++                        return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS,
++                                                 "\"%s\" argv cannot be empty", name);
++
+                 r = is_ex_prop ? sd_bus_message_read_strv(message, &ex_opts) : sd_bus_message_read(message, "b", &b);
+                 if (r < 0)
+                         return r;
+diff --git a/src/core/service.c b/src/core/service.c
+index 9299813d45..4c75819a8f 100644
+--- a/src/core/service.c
++++ b/src/core/service.c
+@@ -564,6 +564,16 @@ static int service_verify(Service *s) {
+         assert(s);
+         assert(UNIT(s)->load_state == UNIT_LOADED);
+ 
++        for (ServiceExecCommand c = 0; c < _SERVICE_EXEC_COMMAND_MAX; c++) {
++                ExecCommand *command;
++
++                LIST_FOREACH(command, command, s->exec_command[c])
++                        if (strv_isempty(command->argv))
++                                return log_unit_error_errno(UNIT(s), SYNTHETIC_ERRNO(ENOEXEC),
++                                                            "Service has an empty argv in %s=. Refusing.",
++                                                            service_exec_command_to_string(c));
++        }
++
+         if (!s->exec_command[SERVICE_EXEC_START] && !s->exec_command[SERVICE_EXEC_STOP] &&
+             UNIT(s)->success_action == EMERGENCY_ACTION_NONE)
+                 /* FailureAction= only makes sense if one of the start or stop commands is specified.
+diff --git a/test/units/testsuite-23.sh b/test/units/testsuite-23.sh
+index 4ef7c878a8..5488447a87 100755
+--- a/test/units/testsuite-23.sh
++++ b/test/units/testsuite-23.sh
+@@ -27,6 +27,37 @@ test "$(systemctl show --value -p RestartKillSignal seven.service)" -eq 2
+ systemctl restart seven.service
+ systemctl stop seven.service
+ 
++# For issue #20933
++
++# Should work normally
++busctl call \
++  org.freedesktop.systemd1 /org/freedesktop/systemd1 \
++  org.freedesktop.systemd1.Manager StartTransientUnit \
++  "ssa(sv)a(sa(sv))" test-20933-ok.service replace 1 \
++    ExecStart "a(sasb)" 1 \
++      /usr/bin/sleep 2 /usr/bin/sleep 1 true \
++  0
++
++# DBus call should fail but not crash systemd
++busctl call \
++  org.freedesktop.systemd1 /org/freedesktop/systemd1 \
++  org.freedesktop.systemd1.Manager StartTransientUnit \
++  "ssa(sv)a(sa(sv))" test-20933-bad.service replace 1 \
++    ExecStart "a(sasb)" 1 \
++      /usr/bin/sleep 0 true \
++  0 && { echo 'unexpected success'; exit 1; }
++
++# Same but with the empty argv in the middle
++busctl call \
++  org.freedesktop.systemd1 /org/freedesktop/systemd1 \
++  org.freedesktop.systemd1.Manager StartTransientUnit \
++  "ssa(sv)a(sa(sv))" test-20933-bad-middle.service replace 1 \
++    ExecStart "a(sasb)" 3 \
++      /usr/bin/sleep 2 /usr/bin/sleep 1 true \
++      /usr/bin/sleep 0                  true \
++      /usr/bin/sleep 2 /usr/bin/sleep 1 true \
++  0 && { echo 'unexpected success'; exit 1; }
++
+ systemd-analyze log-level info
+ 
+ echo OK >/testok
+-- 
+2.27.0
+
