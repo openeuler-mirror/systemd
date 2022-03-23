@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        15
+Release:        16
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -65,6 +65,10 @@ Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 Patch0018:      0018-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
 Patch0019:      0019-pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
+Patch0020:      0020-fix-journal-file-descriptors-leak-problems.patch
+Patch0021:      0021-activation-service-must-be-restarted-when-reactivated.patch
+Patch0022:      0022-systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
+Patch0023:      0023-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -87,6 +91,11 @@ Patch6016:      backport-Bump-the-max-number-of-inodes-for-tmp-to-a-million-t.pa
 Patch6017:      backport-unit-escape.patch
 Patch6018:      backport-udev-rename-type-name-e.g.-struct-worker-Worker.patch
 Patch6019:      backport-udev-run-the-main-process-workers-and-spawned-comman.patch
+Patch6020:      backport-timesync-fix-wrong-type-for-receiving-timestamp-in-n.patch
+Patch6021:      backport-udev-fix-potential-memleak.patch
+Patch6022:      backport-journalctl-never-fail-at-flushing-when-the-flushed-f.patch
+Patch6023:      backport-core-fix-SIGABRT-on-empty-exec-command-argv.patch
+Patch6024:      backport-core-service-also-check-path-in-exec-commands.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1488,6 +1497,16 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Wed Mar 23 2022 xujing <xujing99@huawei.com> - 249-16
+- systemd-journald: Fix journal file descriptors leak problems.
+  systemd: Activation service must be restarted when it is already started and re-actived by dbus
+  systemd-core: fix problem of dbus service can not be started
+  systemd-core: Delay to restart when a service can not be auto-restarted when there is one STOP_JOB for the service
+  core: fix SIGABRT on empty exec command argv
+  journalctl: never fail at flushing when the flushed flag is set
+  timesync: fix wrong type for receiving timestamp in nanoseconds
+  udev: fix potential memleak
+
 * Fri Mar 18 2022 yangmingtai <yangmingtai@huawei.com> - 249-15
 - fix systemctl reload systemd-udevd failed
 
