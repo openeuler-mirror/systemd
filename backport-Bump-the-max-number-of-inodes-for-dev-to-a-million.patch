@@ -1,0 +1,30 @@
+From e98d0662ffbffe2c60492be6b4f5d579038d3282 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Thu, 9 Dec 2021 10:09:17 +0100
+Subject: [PATCH 1/2] Bump the max number of inodes for /dev to a million
+
+4c733d3046942984c5f73b40c3af39cc218c103f shows that 95k can be used easily on a large
+system. Let's bump it up even more so that we have some "breathing room".
+---
+ src/shared/mount-util.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/shared/mount-util.h b/src/shared/mount-util.h
+index 3622170297..ce73aebd4b 100644
+--- a/src/shared/mount-util.h
++++ b/src/shared/mount-util.h
+@@ -11,9 +11,9 @@
+ #include "errno-util.h"
+ #include "macro.h"
+ 
+-/* 4MB for contents of regular files, 64k inodes for directories, symbolic links and device specials, using
++/* 4MB for contents of regular files, 1m inodes for directories, symbolic links and device nodes, using
+  * large storage array systems as a baseline */
+-#define TMPFS_LIMITS_DEV             ",size=4m,nr_inodes=64k"
++#define TMPFS_LIMITS_DEV             ",size=4m,nr_inodes=1m"
+ 
+ /* Very little, if any use expected */
+ #define TMPFS_LIMITS_EMPTY_OR_ALMOST ",size=4m,nr_inodes=1k"
+-- 
+2.27.0
+
