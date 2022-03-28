@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        11
+Release:        12
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -84,18 +84,15 @@ Patch6014:      backport-0002-core-wrap-cgroup-path-with-empty_to_root-in-log-me
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
-BuildRequires:  audit-libs-devel, cryptsetup-devel, dbus-devel, libacl-devel
+BuildRequires:  audit-libs-devel, dbus-devel, libacl-devel
 BuildRequires:  gobject-introspection-devel, libblkid-devel, xz-devel, xz
-BuildRequires:  lz4-devel, lz4, bzip2-devel, libidn2-devel, libcurl-devel
-BuildRequires:  kmod-devel, elfutils-devel, libgcrypt-devel, libgpg-error-devel
-BuildRequires:  gnutls-devel, qrencode-devel, libmicrohttpd-devel, libxkbcommon-devel
+BuildRequires:  lz4-devel, lz4, bzip2-devel, libidn2-devel
+BuildRequires:  kmod-devel, libgcrypt-devel, libgpg-error-devel
+BuildRequires:  gnutls-devel, libxkbcommon-devel
 BuildRequires:  iptables-devel, docbook-style-xsl, pkgconfig, libxslt, gperf
 BuildRequires:  gawk, tree, hostname, git, meson >= 0.43, gettext, dbus >= 1.9.18
 BuildRequires:  python3-devel, python3-lxml, firewalld-filesystem, libseccomp-devel
 BuildRequires:  python3-jinja2
-%if 0%{?have_gnu_efi}
-BuildRequires:  gnu-efi gnu-efi-devel
-%endif
 
 %ifarch %{valgrind_arches}
 BuildRequires:  valgrind-devel
@@ -197,35 +194,7 @@ License:        LGPLv2+
 %description container
 Systemd tools to spawn and manage containers and virtual machines.
 
-This package contains systemd-nspawn, machinectl, systemd-machined,
-and systemd-importd.
-
-%package journal-remote
-# Name is the same as in Debian
-Summary:        Tools to send journal events over the network
-Requires:       %{name}%{?_isa} = %{version}-%{release}
-License:        LGPLv2+
-Requires(pre):    /usr/bin/getent
-Requires:       firewalld
-Provides:       %{name}-journal-gateway = %{version}-%{release}
-Provides:       %{name}-journal-gateway%{_isa} = %{version}-%{release}
-Obsoletes:      %{name}-journal-gateway < 227-7
-
-%description journal-remote
-Programs to forward journal entries over the network, using encrypted HTTP,
-and to write journal files from serialized journal contents.
-
-%package oomd
-Summary:       Systemd oomd feature
-Requires:       %{name} = %{version}-%{release}
-License:        LGPLv2+
-Requires(pre):    /usr/bin/getent
-Requires(post):   systemd
-Requires(preun):  systemd
-Requires(postun): systemd
-
-%description oomd
-Systemd-oomd.service, systemd-oomd - A userspace out-of-memory (OOM) killer
+This package contains machinectl, systemd-machined.
 
 %package resolved
 Summary:        Network Name Resolution manager
@@ -290,45 +259,6 @@ Requires:       %{name} = %{version}-%{release}
 %description pam
 Systemd PAM module registers the session with systemd-logind.
 
-%package portable
-Summary:        Systemd tools for portable services
-License:        LGPLv2+
-Requires:       %{name} = %{version}-%{release}
-%{?systemd_requires}
-
-%description portable
-Systemd tools to manage portable services. The feature is still
-considered experimental so the package might change  or vanish.
-Use at own risk.
-
-More information can be found online:
-
-http://0pointer.net/blog/walkthrough-for-portable-services.html
-https://systemd.io/PORTABLE_SERVICES
-
-%package userdbd
-Summary:        Systemd tools for userdbd services
-License:        LGPLv2+
-Requires:       %{name} = %{version}-%{release}
-%{?systemd_requires}
-
-%description userdbd
-systemd-userdbd is a system service that multiplexes user/group lookups to 
-all local services that provide JSON user/group record definitions to the system.
-Most of systemd-userdbd's functionality is accessible through the userdbctl(1) command.
-
-%package pstore
-Summary:        Systemd tools for pstore services
-License:        LGPLv2+
-Requires:       %{name} = %{version}-%{release}
-%{?systemd_requires}
-
-%description pstore
-systemd-pstore.service is a system service that archives the contents 
-of the Linux persistent storage filesystem, pstore, to other storage, 
-thus preserving the existing information contained in the pstore, 
-and clearing pstore storage for future error events.
-
 %package_help
 
 %prep
@@ -354,23 +284,20 @@ CONFIGURE_OPTS=(
         -Dlz4=true
         -Dpam=true
         -Dacl=true
-        -Dsmack=true
+        -Dsmack=false
         -Dgcrypt=true
         -Daudit=true
-        -Delfutils=true
-        -Dlibcryptsetup=true
-        -Delfutils=true
-        -Dqrencode=true
+        -Delfutils=false
+        -Dlibcryptsetup=false
+        -Dqrencode=false
         -Dgnutls=true
-        -Dmicrohttpd=true
+        -Dmicrohttpd=false
         -Dlibidn2=true
-        -Dlibiptc=true
-        -Dlibcurl=true
+        -Dlibidn=false
+        -Dlibiptc=false
+        -Dlibcurl=false
         -Defi=true
-%if 0%{?have_gnu_efi}
-        -Dgnu-efi=true
-%endif
-        -Dtpm=true
+        -Dtpm=false
         -Dhwdb=true
         -Dsysusers=true
         -Ddefault-kill-user-processes=false
@@ -391,17 +318,14 @@ CONFIGURE_OPTS=(
         # https://bugzilla.redhat.com/show_bug.cgi?id=1867830
         -Ddefault-mdns=no
         -Ddefault-llmnr=resolve
-        -Doomd=true
         -Dhtml=false
         -Dlibbpf=false
         -Dlibfido2=false
-        -Dlibidn=false
         -Dopenssl=false
         -Dpwquality=false
         -Dtpm2=false
         -Dzstd=false
         -Dbpf-framework=false
-        -Dhomed=false
         -Drepart=false
         -Dlegacy-pkla=false
         -Dcompat-mutable-uid-boundaries=false
@@ -410,6 +334,20 @@ CONFIGURE_OPTS=(
         -Dstandalone-binaries=false
         -Dstatic-libsystemd=false
         -Dstatic-libudev=false
+        -Dfirstboot=false
+        -Dsysext=false
+        -Dhomed=false
+        -Dgnu-efi=false
+        -Dquotacheck=false
+        -Dxdg-autostart=false
+        -Dimportd=false
+        -Dbacklight=false
+        -Drfkill=false
+        -Dpstore=false
+        -Dportabled=false
+        -Doomd=false
+        -Duserdb=false
+        -Dtime-epoch=0
 )
 
 %meson "${CONFIGURE_OPTS[@]}"
@@ -464,26 +402,19 @@ mkdir -p %{buildroot}%{pkgdir}/system-sleep/
 # Make sure directories in /var exist
 mkdir -p %{buildroot}%{_localstatedir}/lib/systemd/coredump
 mkdir -p %{buildroot}%{_localstatedir}/lib/systemd/catalog
-mkdir -p %{buildroot}%{_localstatedir}/lib/systemd/backlight
-mkdir -p %{buildroot}%{_localstatedir}/lib/systemd/rfkill
 mkdir -p %{buildroot}%{_localstatedir}/lib/systemd/linger
 mkdir -p %{buildroot}%{_localstatedir}/lib/private
 mkdir -p %{buildroot}%{_localstatedir}/log/private
 mkdir -p %{buildroot}%{_localstatedir}/cache/private
-mkdir -p %{buildroot}%{_localstatedir}/lib/private/systemd/journal-upload
 mkdir -p %{buildroot}%{_localstatedir}/lib/systemd/timesync
-ln -s ../private/systemd/journal-upload %{buildroot}%{_localstatedir}/lib/systemd/journal-upload
 mkdir -p %{buildroot}%{_localstatedir}/log/journal
 touch %{buildroot}%{_localstatedir}/lib/systemd/catalog/database
 touch %{buildroot}%{_sysconfdir}/udev/hwdb.bin
 touch %{buildroot}%{_localstatedir}/lib/systemd/random-seed
 touch %{buildroot}%{_localstatedir}/lib/systemd/timesync/clock
-touch %{buildroot}%{_localstatedir}/lib/private/systemd/journal-upload/state
 
 # Install yum protection fragment
 install -Dm0644 %{SOURCE4} %{buildroot}/etc/dnf/protected.d/systemd.conf
-
-install -Dm0644 -t %{buildroot}/usr/lib/firewalld/services/ %{SOURCE7} %{SOURCE8}
 
 # Restore systemd-user pam config from before "removal of Fedora-specific bits"
 install -Dm0644 -t %{buildroot}/etc/pam.d/ %{SOURCE12}
@@ -790,10 +721,7 @@ fi
 %systemd_post systemd-timesyncd.service
 
 %post udev
-# Move old stuff around in /var/lib
-mv %{_localstatedir}/lib/backlight %{_localstatedir}/lib/systemd/backlight &>/dev/null
-
-udevadm hwdb --update &>/dev/null
+fdevadm hwdb --update &>/dev/null
 %systemd_post %udev_services
 %{_systemddir}/systemd-random-seed save 2>&1
 
@@ -818,46 +746,14 @@ fi
 # Others are either oneshot services, or sockets, and restarting them causes issues (#1378974)
 %systemd_postun_with_restart systemd-udevd.service
 
-%pre journal-remote
-getent group systemd-journal-remote &>/dev/null || groupadd -r systemd-journal-remote 2>&1 || :
-getent passwd systemd-journal-remote &>/dev/null || useradd -r -l -g systemd-journal-remote -d %{_localstatedir}/log/journal/remote -s /sbin/nologin -c "Journal Remote" systemd-journal-remote &>/dev/null || :
-
-%post journal-remote
-%systemd_post systemd-journal-gatewayd.socket systemd-journal-gatewayd.service
-%systemd_post systemd-journal-remote.socket systemd-journal-remote.service
-%systemd_post systemd-journal-upload.service
-%firewalld_reload
-
-%preun journal-remote
-%systemd_preun systemd-journal-gatewayd.socket systemd-journal-gatewayd.service
-%systemd_preun systemd-journal-remote.socket systemd-journal-remote.service
-%systemd_preun systemd-journal-upload.service
-if [ $1 -eq 1 ] ; then
-    if [ -f %{_localstatedir}/lib/systemd/journal-upload/state -a ! -L %{_localstatedir}/lib/systemd/journal-upload ] ; then
-        mkdir -p %{_localstatedir}/lib/private/systemd/journal-upload
-        mv %{_localstatedir}/lib/systemd/journal-upload/state %{_localstatedir}/lib/private/systemd/journal-upload/.
-        rmdir %{_localstatedir}/lib/systemd/journal-upload || :
-    fi
-fi
-
-%postun journal-remote
-%systemd_postun_with_restart systemd-journal-gatewayd.service
-%systemd_postun_with_restart systemd-journal-remote.service
-%systemd_postun_with_restart systemd-journal-upload.service
-%firewalld_reload
-
-%preun portable
-%systemd_preun systemd-portabled.service
-
-%preun userdbd
-%systemd_preun systemd-userdbd.service systemd-userdbd.socket
-
-%preun pstore
-%systemd_preun systemd-pstore.service
-
 %files -f %{name}.lang
 %doc %{_pkgdocdir}
 %exclude %{_pkgdocdir}/LICENSE.*
+%exclude %{_systemddir}/systemd-bless-boot
+%exclude %{_unitdir}/systemd-bless-boot.service
+%exclude %{_systemddir}/system-generators/systemd-bless-boot-generator
+%exclude %{_unitdir}/systemd-boot-system-token.service
+%exclude %{_unitdir}/sysinit.target.wants/systemd-boot-system-token.service
 %license LICENSE.GPL2 LICENSE.LGPL2.1
 %ghost %dir %attr(0755,-,-) /etc/systemd/system/basic.target.wants
 %ghost %dir %attr(0755,-,-) /etc/systemd/system/bluetooth.target.wants
@@ -909,7 +805,6 @@ fi
 /usr/share/systemd/kbd-model-map
 /usr/share/bash-completion/completions/localectl
 /usr/share/bash-completion/completions/systemd-path
-/usr/share/bash-completion/completions/portablectl
 /usr/share/bash-completion/completions/systemd-run
 /usr/share/bash-completion/completions/systemd-cat
 /usr/share/bash-completion/completions/coredumpctl
@@ -942,7 +837,6 @@ fi
 /usr/share/zsh/site-functions/_hostnamectl
 /usr/share/zsh/site-functions/_sd_hosts_or_user_at_host
 /usr/share/zsh/site-functions/_localectl
-/usr/share/dbus-1/system-services/org.freedesktop.portable1.service
 /usr/share/dbus-1/system-services/org.freedesktop.login1.service
 /usr/share/dbus-1/system-services/org.freedesktop.locale1.service
 /usr/share/dbus-1/system-services/org.freedesktop.hostname1.service
@@ -952,11 +846,9 @@ fi
 /usr/share/dbus-1/system.d/org.freedesktop.login1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.systemd1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.locale1.conf
-/usr/share/dbus-1/system.d/org.freedesktop.portable1.conf
 /usr/share/pkgconfig/systemd.pc
 /usr/share/pkgconfig/udev.pc
 /usr/share/polkit-1/actions/org.freedesktop.hostname1.policy
-/usr/share/polkit-1/actions/org.freedesktop.portable1.policy
 /usr/share/polkit-1/actions/org.freedesktop.timedate1.policy
 /usr/share/polkit-1/actions/org.freedesktop.systemd1.policy
 /usr/share/polkit-1/actions/org.freedesktop.login1.policy
@@ -965,7 +857,6 @@ fi
 /usr/bin/localectl
 /usr/bin/systemd-path
 /usr/bin/systemd-run
-/usr/bin/systemd-firstboot
 /usr/bin/systemd-escape
 /usr/bin/systemd-tmpfiles
 /usr/bin/systemd-cat
@@ -998,7 +889,6 @@ fi
 %dir /usr/lib/sysctl.d
 %dir /usr/lib/systemd
 %dir /usr/lib/sysusers.d
-/usr/lib/pam.d/systemd-user
 /usr/lib/sysusers.d/systemd.conf
 /usr/lib/sysusers.d/basic.conf
 /usr/lib/systemd/system/hwclock-save.service
@@ -1019,7 +909,6 @@ fi
 %{_systemddir}/systemd-socket-proxyd
 %{_systemddir}/systemd-ac-power
 %{_systemddir}/systemd-hostnamed
-%{_systemddir}/systemd-bless-boot
 %{_systemddir}/systemd-localed
 %dir %{_systemddir}/user
 %{_systemddir}/systemd-volatile-root
@@ -1033,18 +922,15 @@ fi
 %{_systemddir}/systemd-reply-password
 %dir %{_systemddir}/system-generators
 %dir %{_systemddir}/system
-%{_systemddir}/systemd-export
 %{_systemddir}/systemd-fsck
 %{_systemddir}/systemd-timedated
 %dir %{_systemddir}/user-generators
 %{_systemddir}/systemd
 %dir %{_systemddir}/user-preset
 %{_systemddir}/systemd-coredump
-%{_systemddir}/systemd-veritysetup
 %{_systemddir}/systemd-network-generator
 %{_systemddir}/systemd-binfmt
 %{_systemddir}/user-preset/90-systemd.preset
-%{_unitdir}/systemd-networkd.socket
 %{_unitdir}/systemd-binfmt.service
 %{_unitdir}/systemd-machine-id-commit.service
 %dir %{_unitdir}/basic.target.wants
@@ -1055,7 +941,6 @@ fi
 %{_unitdir}/rpcbind.target
 %{_unitdir}/systemd-update-done.service
 %{_unitdir}/dev-hugepages.mount
-%{_unitdir}/systemd-firstboot.service
 %dir %{_unitdir}/sockets.target.wants
 %dir %{_unitdir}/dbus.target.wants
 %{_unitdir}/network.target
@@ -1081,7 +966,6 @@ fi
 %{_unitdir}/sigpwr.target
 %dir %{_unitdir}/runlevel3.target.wants
 %{_unitdir}/reboot.target
-%{_unitdir}/systemd-boot-system-token.service
 %{_unitdir}/systemd-user-sessions.service
 %{_unitdir}/systemd-journald-dev-log.socket
 %{_unitdir}/systemd-journald.socket
@@ -1118,7 +1002,6 @@ fi
 %{_unitdir}/emergency.service
 %{_unitdir}/network-pre.target
 %{_unitdir}/rescue.service
-%{_unitdir}/systemd-bless-boot.service
 %{_unitdir}/sys-kernel-config.mount
 %{_unitdir}/systemd-journald.service
 %dir %{_unitdir}/runlevel2.target.wants
@@ -1198,11 +1081,9 @@ fi
 %{_unitdir}/sysinit.target.wants/systemd-tmpfiles-setup.service
 %{_unitdir}/sysinit.target.wants/systemd-update-done.service
 %{_unitdir}/sysinit.target.wants/dev-hugepages.mount
-%{_unitdir}/sysinit.target.wants/systemd-firstboot.service
 %{_unitdir}/sysinit.target.wants/proc-sys-fs-binfmt_misc.automount
 %{_unitdir}/sysinit.target.wants/systemd-ask-password-console.path
 %{_unitdir}/sysinit.target.wants/sys-kernel-debug.mount
-%{_unitdir}/sysinit.target.wants/systemd-boot-system-token.service
 %{_unitdir}/sysinit.target.wants/systemd-journal-flush.service
 %{_unitdir}/sysinit.target.wants/systemd-update-utmp.service
 %{_unitdir}/sysinit.target.wants/sys-kernel-config.mount
@@ -1226,21 +1107,18 @@ fi
 %{_unitdir}/sockets.target.wants/systemd-journald-dev-log.socket
 %{_unitdir}/sockets.target.wants/systemd-journald.socket
 %{_unitdir}/sockets.target.wants/systemd-initctl.socket
+%{_unitdir}/sockets.target.wants/systemd-coredump.socket
 %{_unitdir}/blockdev@.target
 %{_unitdir}/sys-kernel-tracing.mount
 %{_unitdir}/sysinit.target.wants/sys-kernel-tracing.mount
-%{_unitdir}/system-systemd\x2dcryptsetup.slice
 %{_unitdir}/systemd-journald-varlink@.socket
 %{_unitdir}/systemd-journald@.service
 %{_unitdir}/systemd-journald@.socket
-%{_unitdir}/usb-gadget.target
 %{_unitdir}/modprobe@.service
 %{_systemddir}/system-generators/systemd-fstab-generator
 %{_systemddir}/system-generators/systemd-sysv-generator
 %{_systemddir}/system-generators/systemd-rc-local-generator
-%{_systemddir}/system-generators/systemd-bless-boot-generator
 %{_systemddir}/system-generators/systemd-debug-generator
-%{_systemddir}/system-generators/systemd-veritysetup-generator
 %{_systemddir}/system-generators/systemd-run-generator
 %{_systemddir}/system-generators/systemd-system-update-generator
 %{_systemddir}/system-generators/systemd-getty-generator
@@ -1263,9 +1141,6 @@ fi
 %{_userunitdir}/systemd-tmpfiles-clean.timer
 %{_userunitdir}/sockets.target
 %{_userunitdir}/smartcard.target
-%{_systemddir}/network/80-wifi-adhoc.network
-%{_systemddir}/network/80-wifi-ap.network.example
-%{_systemddir}/network/80-wifi-station.network.example
 %{_systemddir}/catalog/systemd.fr.catalog
 %{_systemddir}/catalog/systemd.be.catalog
 %{_systemddir}/catalog/systemd.bg.catalog
@@ -1278,9 +1153,6 @@ fi
 %{_systemddir}/catalog/systemd.zh_TW.catalog
 %{_systemddir}/catalog/systemd.ru.catalog
 %{_systemddir}/catalog/systemd.catalog
-%{_systemddir}/systemd-xdg-autostart-condition
-%{_systemddir}/user-generators/systemd-xdg-autostart-generator
-%{_systemddir}/user/xdg-desktop-autostart.target
 /usr/lib/sysctl.d/50-default.conf
 /usr/lib/sysctl.d/50-pid-max.conf
 /usr/lib/sysctl.d/50-coredump.conf
@@ -1319,6 +1191,7 @@ fi
 %ghost %config(noreplace) /etc/X11/xorg.conf.d/00-keyboard.conf
 %config(noreplace) /etc/X11/xinit/xinitrc.d/50-systemd-user.sh
 %config(noreplace) /etc/pam.d/systemd-user
+/usr/lib/pam.d/systemd-user
 %config(noreplace) /etc/sysctl.d/99-sysctl.conf
 %config(noreplace) /etc/dnf/protected.d/systemd.conf
 %dir /etc/rc.d/init.d
@@ -1328,21 +1201,10 @@ fi
 %dir /etc/xdg/systemd
 %config(noreplace) /etc/xdg/systemd/user
 %{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
-
 /usr/lib/rpm/macros.d/macros.systemd
-
-/usr/bin/systemd-cryptenroll
-/usr/bin/systemd-sysext
 /usr/lib/modprobe.d/README
 /usr/lib/sysctl.d/README
 /usr/lib/systemd/system/first-boot-complete.target
-/usr/lib/systemd/system/initrd-root-device.target.wants/remote-cryptsetup.target
-/usr/lib/systemd/system/initrd-root-device.target.wants/remote-veritysetup.target
-/usr/lib/systemd/system/remote-veritysetup.target
-/usr/lib/systemd/system/sysinit.target.wants/veritysetup.target
-/usr/lib/systemd/system/systemd-sysext.service
-/usr/lib/systemd/system/veritysetup-pre.target
-/usr/lib/systemd/system/veritysetup.target
 /usr/lib/systemd/user/app.slice
 /usr/lib/systemd/user/background.slice
 /usr/lib/systemd/user/session.slice
@@ -1389,69 +1251,64 @@ fi
 %{_libdir}/pkgconfig/libudev.pc
 
 %files udev
-%ghost %dir /var/lib/systemd/backlight
-%ghost %dir /var/lib/systemd/rfkill
+%exclude /usr/share/bash-completion/completions/kernel-install
+%exclude /usr/share/zsh/site-functions/_kernel-install
+%exclude /usr/bin/kernel-install
+%exclude /usr/lib/kernel/install.d/00-entry-directory.install
+%exclude /usr/lib/kernel/install.d/90-loaderentry.install
+%exclude /usr/lib/kernel/install.d/50-depmod.install
+%exclude /usr/lib/kernel/install.d/20-grubby.install
+%exclude %dir /etc/kernel/install.d
+%exclude %dir /etc/kernel
+%exclude %dir /usr/lib/kernel
+%exclude %dir /usr/lib/kernel/install.d
+%exclude /usr/bin/bootctl
+%exclude /usr/share/zsh/site-functions/_bootctl
+%exclude /usr/share/bash-completion/completions/bootctl
+%exclude %{_unitdir}/usb-gadget.target
 %ghost /var/lib/systemd/random-seed
+/etc/modules-load.d
 /usr/sbin/udevadm
 /usr/share/bash-completion/completions/udevadm
-/usr/share/bash-completion/completions/bootctl
-/usr/share/bash-completion/completions/kernel-install
-/usr/share/zsh/site-functions/_bootctl
 /usr/share/zsh/site-functions/_udevadm
-/usr/share/zsh/site-functions/_kernel-install
 /usr/bin/systemd-hwdb
 /usr/bin/udevadm
-/usr/bin/bootctl
-/usr/bin/kernel-install
 %dir /usr/lib/modprobe.d
 %dir /usr/lib/udev
-%dir /usr/lib/kernel
 %dir /usr/lib/modules-load.d
 %{_systemddir}/systemd-growfs
 %{_systemddir}/systemd-modules-load
 %dir %{_systemddir}/system-sleep
 %{_systemddir}/systemd-makefs
 %{_systemddir}/systemd-remount-fs
-%{_systemddir}/systemd-backlight
 %{_systemddir}/systemd-hibernate-resume
 %{_systemddir}/systemd-random-seed
 %{_systemddir}/systemd-sleep
-%{_systemddir}/systemd-cryptsetup
 %{_systemddir}/systemd-udevd
-%{_systemddir}/systemd-quotacheck
-%{_systemddir}/systemd-rfkill
 %{_systemddir}/systemd-vconsole-setup
 %{_unitdir}/systemd-udevd.service
 %{_unitdir}/initrd-udevadm-cleanup-db.service
-%{_unitdir}/systemd-rfkill.socket
 %{_unitdir}/systemd-suspend.service
 %{_unitdir}/suspend-then-hibernate.target
 %{_unitdir}/systemd-modules-load.service
 %{_unitdir}/systemd-tmpfiles-setup-dev.service
 %{_unitdir}/systemd-vconsole-setup.service
 %{_unitdir}/systemd-hibernate.service
-%{_unitdir}/systemd-backlight@.service
 %dir %{_unitdir}/systemd-udev-trigger.service.d
 %{_unitdir}/systemd-random-seed.service
-%{_unitdir}/systemd-quotacheck.service
 %{_unitdir}/systemd-udevd-control.socket
 %{_unitdir}/hibernate.target
 %{_unitdir}/systemd-remount-fs.service
 %{_unitdir}/suspend.target
 %{_unitdir}/systemd-hybrid-sleep.service
-%{_unitdir}/systemd-rfkill.service
 %{_unitdir}/systemd-suspend-then-hibernate.service
-%{_unitdir}/cryptsetup-pre.target
 %{_unitdir}/hybrid-sleep.target
-%{_unitdir}/quotaon.service
 %{_unitdir}/systemd-hwdb-update.service
 %{_unitdir}/systemd-hibernate-resume@.service
 %{_unitdir}/systemd-udev-settle.service
 %{_unitdir}/sleep.target
 %{_unitdir}/kmod-static-nodes.service
 %{_unitdir}/systemd-udevd-kernel.socket
-%{_unitdir}/remote-cryptsetup.target
-%{_unitdir}/cryptsetup.target
 %{_unitdir}/systemd-udev-trigger.service
 %{_unitdir}/sysinit.target.wants/systemd-udevd.service
 %{_unitdir}/sysinit.target.wants/systemd-modules-load.service
@@ -1459,27 +1316,13 @@ fi
 %{_unitdir}/sysinit.target.wants/systemd-random-seed.service
 %{_unitdir}/sysinit.target.wants/systemd-hwdb-update.service
 %{_unitdir}/sysinit.target.wants/kmod-static-nodes.service
-%{_unitdir}/sysinit.target.wants/cryptsetup.target
 %{_unitdir}/sysinit.target.wants/systemd-udev-trigger.service
 %{_unitdir}/systemd-udev-trigger.service.d/systemd-udev-trigger-no-reload.conf
 %{_unitdir}/sockets.target.wants/systemd-udevd-control.socket
 %{_unitdir}/sockets.target.wants/systemd-udevd-kernel.socket
-%{_systemddir}/system-generators/systemd-cryptsetup-generator
 %{_systemddir}/system-generators/systemd-hibernate-resume-generator
 %{_systemddir}/system-generators/systemd-gpt-auto-generator
-%if 0%{?have_gnu_efi}
-%dir %{_systemddir}/boot
-%dir %{_systemddir}/boot/efi
-%{_systemddir}/boot/efi/systemd-boot%{efi_arch}.efi
-%{_systemddir}/boot/efi/linux%{efi_arch}.efi.stub
-%{_systemddir}/boot/efi/linux%{efi_arch}.elf.stub
-%endif
 %{_systemddir}/network/99-default.link
-%dir /usr/lib/kernel/install.d
-/usr/lib/kernel/install.d/20-grubby.install
-/usr/lib/kernel/install.d/00-entry-directory.install
-/usr/lib/kernel/install.d/90-loaderentry.install
-/usr/lib/kernel/install.d/50-depmod.install
 /usr/lib/udev/v4l_id
 %dir /usr/lib/udev/rules.d
 /usr/lib/udev/ata_id
@@ -1546,9 +1389,7 @@ fi
 %ghost %config(noreplace) /etc/vconsole.conf
 %dir /etc/udev
 %dir /etc/kernel
-%dir /etc/modules-load.d
 %config(noreplace) /etc/systemd/sleep.conf
-%dir /etc/kernel/install.d
 %ghost /etc/udev/hwdb.bin
 %dir /etc/udev/rules.d
 %config(noreplace) /etc/udev/udev.conf
@@ -1557,26 +1398,16 @@ fi
 %files container
 /usr/share/bash-completion/completions/machinectl
 /usr/share/zsh/site-functions/_machinectl
-/usr/share/dbus-1/system-services/org.freedesktop.import1.service
 /usr/share/dbus-1/system-services/org.freedesktop.machine1.service
 /usr/share/dbus-1/services/org.freedesktop.systemd1.service
 /usr/share/dbus-1/system-services/org.freedesktop.systemd1.service
-/usr/share/dbus-1/system.d/org.freedesktop.import1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.machine1.conf
-/usr/share/polkit-1/actions/org.freedesktop.import1.policy
 /usr/share/polkit-1/actions/org.freedesktop.machine1.policy
 %{_libdir}/libnss_mymachines.so.2
 /usr/bin/machinectl
-%{_systemddir}/systemd-import
 %{_systemddir}/systemd-machined
-%{_systemddir}/systemd-importd
-%{_systemddir}/systemd-import-fs
-%{_systemddir}/systemd-pull
-%{_systemddir}/import-pubring.gpg
 %{_unitdir}/systemd-machined.service
-%{_unitdir}/dbus-org.freedesktop.import1.service
 %{_unitdir}/var-lib-machines.mount
-%{_unitdir}/systemd-importd.service
 %{_unitdir}/dbus-org.freedesktop.machine1.service
 %{_unitdir}/machine.slice
 %{_unitdir}/machines.target
@@ -1584,36 +1415,6 @@ fi
 %{_unitdir}/machines.target.wants/var-lib-machines.mount
 %{_unitdir}/remote-fs.target.wants/var-lib-machines.mount
 %{_systemddir}/network/80-vm-vt.network
-
-%files journal-remote
-%ghost %dir /var/log/journal/remote
-%ghost /var/lib/systemd/journal-upload
-%ghost %dir /var/lib/private/systemd/journal-upload
-%ghost /var/lib/private/systemd/journal-upload/state
-%dir /usr/share/systemd/gatewayd
-/usr/share/systemd/gatewayd/browse.html
-/usr/lib/sysusers.d/systemd-remote.conf
-%{_systemddir}/systemd-journal-upload
-%{_systemddir}/systemd-journal-gatewayd
-%{_systemddir}/systemd-journal-remote
-%{_unitdir}/systemd-journal-upload.service
-%{_unitdir}/systemd-journal-gatewayd.service
-%{_unitdir}/systemd-journal-gatewayd.socket
-%{_unitdir}/systemd-journal-remote.socket
-%{_unitdir}/systemd-journal-remote.service
-/usr/lib/firewalld/services/systemd-journal-remote.xml
-/usr/lib/firewalld/services/systemd-journal-gatewayd.xml
-%config(noreplace) /etc/systemd/journal-remote.conf
-%config(noreplace) /etc/systemd/journal-upload.conf
-
-%files oomd
-/etc/systemd/oomd.conf
-/usr/bin/oomctl
-/usr/lib/systemd/system/systemd-oomd.service
-/usr/lib/systemd/system/dbus-org.freedesktop.oom1.service
-/usr/lib/systemd/systemd-oomd
-/usr/share/dbus-1/system-services/org.freedesktop.oom1.service
-/usr/share/dbus-1/system.d/org.freedesktop.oom1.conf
 
 %files help
 /usr/share/man/*/*
@@ -1660,6 +1461,9 @@ fi
 %config(noreplace) /etc/systemd/networkd.conf
 %{_systemddir}/network/80-container-vz.network
 %{_systemddir}/network/80-container-ve.network
+%{_systemddir}/network/80-wifi-adhoc.network
+%{_systemddir}/network/80-wifi-ap.network.example
+%{_systemddir}/network/80-wifi-station.network.example
 
 %files timesyncd
 %dir %{_systemddir}/ntp-units.d
@@ -1677,31 +1481,10 @@ fi
 %files pam
 %{_libdir}/security/pam_systemd.so
 
-%files portable
-%defattr(-,root,root)
-%{_bindir}/portablectl
-%{_prefix}/lib/systemd/systemd-portabled
-%{_prefix}/lib/systemd/portable
-%{_unitdir}/systemd-portabled.service
-%{_unitdir}/dbus-org.freedesktop.portable1.service
-%{_tmpfilesdir}/portables.conf
-
-%files pstore
-%defattr(-,root,root)
-%config(noreplace) %{_sysconfdir}/systemd/pstore.conf
-%{_prefix}/lib/systemd/systemd-pstore
-%{_unitdir}/systemd-pstore.service
-%{_tmpfilesdir}/systemd-pstore.conf
-
-%files userdbd
-%defattr(-,root,root)
-%{_bindir}/userdbctl
-%{_prefix}/lib/systemd/systemd-userwork
-%{_prefix}/lib/systemd/systemd-userdbd
-%{_unitdir}/systemd-userdbd.service
-%{_unitdir}/systemd-userdbd.socket
-
 %changelog
+* Fri Mar 11 2022 yangmingtai <yangmingtai@huawei.com> - 249-12
+- disable some features
+
 * Thu Mar 10 2022 xujing <xujing99@huawei.com> - 249-11
 - core: use empty_to_root for cgroup path in log messages
 
