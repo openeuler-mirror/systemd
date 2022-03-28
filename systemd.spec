@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        12
+Release:        14
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -63,7 +63,8 @@ Patch0014:      0014-journal-don-t-enable-systemd-journald-audit.socket-b.patch
 Patch0015:      0015-systemd-change-time-log-level.patch
 Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
-patch0018:      0018-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
+Patch0018:      0018-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
+Patch0019:      0019-pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -79,8 +80,11 @@ Patch6009:      backport-CVE-2021-3997-shared-rm-rf-loop-over-nested-directories
 Patch6010:      backport-fix-CVE-2021-33910.patch
 Patch6011:      backport-temporarily-disable-test-seccomp.patch
 Patch6012:      backport-revert-core-map-io.bfq.weight-to-1.1000.patch
-Patch6013:      backport-0001-core-cgroup-fix-error-handling-of-cg_remove_xattr.patch
-Patch6014:      backport-0002-core-wrap-cgroup-path-with-empty_to_root-in-log-mess.patch
+Patch6013:      backport-core-cgroup-fix-error-handling-of-cg_remove_xattr.patch
+Patch6014:      backport-core-wrap-cgroup-path-with-empty_to_root-in-log-mess.patch
+Patch6015:      backport-Bump-the-max-number-of-inodes-for-dev-to-a-million.patch
+Patch6016:      backport-Bump-the-max-number-of-inodes-for-tmp-to-a-million-t.patch
+Patch6017:      backport-unit-escape.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1482,6 +1486,12 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Thu Mar 17 2022 xujing <xujing99@huawei.com> - 249-14
+- pid1 bump DefaultTasksMax to 80% of the kernel pid.max value
+
+* Thu Mar 17 2022 xujing <xujing99@huawei.com> - 249-13
+- allow more inodes in /dev an /tmp
+
 * Fri Mar 11 2022 yangmingtai <yangmingtai@huawei.com> - 249-12
 - disable some features
 

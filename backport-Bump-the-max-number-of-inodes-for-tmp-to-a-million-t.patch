@@ -1,0 +1,28 @@
+From cac372a80177fb622806270eb0d810e4c6ad0c84 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Thu, 9 Dec 2021 10:20:46 +0100
+Subject: [PATCH 2/2] Bump the max number of inodes for /tmp to a million too
+
+Fixes #21626. (The bug report talks about /run, but the issue is actually with
+/tmp.) People use /tmp for various things that fit in memory, e.g. unpacking
+packages, and 400k is not much. Let's raise is a bit.
+---
+ units/tmp.mount | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/units/tmp.mount b/units/tmp.mount
+index 516bd1621c..4e1bb8de24 100644
+--- a/units/tmp.mount
++++ b/units/tmp.mount
+@@ -22,7 +22,7 @@ After=swap.target
+ What=tmpfs
+ Where=/tmp
+ Type=tmpfs
+-Options=mode=1777,strictatime,nosuid,nodev,size=50%,nr_inodes=400k
++Options=mode=1777,strictatime,nosuid,nodev,size=50%,nr_inodes=1m
+ 
+ # Make 'systemctl enable tmp.mount' work:
+ [Install]
+-- 
+2.27.0
+
