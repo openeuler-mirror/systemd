@@ -1,0 +1,40 @@
+From bf589755bd5b084f1b5dd099ea3e4917ac9911fd Mon Sep 17 00:00:00 2001
+From: huangkaibin <huangkaibin@huawei.com>
+Date: Thu, 14 Sep 2017 12:54:01 +0800
+Subject: [PATCH] systemd-core: fix problem of dbus service can not be started
+ when dbus is dead and state of system dbus of systemd stay in
+ BUS_AUTHENTICATING.
+
+When systemd starts a dbus communication, it will first authenticate the bus by communicating with polkitd service, and then enter running state.
+But if authenticating can not be establised within 25s(default timeout seconds) since authenticating starts
+(maybe caused by polkitd service or dbus service can not be activated in time), the dbus state in systemd side will stays in BUS_AUTHENTICATING state,
+and systemd will enter a mad state that it will handle authenticating(in bus_process_internal function) very frequently and will have no any change to
+service for events of restarting services(by systemctl restart dbus.service --no-ask-password --no-block). So that the dbus service will never be restarted successfully.
+systemd will enter such a state is caused by the timeout setting in sd_bus_get_timeout function. When in BUS_AUTHENTICATING state, the timeout is set
+to a fix value of bus->auth_timeout(authenticating start time + 25s), if auth_timeout is an expired time, but not a furture time, systemd will always service
+for the callback of function of dbus(time_callback) with no any delay when it got its chance, and leave no chance for events of restarting services.
+This patch fix this problem by fixing the timeout to a furture time when bus->auth_timeout is expired.
+---
+ src/libsystemd/sd-bus/sd-bus.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/libsystemd/sd-bus/sd-bus.c b/src/libsystemd/sd-bus/sd-bus.c
+index b0a3237..ca626d3 100644
+--- a/src/libsystemd/sd-bus/sd-bus.c
++++ b/src/libsystemd/sd-bus/sd-bus.c
+@@ -2267,7 +2267,11 @@ _public_ int sd_bus_get_timeout(sd_bus *bus, uint64_t *timeout_usec) {
+         switch (bus->state) {
+ 
+         case BUS_AUTHENTICATING:
+-                *timeout_usec = bus->auth_timeout;
++                //delay 1 second to ensure it is a furture time but not an expired time
++                if(bus->auth_timeout <= now(CLOCK_MONOTONIC))
++                        *timeout_usec = now(CLOCK_MONOTONIC) + USEC_PER_SEC;
++                else
++                        *timeout_usec = bus->auth_timeout;
+                 return 1;
+ 
+         case BUS_RUNNING:
+-- 
+1.8.3.1
+
