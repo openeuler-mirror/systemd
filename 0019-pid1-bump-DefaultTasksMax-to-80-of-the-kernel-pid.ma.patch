@@ -1,19 +1,20 @@
-From bb46b12cbb84411e378cd45f2ac320a9ce53551c Mon Sep 17 00:00:00 2001
+From ad2da19e1e80a9ab9d0dfae17a74f5009e4d1898 Mon Sep 17 00:00:00 2001
 From: openEuler Buildteam <buildteam@openeuler.org>
 Date: Tue, 10 Mar 2020 21:01:43 +0800
 Subject: [PATCH] pid1 bump DefaultTasksMax to 80% of the kernel pid.max value
 
 ---
  man/systemd-system.conf.xml          | 2 +-
+ src/core/main.c                      | 2 +-
  src/core/system.conf.in              | 2 +-
  units/user-.slice.d/10-defaults.conf | 2 +-
- 3 files changed, 3 insertions(+), 3 deletions(-)
+ 4 files changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/man/systemd-system.conf.xml b/man/systemd-system.conf.xml
-index e403fa5..afd51ed 100644
+index c11dd46..b259631 100644
 --- a/man/systemd-system.conf.xml
 +++ b/man/systemd-system.conf.xml
-@@ -360,7 +360,7 @@
+@@ -389,7 +389,7 @@
          <listitem><para>Configure the default value for the per-unit <varname>TasksMax=</varname> setting. See
          <citerefentry><refentrytitle>systemd.resource-control</refentrytitle><manvolnum>5</manvolnum></citerefentry>
          for details. This setting applies to all unit types that support resource control settings, with the exception
@@ -22,11 +23,24 @@ index e403fa5..afd51ed 100644
          and root cgroup <varname>pids.max</varname>.
          Kernel has a default value for <varname>kernel.pid_max=</varname> and an algorithm of counting in case of more than 32 cores.
          For example with the default <varname>kernel.pid_max=</varname>, <varname>DefaultTasksMax=</varname> defaults to 4915,
+diff --git a/src/core/main.c b/src/core/main.c
+index da6c50a..f4fe751 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -92,7 +92,7 @@
+ #include <sanitizer/lsan_interface.h>
+ #endif
+ 
+-#define DEFAULT_TASKS_MAX ((TasksMax) { 15U, 100U }) /* 15% */
++#define DEFAULT_TASKS_MAX ((TasksMax) { 80U, 100U }) /* 80% */
+ 
+ static enum {
+         ACTION_RUN,
 diff --git a/src/core/system.conf.in b/src/core/system.conf.in
-index 8112125..9e75b14 100644
+index e88280b..f2c75fc 100644
 --- a/src/core/system.conf.in
 +++ b/src/core/system.conf.in
-@@ -51,7 +51,7 @@
+@@ -54,7 +54,7 @@
  #DefaultBlockIOAccounting=no
  #DefaultMemoryAccounting={{ 'yes' if MEMORY_ACCOUNTING_DEFAULT else 'no' }}
  #DefaultTasksAccounting=yes
@@ -36,7 +50,7 @@ index 8112125..9e75b14 100644
  #DefaultLimitFSIZE=
  #DefaultLimitDATA=
 diff --git a/units/user-.slice.d/10-defaults.conf b/units/user-.slice.d/10-defaults.conf
-index c81a00e..3b14c35 100644
+index cb3651b..be8fa28 100644
 --- a/units/user-.slice.d/10-defaults.conf
 +++ b/units/user-.slice.d/10-defaults.conf
 @@ -14,4 +14,4 @@ After=systemd-user-sessions.service
@@ -46,5 +60,5 @@ index c81a00e..3b14c35 100644
 -TasksMax=33%
 +TasksMax=80%
 -- 
-1.8.3.1
+2.27.0
 

@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        16
+Release:        17
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -363,6 +363,7 @@ CONFIGURE_OPTS=(
         -Doomd=false
         -Duserdb=false
         -Dtime-epoch=0
+        -Dmode=release
 )
 
 %meson "${CONFIGURE_OPTS[@]}"
@@ -631,7 +632,6 @@ setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/ &>/de
 # before systemd due to rpm ordering problems:
 # https://bugzilla.redhat.com/show_bug.cgi?id=1647172
 if [ $1 -eq 1 ] ; then
-        echo "DefaultTasksMax=80%" >> /etc/systemd/system.conf
         systemctl preset-all &>/dev/null || :
 fi
 
@@ -1497,6 +1497,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Thu Mar 31 2022 xujing <xujing99@huawei.com> - 249-17
+- set DEFAULT_TASKS_MAX to 80% and set mode to release
+
 * Wed Mar 23 2022 xujing <xujing99@huawei.com> - 249-16
 - systemd-journald: Fix journal file descriptors leak problems.
   systemd: Activation service must be restarted when it is already started and re-actived by dbus
