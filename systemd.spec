@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        17
+Release:        18
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -96,6 +96,7 @@ Patch6021:      backport-udev-fix-potential-memleak.patch
 Patch6022:      backport-journalctl-never-fail-at-flushing-when-the-flushed-f.patch
 Patch6023:      backport-core-fix-SIGABRT-on-empty-exec-command-argv.patch
 Patch6024:      backport-core-service-also-check-path-in-exec-commands.patch
+Patch6025:      backport-Add-meson-option-to-disable-urlify.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -364,6 +365,7 @@ CONFIGURE_OPTS=(
         -Duserdb=false
         -Dtime-epoch=0
         -Dmode=release
+        -Durlify=false
 )
 
 %meson "${CONFIGURE_OPTS[@]}"
@@ -1497,6 +1499,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Sat Apr 2 2022 xujing <xujing99@huawei.com> - 249-18
+- set urlify to be disabled by default
+
 * Thu Mar 31 2022 xujing <xujing99@huawei.com> - 249-17
 - set DEFAULT_TASKS_MAX to 80% and set mode to release
 
