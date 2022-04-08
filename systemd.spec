@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        18
+Release:        19
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -330,10 +330,10 @@ CONFIGURE_OPTS=(
         -Dman=true
         -Dversion-tag=v%{version}-%{release}
         -Ddefault-hierarchy=legacy
-        -Ddefault-dnssec=no
+        -Ddefault-dnssec=allow-downgrade
         # https://bugzilla.redhat.com/show_bug.cgi?id=1867830
-        -Ddefault-mdns=no
-        -Ddefault-llmnr=resolve
+        -Ddefault-mdns=yes
+        -Ddefault-llmnr=yes
         -Dhtml=false
         -Dlibbpf=false
         -Dlibfido2=false
@@ -1499,6 +1499,11 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Fri Apr 8 2022 wangyuhang <wangyuhang27@huawei.com> - 249-19
+- set dnssec to be allow-downgrade by default
+  set mdns to be yes by default
+  set llmnr to be yes by default
+
 * Sat Apr 2 2022 xujing <xujing99@huawei.com> - 249-18
 - set urlify to be disabled by default
 
