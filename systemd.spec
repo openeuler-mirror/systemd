@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        19
+Release:        20
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -97,6 +97,7 @@ Patch6022:      backport-journalctl-never-fail-at-flushing-when-the-flushed-f.pa
 Patch6023:      backport-core-fix-SIGABRT-on-empty-exec-command-argv.patch
 Patch6024:      backport-core-service-also-check-path-in-exec-commands.patch
 Patch6025:      backport-Add-meson-option-to-disable-urlify.patch
+Patch6026:      backport-logind.conf-Fix-name-of-option-RuntimeDirectoryInode.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1499,6 +1500,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Fri Apr 8 2022 xujing <xujing99@huawei.com> - 249-20
+- fix name of option: RuntimeDirectoryInodes
+
 * Fri Apr 8 2022 wangyuhang <wangyuhang27@huawei.com> - 249-19
 - set dnssec to be allow-downgrade by default
   set mdns to be yes by default
