@@ -1,0 +1,62 @@
+From fbd28b3b40701f1fda29707dfa09d1e481c4162c Mon Sep 17 00:00:00 2001
+From: hexiaowen<hexiaowen@huawei.com>
+Date: Tue, 9 Jul 2019 19:13:43 +0800
+Subject: [PATCH] delete clock_apply_epoch
+
+resolved: apply epoch to system time from PID 1
+
+For use in timesyncd we already defined a compile-time "epoch" value, which is based on the mtime of the NEWS file, and
+specifies a point in time we know lies in the past at runtime. timesyncd uses this to filter out nonsensical timestamp
+file data, and bump the system clock to a time that is after the build time of systemd. This patch adds similar bumping
+code to earliest PID 1 initialization, so that the system never continues operation with a clock that is in the 1970ies
+or even 1930s. we think it is ok when current system time is before build time.
+
+And, don't restore time when systemd-timesyncd started.
+
+---
+ src/core/main.c          |  5 -----
+ src/timesync/timesyncd.c | 12 ------------
+ 2 files changed, 17 deletions(-)
+
+diff --git a/src/core/main.c b/src/core/main.c
+index a114257..bac746f 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -1473,11 +1473,6 @@ static void initialize_clock(void) {
+                  */
+                 (void) clock_reset_timewarp();
+ 
+-        r = clock_apply_epoch();
+-        if (r < 0)
+-                log_error_errno(r, "Current system time is before build time, but cannot correct: %m");
+-        else if (r > 0)
+-                log_info("System time before build time, advancing clock.");
+ }
+ 
+ static void apply_clock_update(void) {
+diff --git a/src/timesync/timesyncd.c b/src/timesync/timesyncd.c
+index e56e09c..028e5d6 100644
+--- a/src/timesync/timesyncd.c
++++ b/src/timesync/timesyncd.c
+@@ -73,18 +73,6 @@ static int load_clock_timestamp(uid_t uid, gid_t gid) {
+         }
+ 
+ settime:
+-        ct = now(CLOCK_REALTIME);
+-        if (ct < min) {
+-                struct timespec ts;
+-                char date[FORMAT_TIMESTAMP_MAX];
+-
+-                log_info("System clock time unset or jumped backwards, restoring from recorded timestamp: %s",
+-                         format_timestamp(date, sizeof(date), min));
+-
+-                if (clock_settime(CLOCK_REALTIME, timespec_store(&ts, min)) < 0)
+-                        log_error_errno(errno, "Failed to restore system clock, ignoring: %m");
+-        }
+-
+         return 0;
+ }
+ 
+-- 
+2.23.0
+
