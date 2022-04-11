@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        20
+Release:        21
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -69,6 +69,7 @@ Patch0020:      0020-fix-journal-file-descriptors-leak-problems.patch
 Patch0021:      0021-activation-service-must-be-restarted-when-reactivated.patch
 Patch0022:      0022-systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
 Patch0023:      0023-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
+Patch0024:      0024-disable-initialize_clock.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -1500,6 +1501,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Mon Apr 11 2022 xujing <xujing99@huawei.com> - 249-21
+- disable initialize_clock
+
 * Fri Apr 8 2022 xujing <xujing99@huawei.com> - 249-20
 - fix name of option: RuntimeDirectoryInodes
 
