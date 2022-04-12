@@ -1,0 +1,35 @@
+From 5fe226b4378a2466d906ae45b8544f1003e9885a Mon Sep 17 00:00:00 2001
+From: yefei25 <yefei25@huawei.com>
+Date: Wed, 8 Apr 2020 23:10:58 -0400
+Subject: [PATCH 1/2] check whether command_prev is null before assigning value
+
+---
+ src/core/service.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/service.c b/src/core/service.c
+index 9a26271f72..3c255b3bcc 100644
+--- a/src/core/service.c
++++ b/src/core/service.c
+@@ -2569,12 +2569,16 @@ static unsigned service_exec_command_index(Unit *u, ServiceExecCommand id, ExecC
+         assert(s);
+         assert(id >= 0);
+         assert(id < _SERVICE_EXEC_COMMAND_MAX);
+-
++        if (!current)
++                return 0;
+         first = s->exec_command[id];
+
+         /* Figure out where we are in the list by walking back to the beginning */
+-        for (c = current; c != first; c = c->command_prev)
++        for (c = current; c != first; c = c->command_prev) {
+                 idx++;
++                if (!c->command_prev)
++                        return idx;
++        }
+
+         return idx;
+ }
+--
+2.19.1
+
