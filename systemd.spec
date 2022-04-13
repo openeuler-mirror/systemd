@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        23
+Release:        24
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -72,6 +72,7 @@ Patch0023:      0023-delay-to-restart-when-a-service-can-not-be-auto-restarted.p
 Patch0024:      0024-disable-initialize_clock.patch
 Patch0025:      0025-systemd-solve-that-rsyslog-reads-journal-s-object-of.patch
 Patch0026:      0026-check-whether-command_prev-is-null-before-assigning-.patch
+Patch0027:      0027-print-the-real-reason-for-link-update.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -1503,6 +1504,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Tue Apr 12 2022 xujing <xujing99@huawei.com> - 249-24
+- print the real reason for link update
+
 * Tue Apr 12 2022 xujing <xujing99@huawei.com> - 249-23
 - check whether command_prev is null before assigning value
 
