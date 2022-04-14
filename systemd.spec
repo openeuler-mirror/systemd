@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        15
+Release:        26
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -65,6 +65,17 @@ Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
 Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 Patch0018:      0018-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
 Patch0019:      0019-pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
+Patch0020:      0020-fix-journal-file-descriptors-leak-problems.patch
+Patch0021:      0021-activation-service-must-be-restarted-when-reactivated.patch
+Patch0022:      0022-systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
+Patch0023:      0023-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
+Patch0024:      0024-disable-initialize_clock.patch
+Patch0025:      0025-systemd-solve-that-rsyslog-reads-journal-s-object-of.patch
+Patch0026:      0026-check-whether-command_prev-is-null-before-assigning-.patch
+Patch0027:      0027-print-the-real-reason-for-link-update.patch
+Patch0028:      0028-core-skip-change-device-to-dead-in-manager_catchup-d.patch
+Patch0029:      0029-Add-support-for-the-LoongArch-architecture.patch
+Patch0030:      0030-Add-LoongArch-dmi-virt-detection-and-testcase.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -87,8 +98,15 @@ Patch6016:      backport-Bump-the-max-number-of-inodes-for-tmp-to-a-million-t.pa
 Patch6017:      backport-unit-escape.patch
 Patch6018:      backport-udev-rename-type-name-e.g.-struct-worker-Worker.patch
 Patch6019:      backport-udev-run-the-main-process-workers-and-spawned-comman.patch
+Patch6020:      backport-timesync-fix-wrong-type-for-receiving-timestamp-in-n.patch
+Patch6021:      backport-udev-fix-potential-memleak.patch
+Patch6022:      backport-journalctl-never-fail-at-flushing-when-the-flushed-f.patch
+Patch6023:      backport-core-fix-SIGABRT-on-empty-exec-command-argv.patch
+Patch6024:      backport-core-service-also-check-path-in-exec-commands.patch
+Patch6025:      backport-Add-meson-option-to-disable-urlify.patch
+Patch6026:      backport-logind.conf-Fix-name-of-option-RuntimeDirectoryInode.patch
 
-BuildRequires:  gcc, gcc-c++
+BuildRequires:  gcc, gcc-c++, glibc-all-langpacks
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
 BuildRequires:  audit-libs-devel, dbus-devel, libacl-devel
 BuildRequires:  gobject-introspection-devel, libblkid-devel, xz-devel, xz
@@ -320,10 +338,10 @@ CONFIGURE_OPTS=(
         -Dman=true
         -Dversion-tag=v%{version}-%{release}
         -Ddefault-hierarchy=legacy
-        -Ddefault-dnssec=no
+        -Ddefault-dnssec=allow-downgrade
         # https://bugzilla.redhat.com/show_bug.cgi?id=1867830
-        -Ddefault-mdns=no
-        -Ddefault-llmnr=resolve
+        -Ddefault-mdns=yes
+        -Ddefault-llmnr=yes
         -Dhtml=false
         -Dlibbpf=false
         -Dlibfido2=false
@@ -354,6 +372,8 @@ CONFIGURE_OPTS=(
         -Doomd=false
         -Duserdb=false
         -Dtime-epoch=0
+        -Dmode=release
+        -Durlify=false
 )
 
 %meson "${CONFIGURE_OPTS[@]}"
@@ -622,7 +642,6 @@ setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/ &>/de
 # before systemd due to rpm ordering problems:
 # https://bugzilla.redhat.com/show_bug.cgi?id=1647172
 if [ $1 -eq 1 ] ; then
-        echo "DefaultTasksMax=80%" >> /etc/systemd/system.conf
         systemctl preset-all &>/dev/null || :
 fi
 
@@ -1488,6 +1507,48 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Thu Apr 14 2022 liyanan <liyanan32@h-partners.com> - 249-26
+- Add support for the LoongArch architecture
+
+* Tue Apr 12 2022 xujing <xujing99@huawei.com> - 249-25
+- core: skip change device to dead in manager_catchup during booting
+
+* Tue Apr 12 2022 xujing <xujing99@huawei.com> - 249-24
+- print the real reason for link update
+
+* Tue Apr 12 2022 xujing <xujing99@huawei.com> - 249-23
+- check whether command_prev is null before assigning value
+
+* Mon Apr 11 2022 xujing <xujing99@huawei.com> - 249-22
+- solve that rsyslog reads journal's object of size 0
+
+* Mon Apr 11 2022 xujing <xujing99@huawei.com> - 249-21
+- disable initialize_clock
+
+* Fri Apr 8 2022 xujing <xujing99@huawei.com> - 249-20
+- fix name of option: RuntimeDirectoryInodes
+
+* Fri Apr 8 2022 wangyuhang <wangyuhang27@huawei.com> - 249-19
+- set dnssec to be allow-downgrade by default
+  set mdns to be yes by default
+  set llmnr to be yes by default
+
+* Sat Apr 2 2022 xujing <xujing99@huawei.com> - 249-18
+- set urlify to be disabled by default
+
+* Thu Mar 31 2022 xujing <xujing99@huawei.com> - 249-17
+- set DEFAULT_TASKS_MAX to 80% and set mode to release
+
+* Wed Mar 23 2022 xujing <xujing99@huawei.com> - 249-16
+- systemd-journald: Fix journal file descriptors leak problems.
+  systemd: Activation service must be restarted when it is already started and re-actived by dbus
+  systemd-core: fix problem of dbus service can not be started
+  systemd-core: Delay to restart when a service can not be auto-restarted when there is one STOP_JOB for the service
+  core: fix SIGABRT on empty exec command argv
+  journalctl: never fail at flushing when the flushed flag is set
+  timesync: fix wrong type for receiving timestamp in nanoseconds
+  udev: fix potential memleak
+
 * Fri Mar 18 2022 yangmingtai <yangmingtai@huawei.com> - 249-15
 - fix systemctl reload systemd-udevd failed
 
