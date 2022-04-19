@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        25
+Release:        26
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -46,34 +46,33 @@ Source105:      rule_generator.functions
 Source106:      write_net_rules
 Source107:      detect_virt
 
-Patch0001:      0001-update-rtc-with-system-clock-when-shutdown.patch
-Patch0002:      0002-udev-add-actions-while-rename-netif-failed.patch
-Patch0003:      0003-fix-two-VF-virtual-machines-have-same-mac-address.patch
-Patch0004:      0004-logind-set-RemoveIPC-to-false-by-default.patch
-Patch0005:      0005-rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
-Patch0006:      0006-unit-don-t-add-Requires-for-tmp.mount.patch
-Patch0007:      0007-rules-add-elevator-kernel-command-line-parameter.patch
-Patch0008:      0008-rules-add-the-rule-that-adds-elevator-kernel-command.patch
-Patch0009:      0009-units-add-Install-section-to-tmp.mount.patch
-Patch0010:      0010-Make-systemd-udevd.service-start-after-systemd-remou.patch
-Patch0011:      0011-udev-virsh-shutdown-vm.patch
-Patch0012:      0012-sd-bus-properly-initialize-containers.patch
-Patch0013:      0013-Revert-core-one-step-back-again-for-nspawn-we-actual.patch
-Patch0014:      0014-journal-don-t-enable-systemd-journald-audit.socket-b.patch
-Patch0015:      0015-systemd-change-time-log-level.patch
-Patch0016:      0016-fix-capsh-drop-but-ping-success.patch
-Patch0017:      0017-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
-Patch0018:      0018-nop_job-of-a-unit-must-also-be-coldpluged-after-deserization.patch
-Patch0019:      0019-pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
-Patch0020:      0020-fix-journal-file-descriptors-leak-problems.patch
-Patch0021:      0021-activation-service-must-be-restarted-when-reactivated.patch
-Patch0022:      0022-systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
-Patch0023:      0023-delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
-Patch0024:      0024-disable-initialize_clock.patch
-Patch0025:      0025-systemd-solve-that-rsyslog-reads-journal-s-object-of.patch
-Patch0026:      0026-check-whether-command_prev-is-null-before-assigning-.patch
-Patch0027:      0027-print-the-real-reason-for-link-update.patch
-Patch0028:      0028-core-skip-change-device-to-dead-in-manager_catchup-d.patch
+Patch0001:      update-rtc-with-system-clock-when-shutdown.patch
+Patch0002:      udev-add-actions-while-rename-netif-failed.patch
+Patch0003:      fix-two-VF-virtual-machines-have-same-mac-address.patch
+Patch0004:      logind-set-RemoveIPC-to-false-by-default.patch
+Patch0005:      rules-add-rule-for-naming-Dell-iDRAC-USB-Virtual-NIC.patch
+Patch0006:      unit-don-t-add-Requires-for-tmp.mount.patch
+Patch0007:      rules-add-elevator-kernel-command-line-parameter.patch
+Patch0008:      rules-add-the-rule-that-adds-elevator-kernel-command.patch
+Patch0009:      units-add-Install-section-to-tmp.mount.patch
+Patch0010:      Make-systemd-udevd.service-start-after-systemd-remou.patch
+Patch0011:      udev-virsh-shutdown-vm.patch
+Patch0012:      sd-bus-properly-initialize-containers.patch
+Patch0013:      Revert-core-one-step-back-again-for-nspawn-we-actual.patch
+Patch0014:      journal-don-t-enable-systemd-journald-audit.socket-b.patch
+Patch0015:      systemd-change-time-log-level.patch
+Patch0016:      fix-capsh-drop-but-ping-success.patch
+Patch0017:      resolved-create-etc-resolv.conf-symlink-at-runtime.patch
+Patch0018:      pid1-bump-DefaultTasksMax-to-80-of-the-kernel-pid.ma.patch
+Patch0019:      fix-journal-file-descriptors-leak-problems.patch
+Patch0020:      activation-service-must-be-restarted-when-reactivated.patch
+Patch0021:      systemd-core-fix-problem-of-dbus-service-can-not-be-started.patch
+Patch0022:      delay-to-restart-when-a-service-can-not-be-auto-restarted.patch
+Patch0023:      disable-initialize_clock.patch
+Patch0024:      systemd-solve-that-rsyslog-reads-journal-s-object-of.patch
+Patch0025:      check-whether-command_prev-is-null-before-assigning-.patch
+Patch0026:      print-the-real-reason-for-link-update.patch
+Patch0027:      core-skip-change-device-to-dead-in-manager_catchup-d.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -103,6 +102,7 @@ Patch6023:      backport-core-fix-SIGABRT-on-empty-exec-command-argv.patch
 Patch6024:      backport-core-service-also-check-path-in-exec-commands.patch
 Patch6025:      backport-Add-meson-option-to-disable-urlify.patch
 Patch6026:      backport-logind.conf-Fix-name-of-option-RuntimeDirectoryInode.patch
+Patch6027:      backport-unit-coldplug-both-job-and-nop_job-if-possible.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1505,6 +1505,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Mon Apr 18 2022 xujing <xujing99@huawei.com> - 249-26
+- rename patches name and use patch from upstream
+
 * Tue Apr 12 2022 xujing <xujing99@huawei.com> - 249-25
 - core: skip change device to dead in manager_catchup during booting
 
