@@ -1,0 +1,25 @@
+From 5896a9ebdbe4d38c01390d0a5e82f9fcb4971059 Mon Sep 17 00:00:00 2001
+From: yangmingtai <961612727@qq.com>
+Date: Mon, 6 Dec 2021 17:06:13 +0800
+Subject: [PATCH] fix DirectoryNotEmpty when it comes to a Non-directory file
+
+---
+ src/core/path.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/core/path.c b/src/core/path.c
+index 29ec66fd4d..bcd922901b 100644
+--- a/src/core/path.c
++++ b/src/core/path.c
+@@ -215,7 +215,7 @@ static bool path_spec_check_good(PathSpec *s, bool initial, bool from_trigger_no
+                 int k;
+ 
+                 k = dir_is_empty(s->path);
+-                good = !(k == -ENOENT || k > 0);
++                good = !(IN_SET(k, -ENOENT, -ENOTDIR) || k > 0);
+                 break;
+         }
+ 
+-- 
+2.27.0
+

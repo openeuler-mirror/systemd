@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        51
+Release:        52
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -155,6 +155,9 @@ Patch0105:      backport-0013-CVE-2020-13776-parse-util-rewrite-parse_mode-on-to
 Patch0106:      backport-0014-CVE-2020-13776-user-util-be-stricter-in-parse_uid.patch
 Patch0107:      backport-0015-CVE-2020-13776-parse-util-also-parse-integers-prefixed-with-0b-and-.patch
 Patch0108:      backport-udev-rename-the-persistent-link-for-ATA-devices.patch
+Patch0109:      backport-fix-ConditionDirectoryNotEmpty-when-it-comes-to-a-No.patch
+Patch0110:      backport-fix-ConditionPathIsReadWrite-when-path-does-not-exis.patch
+Patch0111:      backport-fix-DirectoryNotEmpty-when-it-comes-to-a-Non-directo.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1542,6 +1545,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Apr 27 2022 shenyangyang <shenyangyang4@huawei.com> - 243-52
+- fix ConditionDirectoryNotEmpty,ConditionPathIsReadWrite and DirectoryNotEmpty
+
 * Fri Feb 26 2022 jiangchuangang <jiangchuangang@huawei.com> - 243-51
 - add backport-udev-rename-the-persistent-link-for-ATA-devices.patch
   for the link of ATA devices
