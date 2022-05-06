@@ -1585,7 +1585,7 @@ fi
 * Wed Dec 01 2021 licunlong <licunlong1@huawei.com> - 243-49
 - disable systemd-{timesyncd, networkd, resolved} by default
 
-* Thu Sep 28 2021 shenyangyang <shenyangyang4@huawei.com> - 243-48
+* Tue Sep 28 2021 shenyangyang <shenyangyang4@huawei.com> - 243-48
 - adapt to the new capsh format for test
 
 * Thu Sep 16 2021 ExtinctFire <shenyining_00@126.com> - 243-47
