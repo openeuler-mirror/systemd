@@ -1,0 +1,25 @@
+From 7f67b01e3f81029a64c2bb46e2fb57fae6c9d505 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 14 Sep 2020 18:30:58 +0900
+Subject: [PATCH] udev: do not update return value on failure
+ 
+Reference:https://github.com/systemd/systemd/pull/16968/commits/7f67b01e3f81029a64c2bb46e2fb57fae6c9d505
+Conflict:NA
+---
+ src/udev/net/link-config.c | 1 -
+ 1 file changed, 1 deletion(-)
+ 
+diff --git a/src/udev/net/link-config.c b/src/udev/net/link-config.c
+index cb1db3b52b..c23c2bdd20 100644
+--- a/src/udev/net/link-config.c
++++ b/src/udev/net/link-config.c
+@@ -287,7 +287,6 @@ int link_config_get(link_config_ctx *ctx, sd_device *device, link_config **ret)
+                 }
+         }
+ 
+-        *ret = NULL;
+         return -ENOENT;
+ }
+ 
+-- 
+2.27.0
