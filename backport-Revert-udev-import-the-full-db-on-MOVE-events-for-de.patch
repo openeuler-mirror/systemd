@@ -1,0 +1,56 @@
+From 51d9aec0ff333ff554079da4babf6dbfa9837096 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 14 Sep 2020 15:20:04 +0900
+Subject: [PATCH] Revert "udev: import the full db on MOVE events for devices
+ without dev_t"
+ 
+This reverts commit b081b27e1433cdc7ac72b25ae8b4db887d79187f.
+ 
+If a network interface get a 'move' event, then previously SYSTEMD_ALIAS=
+property still contains an old alias, and the old alias .device unit
+will not be removed.
+ 
+This makes all properties cleared on 'move' event, and then old alias
+.device unit will be removed by pid1.
+ 
+Fixes #16967.
+ 
+Reference:https://github.com/systemd/systemd/commit/51d9aec0ff333ff554079da4babf6dbfa9837096
+Conflict:context adaptation
+---
+ src/udev/udev-event.c | 11 ++---------
+ 1 file changed, 2 insertions(+), 9 deletions(-)
+ 
+diff --git a/src/udev/udev-event.c b/src/udev/udev-event.c
+index 7c78b4c680..ede8e3aef7 100644
+--- a/src/udev/udev-event.c
++++ b/src/udev/udev-event.c
+@@ -940,16 +940,9 @@ static void event_execute_rules_on_remove(
+                 (void) udev_node_remove(dev);
+ }
+ 
+-static int udev_event_on_move(UdevEvent *event) {
+-        sd_device *dev = event->dev;
++static int udev_event_on_move(sd_device *dev) {
+         int r;
+ 
+-        if (sd_device_get_devnum(dev, NULL) < 0) {
+-                r = device_copy_properties(dev, event->dev_db_clone);
+-                if (r < 0)
+-                        log_device_debug_errno(dev, r, "Failed to copy properties from cloned sd_device object, ignoring: %m");
+-        }
+-
+         /* Drop previously added property */
+         r = device_add_property(dev, "ID_RENAMING", NULL);
+         if (r < 0)
+@@ -1017,7 +1010,7 @@ int udev_event_execute_rules(UdevEvent *event,
+                 (void) udev_watch_end(event->dev_db_clone);
+ 
+         if (action == DEVICE_ACTION_MOVE) {
+-                r = udev_event_on_move(event);
++                r = udev_event_on_move(event->dev);
+                 if (r < 0)
+                         return r;
+         }
+-- 
+2.27.0
