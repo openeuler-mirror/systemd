@@ -1,0 +1,256 @@
+From 2e17fed5f3000175f3ea67ece47fb7fd6ca41efa Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 15 Sep 2020 10:41:38 +0900
+Subject: [PATCH] udev: split link_config_apply() into small pieces
+ 
+Reference:https://github.com/systemd/systemd/commit/2e17fed5f3000175f3ea67ece47fb7fd6ca41efa
+Conflict:context adaptation
+---
+ src/udev/net/link-config.c | 154 ++++++++++++++++++++++++-------------
+ src/udev/net/link-config.h |   4 +-
+ 2 files changed, 104 insertions(+), 54 deletions(-)
+ 
+diff --git a/src/udev/net/link-config.c b/src/udev/net/link-config.c
+index 6a414db..8453785 100644
+--- a/src/udev/net/link-config.c
++++ b/src/udev/net/link-config.c
+@@ -320,67 +320,94 @@ static int get_mac(sd_device *device, MACAddressPolicy policy, struct ether_addr
+         return 1;
+ }
+ 
+-int link_config_apply(link_config_ctx *ctx, link_config *config,
+-                      sd_device *device, const char **name) {
+-        struct ether_addr generated_mac;
+-        struct ether_addr *mac = NULL;
+-        const char *new_name = NULL;
+-        const char *old_name;
+-        unsigned speed, name_type = NET_NAME_UNKNOWN;
+-        NamePolicy policy;
+-        int r, ifindex;
+-
+-        assert(ctx);
++static int link_config_apply_ethtool_settings(int *ethtool_fd, const link_config *config, sd_device *device) {
++        const char *name;
++        int r;
++
++        assert(ethtool_fd);
+         assert(config);
+         assert(device);
+-        assert(name);
+ 
+-        r = sd_device_get_sysname(device, &old_name);
++        r = sd_device_get_sysname(device, &name);
+         if (r < 0)
+-                return r;
++                return log_device_error_errno(device, r, "Failed to get sysname: %m");
+ 
+-        r = ethtool_set_glinksettings(&ctx->ethtool_fd, old_name,
++        r = ethtool_set_glinksettings(ethtool_fd, name,
+                                       config->autonegotiation, config->advertise,
+                                       config->speed, config->duplex, config->port);
+-        if (r < 0) {
+ 
++        if (r < 0) {
+                 if (config->port != _NET_DEV_PORT_INVALID)
+-                        log_warning_errno(r, "Could not set port (%s) of %s: %m", port_to_string(config->port), old_name);
++                        log_device_warning_errno(device, r, "Could not set port '%s', ignoring: %m", port_to_string(config->port));
+ 
+                 if (!eqzero(config->advertise))
+-                        log_warning_errno(r, "Could not set advertise mode: %m"); /* TODO: include modes in the log message. */
++                        log_device_warning_errno(device, r, "Could not set advertise mode, ignoring: %m"); /* TODO: include modes in the log message. */
+ 
+                 if (config->speed) {
+-                        speed = DIV_ROUND_UP(config->speed, 1000000);
++                        unsigned speed = DIV_ROUND_UP(config->speed, 1000000);
+                         if (r == -EOPNOTSUPP) {
+-                                r = ethtool_set_speed(&ctx->ethtool_fd, old_name, speed, config->duplex);
++                                r = ethtool_set_speed(ethtool_fd, name, speed, config->duplex);
+                                 if (r < 0)
+-                                        log_warning_errno(r, "Could not set speed of %s to %u Mbps: %m", old_name, speed);
++                                        log_device_warning_errno(device, r, "Could not set speed to %uMbps, ignoring: %m", speed);
+                         }
+                 }
+ 
+-                if (config->duplex !=_DUP_INVALID)
+-                        log_warning_errno(r, "Could not set duplex of %s to (%s): %m", old_name, duplex_to_string(config->duplex));
++                if (config->duplex != _DUP_INVALID)
++                        log_device_warning_errno(device, r, "Could not set duplex to %s, ignoring: %m", duplex_to_string(config->duplex));
+         }
+ 
+-        r = ethtool_set_wol(&ctx->ethtool_fd, old_name, config->wol);
++        r = ethtool_set_wol(ethtool_fd, name, config->wol);
+         if (r < 0)
+-                log_warning_errno(r, "Could not set WakeOnLan of %s to %s: %m",
+-                                  old_name, wol_to_string(config->wol));
++                log_device_warning_errno(device, r, "Could not set WakeOnLan to %s, ignoring: %m", wol_to_string(config->wol));
+ 
+-        r = ethtool_set_features(&ctx->ethtool_fd, old_name, config->features);
++        r = ethtool_set_features(ethtool_fd, name, config->features);
+         if (r < 0)
+-                log_warning_errno(r, "Could not set offload features of %s: %m", old_name);
++                log_device_warning_errno(device, r, "Could not set offload features, ignoring: %m");
+ 
+         if (config->channels.rx_count_set || config->channels.tx_count_set || config->channels.other_count_set || config->channels.combined_count_set) {
+-                r = ethtool_set_channels(&ctx->ethtool_fd, old_name, &config->channels);
++                r = ethtool_set_channels(ethtool_fd, name, &config->channels);
+                 if (r < 0)
+-                        log_warning_errno(r, "Could not set channels of %s: %m", old_name);
++                        log_device_warning_errno(device, r, "Could not set channels, ignoring: %m");
+         }
+ 
++        return 0;
++}
++
++static int link_config_apply_rtnl_settings(sd_netlink **rtnl, const link_config *config, sd_device *device) {
++        struct ether_addr generated_mac, *mac = NULL;
++        int ifindex, r;
++
++        assert(rtnl);
++        assert(config);
++        assert(device);
++
+         r = sd_device_get_ifindex(device, &ifindex);
+         if (r < 0)
+-                return log_device_warning_errno(device, r, "Could not find ifindex: %m");
++                return log_device_error_errno(device, r, "Could not find ifindex: %m");
++
++        if (IN_SET(config->mac_address_policy, MAC_ADDRESS_POLICY_PERSISTENT, MAC_ADDRESS_POLICY_RANDOM)) {
++                if (get_mac(device, config->mac_address_policy, &generated_mac) > 0)
++                        mac = &generated_mac;
++        } else
++                mac = config->mac;
++
++        r = rtnl_set_link_properties(rtnl, ifindex, config->alias, mac, config->mtu);
++        if (r < 0)
++                log_device_warning_errno(device, r, "Could not set Alias=, MACAddress= or MTU=, ignoring: %m");
++
++        return 0;
++}
++
++static int link_config_generate_new_name(const link_config_ctx *ctx, const link_config *config, sd_device *device, const char **ret_name) {
++        unsigned name_type = NET_NAME_UNKNOWN;
++        const char *new_name = NULL;
++        NamePolicy policy;
++        int r;
++
++        assert(ctx);
++        assert(config);
++        assert(device);
++        assert(ret_name);
+ 
+         (void) link_unsigned_attribute(device, "name_assign_type", &name_type);
+ 
+@@ -390,15 +417,13 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
+                 goto no_rename;
+         }
+ 
+-        if (ctx->enable_name_policy && config->name_policy)
+-                for (NamePolicy *p = config->name_policy; !new_name && *p != _NAMEPOLICY_INVALID; p++) {
++        if (ctx->enable_name_policy && config->name_policy)
++                for (NamePolicy *p = config->name_policy; *p != _NAMEPOLICY_INVALID; p++) {
+                         policy = *p;
+-
+                         switch (policy) {
+                         case NAMEPOLICY_KERNEL:
+                                 if (name_type != NET_NAME_PREDICTABLE)
+                                         continue;
+-
+                                 /* The kernel claims to have given a predictable name, keep it. */
+                                 log_device_debug(device, "Policy *%s*: keeping predictable kernel name",
+                                                  name_policy_to_string(policy));
+@@ -406,7 +431,6 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
+                         case NAMEPOLICY_KEEP:
+                                 if (!IN_SET(name_type, NET_NAME_USER, NET_NAME_RENAMED))
+                                         continue;
+-
+                                 log_device_debug(device, "Policy *%s*: keeping existing userspace name",
+                                                  name_policy_to_string(policy));
+                                 goto no_rename;
+@@ -428,28 +452,54 @@ int link_config_apply(link_config_ctx *ctx, link_config *config,
+                         default:
+                                 assert_not_reached("invalid policy");
+                         }
+-                }
++                        if (ifname_valid(new_name))
++                                break;
++        }
+ 
+-        if (new_name)
++        if (new_name) {
+                 log_device_debug(device, "Policy *%s* yields \"%s\".", name_policy_to_string(policy), new_name);
+-        else if (config->name) {
+-                new_name = config->name;
+-                log_device_debug(device, "Policies didn't yield a name, using specified Name=%s.", new_name);
+-        } else
+-                log_device_debug(device, "Policies didn't yield a name and Name= is not given, not renaming.");
+- no_rename:
++                *ret_name = new_name;
++                return 0;
++        }
+ 
+-        if (IN_SET(config->mac_address_policy, MAC_ADDRESS_POLICY_PERSISTENT, MAC_ADDRESS_POLICY_RANDOM)) {
+-                if (get_mac(device, config->mac_address_policy, &generated_mac) > 0)
+-                        mac = &generated_mac;
+-        } else
+-                mac = config->mac;
++        if (config->name) {
++                log_device_debug(device, "Policies didn't yield a name, using specified Name=%s.", config->name);
++                *ret_name = config->name;
++                return 0;
++        }
++
++        log_device_debug(device, "Policies didn't yield a name and Name= is not given, not renaming.");
+ 
+-        r = rtnl_set_link_properties(&ctx->rtnl, ifindex, config->alias, mac, config->mtu);
++no_rename:
++        r = sd_device_get_sysname(device, ret_name);
++        if (r < 0)
++                return log_device_error_errno(device, r, "Failed to get sysname: %m");
++
++        return 0;
++}
++
++int link_config_apply(link_config_ctx *ctx, const link_config *config, sd_device *device, const char **ret_name) {
++        const char *new_name;
++        int r;
++
++        assert(ctx);
++        assert(config);
++        assert(device);
++        assert(ret_name);
++
++        r = link_config_apply_ethtool_settings(&ctx->ethtool_fd, config, device);
++        if (r < 0)
++                return r;
++
++        r = link_config_apply_rtnl_settings(&ctx->rtnl, config, device);
+         if (r < 0)
+-                return log_warning_errno(r, "Could not set Alias=, MACAddress= or MTU= on %s: %m", old_name);
++                return r;
++
++        r = link_config_generate_new_name(ctx, config, device, &new_name);
++        if (r < 0)
++                return r;
+ 
+-        *name = new_name;
++        *ret_name = new_name;
+ 
+         return 0;
+ }
+diff --git a/src/udev/net/link-config.h b/src/udev/net/link-config.h
+index 26666ad..4922be6 100644
+--- a/src/udev/net/link-config.h
++++ b/src/udev/net/link-config.h
+@@ -70,8 +70,8 @@ int link_load_one(link_config_ctx *ctx, const char *filename);
+ int link_config_load(link_config_ctx *ctx);
+ bool link_config_should_reload(link_config_ctx *ctx);
+ 
+-int link_config_get(link_config_ctx *ctx, sd_device *device, struct link_config **ret);
+-int link_config_apply(link_config_ctx *ctx, struct link_config *config, sd_device *device, const char **name);
++int link_config_get(link_config_ctx *ctx, sd_device *device, link_config **ret);
++int link_config_apply(link_config_ctx *ctx, const link_config *config, sd_device *device, const char **ret_name);
+ int link_get_driver(link_config_ctx *ctx, sd_device *device, char **ret);
+ 
+ const char *name_policy_to_string(NamePolicy p) _const_;
+-- 
+2.27.0

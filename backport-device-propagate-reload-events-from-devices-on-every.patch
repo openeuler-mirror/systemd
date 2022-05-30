@@ -1,0 +1,68 @@
+From ae6ad21e0b9a179e3408c12297783870cf13a00a Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 12 Dec 2018 21:31:12 +0100
+Subject: [PATCH] device: propagate reload events from devices on everything
+ but "add", and "remove"
+ 
+Any uevent other then the initial and the last uevent we see for a
+device (which is "add" and "remove") should result in a reload being
+triggered, including "bind" and "unbind". Hence, let's fix up the check.
+ 
+("move" is kinda a combined "remove" + "add", hence cover that too)
+ 
+Reference:https://github.com/systemd/systemd/commit/ae6ad21e0b9a179e3408c12297783870cf13a00a
+Conflict: NA
+---
+ src/core/device.c | 22 +++++++++-------------
+ 1 file changed, 9 insertions(+), 13 deletions(-)
+ 
+diff --git a/src/core/device.c b/src/core/device.c
+index 50d55289fa..5b8134159a 100644
+--- a/src/core/device.c
++++ b/src/core/device.c
+@@ -915,20 +915,19 @@ static int device_dispatch_io(sd_device_monitor *monitor, sd_device *dev, void *
+                 return 0;
+         }
+ 
+-        if (action == DEVICE_ACTION_CHANGE)
++        if (!IN_SET(action, DEVICE_ACTION_ADD, DEVICE_ACTION_REMOVE, DEVICE_ACTION_MOVE))
+                 device_propagate_reload_by_sysfs(m, sysfs);
+ 
+-        /* A change event can signal that a device is becoming ready, in particular if
+-         * the device is using the SYSTEMD_READY logic in udev
+-         * so we need to reach the else block of the following if, even for change events */
++        /* A change event can signal that a device is becoming ready, in particular if the device is using
++         * the SYSTEMD_READY logic in udev so we need to reach the else block of the following if, even for
++         * change events */
+         if (action == DEVICE_ACTION_REMOVE) {
+                 r = swap_process_device_remove(m, dev);
+                 if (r < 0)
+                         log_device_warning_errno(dev, r, "Failed to process swap device remove event, ignoring: %m");
+ 
+-                /* If we get notified that a device was removed by
+-                 * udev, then it's completely gone, hence unset all
+-                 * found bits */
++                /* If we get notified that a device was removed by udev, then it's completely gone, hence
++                 * unset all found bits */
+                 device_update_found_by_sysfs(m, sysfs, 0, DEVICE_FOUND_UDEV|DEVICE_FOUND_MOUNT|DEVICE_FOUND_SWAP);
+ 
+         } else if (device_is_ready(dev)) {
+@@ -944,13 +943,10 @@ static int device_dispatch_io(sd_device_monitor *monitor, sd_device *dev, void *
+                 /* The device is found now, set the udev found bit */
+                 device_update_found_by_sysfs(m, sysfs, DEVICE_FOUND_UDEV, DEVICE_FOUND_UDEV);
+ 
+-        } else {
+-                /* The device is nominally around, but not ready for
+-                 * us. Hence unset the udev bit, but leave the rest
+-                 * around. */
+-
++        } else
++                /* The device is nominally around, but not ready for us. Hence unset the udev bit, but leave
++                 * the rest around. */
+                 device_update_found_by_sysfs(m, sysfs, 0, DEVICE_FOUND_UDEV);
+-        }
+ 
+         return 0;
+ }
+-- 
+2.27.0

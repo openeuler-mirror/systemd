@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        52
+Release:        53
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -158,6 +158,15 @@ Patch0108:      backport-udev-rename-the-persistent-link-for-ATA-devices.patch
 Patch0109:      backport-fix-ConditionDirectoryNotEmpty-when-it-comes-to-a-No.patch
 Patch0110:      backport-fix-ConditionPathIsReadWrite-when-path-does-not-exis.patch
 Patch0111:      backport-fix-DirectoryNotEmpty-when-it-comes-to-a-Non-directo.patch
+Patch0112:      backport-udev-drop-unnecessary-checks.patch
+Patch0113:      backport-device-propagate-reload-events-from-devices-on-every.patch
+Patch0114:      backport-core-device-remove-.device-unit-corresponding-to-DEV.patch
+Patch0115:      backport-udev-split-link_config_apply-into-small-pieces.patch
+Patch0116:      backport-Revert-udev-import-the-full-db-on-MOVE-events-for-de.patch
+Patch0117:      backport-udev-re-assign-ID_NET_DRIVER-ID_NET_LINK_FILE-ID_NET.patch
+Patch0118:      backport-udev-allow-to-match-OriginalName-with-renamed-interf.patch
+Patch0119:      backport-udev-do-not-update-return-value-on-failure.patch
+Patch0120:      backport-test-add-test-for-device-renaming-issue-16967.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1545,6 +1554,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu May 26 2022 yangmingtai <yangmingtai@huawei.com> - 243-53
+- remove old device on move event
+
 * Wed Apr 27 2022 shenyangyang <shenyangyang4@huawei.com> - 243-52
 - fix ConditionDirectoryNotEmpty,ConditionPathIsReadWrite and DirectoryNotEmpty
 
