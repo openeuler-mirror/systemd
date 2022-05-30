@@ -1,0 +1,72 @@
+From efdaeb88f02aeb406068d45ae7687abf1bd4a8a3 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 14 Sep 2020 15:44:30 +0900
+Subject: [PATCH] test: add test for device renaming issue #16967
+ 
+Reference:https://github.com/systemd/systemd/commit/efdaeb88f02aeb406068d45ae7687abf1bd4a8a3
+Conflict:context adaptation
+---
+ test/TEST-29-UDEV-ID_RENAMING/test.sh | 15 +++++++++++++++
+ test/units/testsuite-29.sh            | 16 ++++++++++++++++
+ 2 files changed, 31 insertions(+)
+ 
+diff --git a/test/TEST-29-UDEV-ID_RENAMING/test.sh b/test/TEST-29-UDEV-ID_RENAMING/test.sh
+index 4feafc04d7..ddf6db9735 100755
+--- a/test/TEST-29-UDEV-ID_RENAMING/test.sh
++++ b/test/TEST-29-UDEV-ID_RENAMING/test.sh
+@@ -1,11 +1,26 @@
+ #!/bin/bash
+ set -e
+ TEST_DESCRIPTION="UDEV ID_RENAMING property"
++IMAGE_NAME="udev-id-renaming"
+ TEST_NO_NSPAWN=1
+ 
+ . $TEST_BASE_DIR/test-functions
+ QEMU_TIMEOUT=300
+ 
++test_create_image() {
++    create_empty_image_rootdir
++
++    # Create what will eventually be our root filesystem onto an overlay
++    (
++        LOG_LEVEL=5
++        setup_basic_environment
++        mask_supporting_services
++
++        instmods dummy
++        generate_module_dependencies
++    )
++}
++
+ test_setup() {
+     create_empty_image_rootdir
+ 
+diff --git a/test/TEST-29-UDEV-ID_RENAMING/testsuite.sh b/test/TEST-29-UDEV-ID_RENAMING/testsuite.sh
+index eb9b2ff..b477d16 100755
+--- a/test/TEST-29-UDEV-ID_RENAMING/testsuite.sh
++++ b/test/TEST-29-UDEV-ID_RENAMING/testsuite.sh
+@@ -38,6 +38,22 @@ STATE=$(systemctl show --property=ActiveState --value sys-devices-virtual-net-lo
+ rm -f /run/udev/rules.d/50-testsuite.rules
+ udevadm control --reload --timeout=600
+ 
++# test for issue #16967
++
++ip link add hoge type dummy
++udevadm info --wait-for-initialization=10s /sys/devices/virtual/net/hoge
++sleep 1
++if ! systemctl status sys-devices-virtual-net-hoge.device; then exit 1; fi
++if ! systemctl status sys-subsystem-net-devices-hoge.device; then exit 1; fi
++
++ip link set hoge name foobar
++udevadm info --wait-for-initialization=10s /sys/devices/virtual/net/foobar
++sleep 1
++if systemctl status sys-devices-virtual-net-hoge.device; then exit 1; fi
++if systemctl status sys-subsystem-net-devices-hoge.device; then exit 1; fi
++if ! systemctl status sys-devices-virtual-net-foobar.device; then exit 1; fi
++if ! systemctl status sys-subsystem-net-devices-foobar.device; then exit 1; fi
++
+ echo OK > /testok
+ 
+ exit 0
+-- 
+2.23.0

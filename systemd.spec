@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        55
+Release:        56
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -172,6 +172,15 @@ Patch0124:      backport-0013-CVE-2020-13776-parse-util-rewrite-parse_mode-on-to
 Patch0125:      backport-0014-CVE-2020-13776-user-util-be-stricter-in-parse_uid.patch
 Patch0126:      backport-0015-CVE-2020-13776-parse-util-also-parse-integers-prefixed-with-0b-and-.patch
 Patch0127:      backport-udev-rename-the-persistent-link-for-ATA-devices.patch
+Patch0128:      backport-udev-drop-unnecessary-checks.patch
+Patch0129:      backport-device-propagate-reload-events-from-devices-on-every.patch
+Patch0130:      backport-core-device-remove-.device-unit-corresponding-to-DEV.patch
+Patch0131:      backport-udev-split-link_config_apply-into-small-pieces.patch
+Patch0132:      backport-Revert-udev-import-the-full-db-on-MOVE-events-for-de.patch
+Patch0133:      backport-udev-re-assign-ID_NET_DRIVER-ID_NET_LINK_FILE-ID_NET.patch
+Patch0134:      backport-udev-allow-to-match-OriginalName-with-renamed-interf.patch
+Patch0135:      backport-udev-do-not-update-return-value-on-failure.patch
+Patch0136:      backport-test-add-test-for-device-renaming-issue-16967.patch
 
 
 #openEuler
@@ -1561,7 +1570,10 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Mon Feb 28 2022 yangmingtai <yangmingtai@huawei.com> - 243-54
+* Wed May 18 2022 yangmingtai <yangmingtai@huawei.com> - 243-56
+- remove old device on move event
+
+* Mon Feb 28 2022 yangmingtai <yangmingtai@huawei.com> - 243-55
 - add backport-udev-rename-the-persistent-link-for-ATA-devices.patch
   for the link of ATA devices
 

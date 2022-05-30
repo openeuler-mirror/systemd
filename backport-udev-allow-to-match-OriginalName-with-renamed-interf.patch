@@ -1,0 +1,64 @@
+From f57673025680fdca0c200e7ca7a37fed943d2b49 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 14 Sep 2020 18:28:29 +0900
+Subject: [PATCH] udev: allow to match OriginalName= with renamed interface
+ name
+ 
+Reference:https://github.com/systemd/systemd/commit/f57673025680fdca0c200e7ca7a37fed943d2b49
+Conflict:context adaptation
+---
+ src/udev/net/link-config.c | 27 ++++++++-------------------
+ 1 file changed, 8 insertions(+), 19 deletions(-)
+ 
+diff --git a/src/udev/net/link-config.c b/src/udev/net/link-config.c
+index 5c871b6717..cb1db3b52b 100644
+--- a/src/udev/net/link-config.c
++++ b/src/udev/net/link-config.c
+@@ -232,6 +232,7 @@ bool link_config_should_reload(link_config_ctx *ctx) {
+ }
+ 
+ int link_config_get(link_config_ctx *ctx, sd_device *device, link_config **ret) {
++        unsigned name_assign_type = NET_NAME_UNKNOWN;
+         link_config *link;
+ 
+         assert(ctx);
+@@ -238,30 +238,17 @@ int link_config_get(link_config_ctx *ctx, sd_device *device, link_config **ret)
+         assert(device);
+         assert(ret);
+ 
++        (void) link_unsigned_attribute(device, "name_assign_type", &name_assign_type);
++
+         LIST_FOREACH(links, link, ctx->links) {
+                 if (net_match_config(link->match_mac, link->match_path, link->match_driver,
+                                      link->match_type, link->match_name, link->match_property,
+                                      device, NULL, NULL)) {
+-                        if (link->match_name && !strv_contains(link->match_name, "*")) {
+-                                unsigned name_assign_type = NET_NAME_UNKNOWN;
+-
+-                                (void) link_unsigned_attribute(device, "name_assign_type", &name_assign_type);
+-
+-                                if (name_assign_type == NET_NAME_ENUM) {
+-                                        log_device_warning(device, "Config file %s applies to device based on potentially unpredictable interface name",
+-                                                           link->filename);
+-                                        *ret = link;
+-
+-                                        return 0;
+-                                } else if (name_assign_type == NET_NAME_RENAMED) {
+-                                        log_device_warning(device, "Config file %s matches device based on renamed interface name, ignoring",
+-                                                           link->filename);
+-
+-                                        continue;
+-                                }
+-                        }
+-
+-                        log_device_debug(device, "Config file %s is applied", link->filename);
++                        if (link->match_name && !strv_contains(link->match_name, "*") && name_assign_type == NET_NAME_ENUM)
++                                log_device_warning(device, "Config file %s is applied to device based on potentially unpredictable interface name.",
++                                                   link->filename);
++                        else
++                                log_device_debug(device, "Config file %s is applied", link->filename);
+ 
+                         *ret = link;
+                         return 0;
+-- 
+2.23.0
