@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        26
+Release:        27
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1233,15 +1233,6 @@ fi
 /usr/lib/systemd/user/session.slice
 /usr/lib/sysusers.d/README
 /usr/lib/tmpfiles.d/README
-/usr/lib/udev/dmi_memory_id
-/usr/lib/udev/hwdb.d/20-dmi-id.hwdb
-/usr/lib/udev/hwdb.d/60-autosuspend-fingerprint-reader.hwdb
-/usr/lib/udev/hwdb.d/README
-/usr/lib/udev/hwdb.d/60-seat.hwdb
-/usr/lib/udev/hwdb.d/80-ieee1394-unit-function.hwdb
-/usr/lib/udev/rules.d/81-net-dhcp.rules
-/usr/lib/udev/rules.d/70-memory.rules
-/usr/lib/udev/rules.d/README
 /usr/share/bash-completion/completions/systemd-id128
 /usr/share/zsh/site-functions/_systemd-path
 
@@ -1347,12 +1338,13 @@ fi
 %{_systemddir}/system-generators/systemd-gpt-auto-generator
 %{_systemddir}/network/99-default.link
 /usr/lib/udev/v4l_id
-%dir /usr/lib/udev/rules.d
 /usr/lib/udev/ata_id
 /usr/lib/udev/cdrom_id
 /usr/lib/udev/mtd_probe
 /usr/lib/udev/scsi_id
 /usr/lib/udev/fido_id
+/usr/lib/udev/dmi_memory_id
+
 %dir /usr/lib/udev/hwdb.d
 %{_udevhwdbdir}/20-bluetooth-vendor-product.hwdb
 %{_udevhwdbdir}/70-touchpad.hwdb
@@ -1375,6 +1367,13 @@ fi
 %{_udevhwdbdir}/60-input-id.hwdb
 %{_udevhwdbdir}/60-autosuspend-chromiumos.hwdb
 %{_udevhwdbdir}/60-autosuspend.hwdb
+%{_udevhwdbdir}/20-dmi-id.hwdb
+%{_udevhwdbdir}/60-autosuspend-fingerprint-reader.hwdb
+%{_udevhwdbdir}/60-seat.hwdb
+%{_udevhwdbdir}/80-ieee1394-unit-function.hwdb
+%{_udevhwdbdir}/README
+
+%dir /usr/lib/udev/rules.d
 %{_udevrulesdir}/60-autosuspend.rules
 %{_udevrulesdir}/40-openEuler.rules
 %{_udevrulesdir}/40-elevator.rules
@@ -1408,6 +1407,10 @@ fi
 %{_udevrulesdir}/60-persistent-storage-tape.rules
 %{_udevrulesdir}/50-udev-default.rules
 %{_udevrulesdir}/60-fido-id.rules
+%{_udevrulesdir}/81-net-dhcp.rules
+%{_udevrulesdir}/70-memory.rules
+%{_udevrulesdir}/README
+
 /usr/lib/modprobe.d/systemd.conf
 %ghost %config(noreplace) /etc/vconsole.conf
 %dir /etc/udev
@@ -1505,6 +1508,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Wed Jun 01 2022 licunlong<licunlong1@huawei.com> -249-27
+- move udev{rules, hwdb, program} to systemd-udev.
+
 * Mon Apr 18 2022 xujing <xujing99@huawei.com> - 249-26
 - rename patches name and use patch from upstream
 
@@ -1586,7 +1592,7 @@ fi
 * Tue Feb 8 2022 yangmingtai <yangmingtai@huawei.com> - 249-3
 - do not make systemd-cpredump sub packages
 
-* Tue Dec 27 2021 yangmingtai <yangmingtai@huawei.com> - 249-2
+* Mon Dec 27 2021 yangmingtai <yangmingtai@huawei.com> - 249-2
 - delete useless Provides and Obsoletes
 
 * Wed Dec 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-1
@@ -1703,7 +1709,7 @@ fi
 - SUG:NA
 - DESC:fix error handling on readv
 
-* Mon Aug 01 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-3
+* Sat Aug 01 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-3
 - Type:enhancement
 - ID:NA
 - SUG:NA
