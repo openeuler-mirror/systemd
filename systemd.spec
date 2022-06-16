@@ -1586,7 +1586,7 @@ fi
 * Tue Feb 8 2022 yangmingtai <yangmingtai@huawei.com> - 249-3
 - do not make systemd-cpredump sub packages
 
-* Tue Dec 27 2021 yangmingtai <yangmingtai@huawei.com> - 249-2
+* Mon Dec 27 2021 yangmingtai <yangmingtai@huawei.com> - 249-2
 - delete useless Provides and Obsoletes
 
 * Wed Dec 8 2021 yangmingtai <yangmingtai@huawei.com> - 249-1
@@ -1703,7 +1703,7 @@ fi
 - SUG:NA
 - DESC:fix error handling on readv
 
-* Mon Aug 01 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-3
+* Sat Aug 01 2020 openEuler Buildteam <buildteam@openeuler.org> - 246-3
 - Type:enhancement
 - ID:NA
 - SUG:NA
