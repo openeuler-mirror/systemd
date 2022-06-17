@@ -1,0 +1,33 @@
+From 3b2ba67cfc83905a88e3ebb88a2b43222a06e869 Mon Sep 17 00:00:00 2001
+From: wangyuhang <wangyuhang27@huawei.com>
+Date: Fri, 17 Jun 2022 14:26:16 +0800
+Subject: [PATCH] revert rpm: restart services in %posttrans
+Reason:In version 22.03, if we do not add 'systemctl reload or restart --marked' in 
+%transfiletriggerpostun, %systemd_postun_with_restart will not restart the 
+service. In order to maintain compatibility with version 20.03, revert the commit 
+and use the version 20.03 scheme
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/fa97d2fcf64e0558054bee673f734f523373b146
+---
+ src/rpm/macros.systemd.in | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/src/rpm/macros.systemd.in b/src/rpm/macros.systemd.in
+index 3a0169a..8dae941 100644
+--- a/src/rpm/macros.systemd.in
++++ b/src/rpm/macros.systemd.in
+@@ -86,9 +86,7 @@ fi \
+ %{expand:%%{?__systemd_someargs_%#:%%__systemd_someargs_%# systemd_postun_with_restart}} \
+ if [ $1 -ge 1 ] && [ -x %{_bindir}/systemctl ]; then \
+     # Package upgrade, not uninstall \
+-    for unit in %{?*}; do \
+-         %{_bindir}/systemctl set-property $unit Markers=+needs-restart || : \
+-    done \
++    %{_bindir}/systemctl try-restart %{?*} || : \
+ fi \
+ %{nil}
+ 
+-- 
+2.33.0
+
