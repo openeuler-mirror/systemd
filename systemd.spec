@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        27
+Release:        28
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -73,6 +73,7 @@ Patch0024:      systemd-solve-that-rsyslog-reads-journal-s-object-of.patch
 Patch0025:      check-whether-command_prev-is-null-before-assigning-.patch
 Patch0026:      print-the-real-reason-for-link-update.patch
 Patch0027:      core-skip-change-device-to-dead-in-manager_catchup-d.patch
+Patch0028:      revert-rpm-restart-services-in-posttrans.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -744,7 +745,7 @@ fi
 %systemd_post systemd-timesyncd.service
 
 %post udev
-fdevadm hwdb --update &>/dev/null
+udevadm hwdb --update &>/dev/null
 %systemd_post %udev_services
 %{_systemddir}/systemd-random-seed save 2>&1
 
@@ -1508,6 +1509,10 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Fri Jun 17 2022 wangyuhang<wangyuhang27@huawei.com> -249-28
+- revert rpm: restart services in %posttrans
+  fix spelling errors in systemd.spec, fdev -> udev
+
 * Wed Jun 01 2022 licunlong<licunlong1@huawei.com> -249-27
 - move udev{rules, hwdb, program} to systemd-udev.
 
