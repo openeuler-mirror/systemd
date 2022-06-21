@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        28
+Release:        29
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -104,6 +104,7 @@ Patch6024:      backport-core-service-also-check-path-in-exec-commands.patch
 Patch6025:      backport-Add-meson-option-to-disable-urlify.patch
 Patch6026:      backport-logind.conf-Fix-name-of-option-RuntimeDirectoryInode.patch
 Patch6027:      backport-unit-coldplug-both-job-and-nop_job-if-possible.patch
+Patch6028:      backport-meson.build-change-operator-combining-bools-from-to-.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -342,7 +343,6 @@ CONFIGURE_OPTS=(
         -Ddefault-mdns=yes
         -Ddefault-llmnr=yes
         -Dhtml=false
-        -Dlibbpf=false
         -Dlibfido2=false
         -Dopenssl=false
         -Dpwquality=false
@@ -350,7 +350,6 @@ CONFIGURE_OPTS=(
         -Dzstd=false
         -Dbpf-framework=false
         -Drepart=false
-        -Dlegacy-pkla=false
         -Dcompat-mutable-uid-boundaries=false
         -Dvalgrind=false
         -Dfexecve=false
@@ -1509,6 +1508,11 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Tue Jun 21 2022 wangyuhang<wangyuhang27@huawei.com> -249-29
+- fix build fail on meson-0.6
+  1. delete invalid meson build option
+  2. meson.build: change operator combining bools from + to and
+
 * Fri Jun 17 2022 wangyuhang<wangyuhang27@huawei.com> -249-28
 - revert rpm: restart services in %posttrans
   fix spelling errors in systemd.spec, fdev -> udev
