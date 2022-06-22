@@ -1,0 +1,36 @@
+From f58c5ced373c2532b5cc44ba2e0c3a28b41472f2 Mon Sep 17 00:00:00 2001
+From: Jan Synacek <jsynacek@redhat.com>
+Date: Tue, 15 May 2018 09:24:20 +0200
+Subject: [PATCH] Avoid /tmp being mounted as tmpfs without the user's
+ will
+
+Conflict:adapt context; modify unit_add_dependency_by_name para because of
+35d8c19ace6; don't modify because we need tmp.mount to be started when
+basic.target is started.
+Reference:https://git.centos.org/rpms/systemd/blob/4b8c80a811af8258c136f5e7000fc0cd0adf8dc5/f/SOURCES/0004-Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
+
+Ensure PrivateTmp doesn't require tmpfs through tmp.mount, but rather
+adds an After relationship.
+
+Resolves: #1578772
+
+---
+ src/core/unit.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/core/unit.c b/src/core/unit.c
+index fd84818..e30c14b 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -1271,7 +1271,7 @@ int unit_add_exec_dependencies(Unit *u, ExecContext *c) {
+                  * tmp.mount so /tmp being masked is supported. However there's no reason to treat
+                  * /tmp specifically and masking other mount units should be handled more
+                  * gracefully too, see PR#16894. */
+-                r = unit_add_two_dependencies_by_name(u, UNIT_AFTER, UNIT_WANTS, "tmp.mount", true, UNIT_DEPENDENCY_FILE);
++                r = unit_add_dependency_by_name(u, UNIT_AFTER, "tmp.mount", true, UNIT_DEPENDENCY_FILE);
+                 if (r < 0)
+                         return r;
+ 
+-- 
+2.23.0
+

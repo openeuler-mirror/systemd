@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        29
+Release:        30
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -105,6 +105,7 @@ Patch6025:      backport-Add-meson-option-to-disable-urlify.patch
 Patch6026:      backport-logind.conf-Fix-name-of-option-RuntimeDirectoryInode.patch
 Patch6027:      backport-unit-coldplug-both-job-and-nop_job-if-possible.patch
 Patch6028:      backport-meson.build-change-operator-combining-bools-from-to-.patch
+Patch6029:      backport-Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1508,6 +1509,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Tue Jun 21 2022 zhangyao<zhangyao108@huawei.com> -249-30
+- fix Avoid /tmp being mounted as tmpfs without the user's will
+
 * Tue Jun 21 2022 wangyuhang<wangyuhang27@huawei.com> -249-29
 - fix build fail on meson-0.6
   1. delete invalid meson build option
