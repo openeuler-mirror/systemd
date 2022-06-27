@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        30
+Release:        31
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -697,7 +697,7 @@ fi
 
 %{?ldconfig:%postun -p %ldconfig}
 
-%global udev_services systemd-udev{d,-settle,-trigger}.service systemd-udevd-{control,kernel}.socket systemd-timesyncd.service
+%global udev_services systemd-udev{d,-settle,-trigger}.service systemd-udevd-{control,kernel}.socket
 
 %preun
 if [ $1 -eq 0 ] ; then
@@ -1509,6 +1509,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Wed Jun 22 2022 zhangyao<zhangyao108@huawei.com> -249-31
+- fix don't preset systemd-timesyncd when install systemd-udev
+
 * Tue Jun 21 2022 zhangyao<zhangyao108@huawei.com> -249-30
 - fix Avoid /tmp being mounted as tmpfs without the user's will
 
