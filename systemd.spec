@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        31
+Release:        32
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -106,6 +106,7 @@ Patch6026:      backport-logind.conf-Fix-name-of-option-RuntimeDirectoryInode.pa
 Patch6027:      backport-unit-coldplug-both-job-and-nop_job-if-possible.patch
 Patch6028:      backport-meson.build-change-operator-combining-bools-from-to-.patch
 Patch6029:      backport-Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
+Patch6030:      backport-core-replace-slice-dependencies-as-they-get-added.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1509,6 +1510,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Tue Aug 02 2022 zhukeqian<zhukeqian1@huawei.com> -249-32
+- core: replace slice dependencies as they get added
+
 * Wed Jun 22 2022 zhangyao<zhangyao108@huawei.com> -249-31
 - fix don't preset systemd-timesyncd when install systemd-udev
 
