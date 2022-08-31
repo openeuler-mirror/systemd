@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        53
+Release:        54
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -197,6 +197,10 @@ BuildRequires:  gnu-efi gnu-efi-devel
 BuildRequires:  valgrind-devel, util-linux
 
 Requires:       %{name}-libs = %{version}-%{release}
+Requires:       %{name}-networkd = %{version}-%{release}
+Requires:       %{name}-timesyncd = %{version}-%{release}
+Requires:       %{name}-pam = %{version}-%{release}
+Requires:       %{name}-resolved = %{version}-%{release}
 Requires(post): coreutils
 Requires(post): sed
 Requires(post): acl
@@ -219,9 +223,7 @@ Provides:       systemd-sysv = 206
 Conflicts:      initscripts < 9.56.1
 Recommends:     %{name}-help
 
-Provides:       %{name}-pam
 Provides:       %{name}-rpm-config
-Obsoletes:      %{name}-pam
 Obsoletes:      %{name}-rpm-config
 
 %description
@@ -286,6 +288,7 @@ machines and in virtual machines, but not in containers.
 %package container
 Summary: Tools for containers and VMs
 Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-nspawn = %{version}-%{release}
 Obsoletes:      %{name} < 229-5
 License:        LGPLv2+
 
@@ -323,6 +326,69 @@ Requires(postun): systemd
 systemd-udev-compat is a set of udev rules which conflict with NetworkManager.
 If users choose to use the network-scripts to manager the network, the package can be used
 to do somethings when down or up nics or disk.
+
+%package resolved
+Summary:        Network Name Resolution manager
+License:        LGPLv2+
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires(post): systemd
+Requires(preun):systemd
+Requires(postun):systemd
+Requires(pre):  /usr/bin/getent
+
+%description resolved
+systemd-resolve is a system service that provides network name resolution to
+local applications. It implements a caching and validating DNS/DNSSEC stub
+resolver, as well as an LLMNR and MulticastDNS resolver and responder.
+
+%package nspawn
+Summary:        Spawn a command or OS in a light-weight container
+License:        LGPLv2+
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+
+%description nspawn
+systemd-nspawn may be used to run a command or OS in a light-weight namespace
+container. In many ways it is similar to chroot, but more powerful since it
+fully virtualizes the file system hierarchy, as well as the process tree, the
+various IPC subsystems and the host and domain name.
+
+%package networkd
+Summary:        System daemon that manages network configurations
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+License:        LGPLv2+
+Requires(pre):  /usr/bin/getent
+Requires(post): systemd
+Requires(preun):systemd
+Requires(postun):systemd
+
+%description networkd
+systemd-networkd is a system service that manages networks. It detects
+and configures network devices as they appear, as well as creating virtual
+network devices.
+
+%package timesyncd
+Summary:        Network Time Synchronization
+License:        LGPLv2+
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires(post): systemd
+Requires(preun):systemd
+Requires(postun):systemd
+Requires(pre):  /usr/bin/getent
+
+%description timesyncd
+systemd-timesyncd is a system service that may be used to synchronize
+the local system clock with a remote Network Time Protocol (NTP) server.
+It also saves the local time to disk every time the clock has been
+synchronized and uses this to possibly advance the system realtime clock
+on subsequent reboots to ensure it (roughly) monotonically advances even
+if the system lacks a battery-buffered RTC chip.
+
+%package pam
+Summary:        systemd PAM module
+Requires:       %{name} = %{version}-%{release}
+
+%description pam
+Systemd PAM module registers the session with systemd-logind.
 
 %package_help
 
@@ -619,13 +685,16 @@ getent group systemd-journal &>/dev/null || groupadd -r -g 190 systemd-journal 2
 getent group systemd-coredump &>/dev/null || groupadd -r systemd-coredump 2>&1 || :
 getent passwd systemd-coredump &>/dev/null || useradd -r -l -g systemd-coredump -d / -s /sbin/nologin -c "systemd Core Dumper" systemd-coredump &>/dev/null || :
 
-getent group systemd-network &>/dev/null || groupadd -r -g 192 systemd-network 2>&1 || :
-getent passwd systemd-network &>/dev/null || useradd -r -u 192 -l -g systemd-network -d / -s /sbin/nologin -c "systemd Network Management" systemd-network &>/dev/null || :
-
+%pre resolved
 getent group systemd-resolve &>/dev/null || groupadd -r -g 193 systemd-resolve 2>&1 || :
 getent passwd systemd-resolve &>/dev/null || useradd -r -u 193 -l -g systemd-resolve -d / -s /sbin/nologin -c "systemd Resolver" systemd-resolve &>/dev/null || :
 
+%pre networkd
+getent group systemd-network &>/dev/null || groupadd -r -g 192 systemd-network 2>&1 || :
+getent passwd systemd-network &>/dev/null || useradd -r -u 192 -l -g systemd-network -d / -s /sbin/nologin -c "systemd Network Management" systemd-network &>/dev/null || :
+
 %post
+/sbin/ldconfig
 systemd-machine-id-setup &>/dev/null || :
 systemctl daemon-reexec &>/dev/null || :
 journalctl --update-catalog &>/dev/null || :
@@ -647,6 +716,9 @@ setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/ &>/de
 if [ $1 -eq 1 ] ; then
         systemctl preset-all &>/dev/null || :
 fi
+
+%postun
+/sbin/ldconfig
 
 %post libs
 %{?ldconfig}
@@ -698,7 +770,7 @@ fi
 
 %{?ldconfig:%postun -p %ldconfig}
 
-%global udev_services systemd-udev{d,-settle,-trigger}.service systemd-udevd-{control,kernel}.socket systemd-timesyncd.service
+%global udev_services systemd-udev{d,-settle,-trigger}.service systemd-udevd-{control,kernel}.socket
 
 %preun
 if [ $1 -eq 0 ] ; then
@@ -708,20 +780,29 @@ if [ $1 -eq 0 ] ; then
                 serial-getty@.service \
                 console-getty.service \
                 debug-shell.service \
-                systemd-networkd.service \
-                systemd-networkd-wait-online.service \
+                >/dev/null || :
+fi
+
+%preun resolved
+if [ $1 -eq 0 ] ; then
+        systemctl disable --quiet \
                 systemd-resolved.service \
                 >/dev/null || :
 fi
 
-%pre udev
+%preun networkd
+if [ $1 -eq 0 ] ; then
+        systemctl disable --quiet \
+                systemd-networkd.service \
+                systemd-networkd-wait-online.service \
+                >/dev/null || :
+fi
+
+%pre timesyncd
 getent group systemd-timesync &>/dev/null || groupadd -r systemd-timesync 2>&1 || :
 getent passwd systemd-timesync &>/dev/null || useradd -r -l -g systemd-timesync -d / -s /sbin/nologin -c "systemd Time Synchronization" systemd-timesync &>/dev/null || :
 
-%post udev
-# Move old stuff around in /var/lib
-mv %{_localstatedir}/lib/random-seed %{_localstatedir}/lib/systemd/random-seed &>/dev/null
-mv %{_localstatedir}/lib/backlight %{_localstatedir}/lib/systemd/backlight &>/dev/null
+%post timesyncd
 if [ -L %{_localstatedir}/lib/systemd/timesync ]; then
     rm %{_localstatedir}/lib/systemd/timesync
     mv %{_localstatedir}/lib/private/systemd/timesync %{_localstatedir}/lib/systemd/timesync
@@ -730,7 +811,13 @@ if [ -f %{_localstatedir}/lib/systemd/clock ] ; then
     mkdir -p %{_localstatedir}/lib/systemd/timesync
     mv %{_localstatedir}/lib/systemd/clock %{_localstatedir}/lib/systemd/timesync/.
 fi
+# devided from post and preun stage of udev that included in macro udev_services
+%systemd_post systemd-timesyncd.service
 
+%post udev
+# Move old stuff around in /var/lib
+mv %{_localstatedir}/lib/random-seed %{_localstatedir}/lib/systemd/random-seed &>/dev/null
+mv %{_localstatedir}/lib/backlight %{_localstatedir}/lib/systemd/backlight &>/dev/null
 udevadm hwdb --update &>/dev/null
 %systemd_post %udev_services
 %{_systemddir}/systemd-random-seed save 2>&1
@@ -744,6 +831,10 @@ if [ -f "/usr/lib/udev/rules.d/50-udev-default.rules" ]; then
      sed -i 's/KERNEL=="kvm", GROUP="kvm", MODE="0666"/KERNEL=="kvm", GROUP="kvm", MODE="0660"/g' /usr/lib/udev/rules.d/50-udev-default.rules
 fi
 %{_bindir}/systemctl daemon-reload &>/dev/null || :
+
+# devided from post and preun stage of udev that included in macro udev_services
+%preun timesyncd
+%systemd_preun systemd-timesyncd.service
 
 %preun udev
 %systemd_preun %udev_services
@@ -801,7 +892,6 @@ fi
 %ghost %dir %attr(0755,-,-) /etc/systemd/system/system-update.target.wants
 %ghost %dir %attr(0755,-,-) /etc/systemd/system/timers.target.wants
 %ghost %dir %attr(0755,-,-) /var/lib/rpm-state/systemd
-
 %ghost %dir /var/log/journal
 %ghost %attr(0664,root,utmp) /var/log/wtmp
 /var/log/README
@@ -819,7 +909,6 @@ fi
 /usr/sbin/reboot
 /usr/sbin/halt
 /usr/sbin/telinit
-/usr/sbin/resolvconf
 /usr/sbin/init
 /usr/sbin/runlevel
 /usr/sbin/poweroff
@@ -839,12 +928,9 @@ fi
 /usr/share/bash-completion/completions/portablectl
 /usr/share/bash-completion/completions/systemd-run
 /usr/share/bash-completion/completions/systemd-cat
-/usr/share/bash-completion/completions/resolvectl
 /usr/share/bash-completion/completions/coredumpctl
 /usr/share/bash-completion/completions/systemd-delta
 /usr/share/bash-completion/completions/systemd-cgls
-/usr/share/bash-completion/completions/systemd-resolve
-/usr/share/bash-completion/completions/networkctl
 /usr/share/bash-completion/completions/systemd-detect-virt
 /usr/share/bash-completion/completions/hostnamectl
 /usr/share/bash-completion/completions/systemd-cgtop
@@ -859,14 +945,12 @@ fi
 /usr/share/zsh/site-functions/_journalctl
 /usr/share/zsh/site-functions/_systemd-delta
 /usr/share/zsh/site-functions/_systemd-tmpfiles
-/usr/share/zsh/site-functions/_resolvectl
 /usr/share/zsh/site-functions/_systemctl
 /usr/share/zsh/site-functions/_systemd-run
 /usr/share/zsh/site-functions/_sd_outputmodes
 /usr/share/zsh/site-functions/_sd_unit_files
 /usr/share/zsh/site-functions/_sd_machines
 /usr/share/zsh/site-functions/_coredumpctl
-/usr/share/zsh/site-functions/_networkctl
 /usr/share/zsh/site-functions/_timedatectl
 /usr/share/zsh/site-functions/_busctl
 /usr/share/zsh/site-functions/_systemd
@@ -877,29 +961,22 @@ fi
 /usr/share/dbus-1/system-services/org.freedesktop.portable1.service
 /usr/share/dbus-1/system-services/org.freedesktop.login1.service
 /usr/share/dbus-1/system-services/org.freedesktop.locale1.service
-/usr/share/dbus-1/system-services/org.freedesktop.resolve1.service
 /usr/share/dbus-1/system-services/org.freedesktop.hostname1.service
-/usr/share/dbus-1/system-services/org.freedesktop.network1.service
 /usr/share/dbus-1/system-services/org.freedesktop.timedate1.service
-/usr/share/dbus-1/system.d/org.freedesktop.resolve1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.timedate1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.hostname1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.login1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.systemd1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.locale1.conf
 /usr/share/dbus-1/system.d/org.freedesktop.portable1.conf
-/usr/share/dbus-1/system.d/org.freedesktop.network1.conf
 /usr/share/pkgconfig/systemd.pc
 /usr/share/pkgconfig/udev.pc
 /usr/share/polkit-1/actions/org.freedesktop.hostname1.policy
 /usr/share/polkit-1/actions/org.freedesktop.portable1.policy
 /usr/share/polkit-1/actions/org.freedesktop.timedate1.policy
-/usr/share/polkit-1/actions/org.freedesktop.resolve1.policy
 /usr/share/polkit-1/actions/org.freedesktop.systemd1.policy
 /usr/share/polkit-1/actions/org.freedesktop.login1.policy
-/usr/share/polkit-1/actions/org.freedesktop.network1.policy
 /usr/share/polkit-1/actions/org.freedesktop.locale1.policy
-/usr/share/polkit-1/rules.d/systemd-networkd.rules
 /usr/bin/systemd-machine-id-setup
 /usr/bin/localectl
 /usr/bin/systemd-path
@@ -911,13 +988,10 @@ fi
 /usr/bin/systemd-cat
 /usr/bin/systemd-inhibit
 /usr/bin/systemd-ask-password
-/usr/bin/resolvectl
 /usr/bin/systemd-notify
 /usr/bin/coredumpctl
 /usr/bin/systemd-delta
 /usr/bin/systemd-cgls
-/usr/bin/systemd-resolve
-/usr/bin/networkctl
 /usr/bin/systemd-stdio-bridge
 /usr/bin/systemd-detect-virt
 /usr/bin/systemd-socket-activate
@@ -954,10 +1028,8 @@ fi
 %{_systemddir}/systemd-cgroups-agent
 %{_systemddir}/systemd-sulogin-shell
 %{_systemddir}/systemd-boot-check-no-failures
-%dir %{_systemddir}/ntp-units.d
 %{_systemddir}/systemd-user-sessions
 %{_systemddir}/systemd-sysctl
-%{_systemddir}/systemd-networkd-wait-online
 %{_systemddir}/systemd-socket-proxyd
 %{_systemddir}/systemd-ac-power
 %{_systemddir}/systemd-hostnamed
@@ -968,7 +1040,6 @@ fi
 %{_systemddir}/systemd-journald
 %{_systemddir}/systemd-user-runtime-dir
 %{_systemddir}/systemd-logind
-%{_systemddir}/systemd-networkd
 %dir %{_systemddir}/system-preset
 %dir %{_systemddir}/user-environment-generators
 %{_systemddir}/systemd-shutdown
@@ -985,13 +1056,10 @@ fi
 %{_systemddir}/systemd
 %dir %{_systemddir}/user-preset
 %{_systemddir}/systemd-coredump
-%{_systemddir}/resolv.conf
 %{_systemddir}/systemd-dissect
 %{_systemddir}/systemd-veritysetup
 %{_systemddir}/systemd-network-generator
-%{_systemddir}/systemd-time-wait-sync
 %{_systemddir}/systemd-pstore
-%{_systemddir}/systemd-resolved
 %{_systemddir}/systemd-binfmt
 %{_systemddir}/user-preset/90-systemd.preset
 %dir %{_systemddir}/portable/profile
@@ -1003,14 +1071,12 @@ fi
 %{_systemddir}/portable/profile/trusted/service.conf
 %{_systemddir}/portable/profile/nonetwork/service.conf
 %{_systemddir}/portable/profile/strict/service.conf
-%{_unitdir}/systemd-networkd.socket
 %{_unitdir}/systemd-binfmt.service
 %{_unitdir}/systemd-machine-id-commit.service
 %dir %{_unitdir}/basic.target.wants
 %{_unitdir}/systemd-coredump.socket
 %{_unitdir}/ctrl-alt-del.target
 %{_unitdir}/systemd-tmpfiles-setup.service
-%{_unitdir}/systemd-time-wait-sync.service
 %{_unitdir}/rpcbind.target
 %{_unitdir}/systemd-update-done.service
 %{_unitdir}/dev-hugepages.mount
@@ -1074,7 +1140,6 @@ fi
 %{_unitdir}/systemd-update-utmp.service
 %dir %{_unitdir}/rescue.target.wants
 %{_unitdir}/bluetooth.target
-%{_unitdir}/systemd-networkd-wait-online.service
 %{_unitdir}/systemd-ask-password-wall.path
 %{_unitdir}/emergency.service
 %{_unitdir}/network-pre.target
@@ -1127,13 +1192,11 @@ fi
 %{_unitdir}/runlevel1.target
 %dir %{_unitdir}/remote-fs.target.wants
 %{_unitdir}/dbus-org.freedesktop.hostname1.service
-%{_unitdir}/systemd-networkd.service
 %{_unitdir}/runlevel0.target
 %{_unitdir}/user.slice
 %{_unitdir}/systemd-journal-catalog-update.service
 %{_unitdir}/local-fs-pre.target
 %{_unitdir}/systemd-halt.service
-%{_unitdir}/systemd-resolved.service
 %{_unitdir}/container-getty@.service
 %{_unitdir}/slices.target
 %{_unitdir}/systemd-network-generator.service
@@ -1221,7 +1284,6 @@ fi
 %{_userunitdir}/systemd-tmpfiles-clean.timer
 %{_userunitdir}/sockets.target
 %{_userunitdir}/smartcard.target
-%{_systemddir}/network/80-container-host0.network
 %{_systemddir}/catalog/systemd.fr.catalog
 %{_systemddir}/catalog/systemd.be.catalog
 %{_systemddir}/catalog/systemd.bg.catalog
@@ -1263,13 +1325,10 @@ fi
 %ghost %config(noreplace) /etc/machine-info
 %ghost %config(noreplace) /etc/machine-id
 %ghost %config(noreplace) /etc/hostname
-%dir /etc/systemd/network
 %config(noreplace) /etc/systemd/user.conf
 %config(noreplace) /etc/systemd/coredump.conf
 %dir /etc/systemd/user
 %config(noreplace) /etc/systemd/logind.conf
-%config(noreplace) /etc/systemd/networkd.conf
-%config(noreplace) /etc/systemd/resolved.conf
 %config(noreplace) /etc/systemd/journald.conf
 %config(noreplace) /etc/systemd/pstore.conf
 %dir /etc/systemd/system
@@ -1285,7 +1344,6 @@ fi
 %config(noreplace) /etc/rc.d/init.d/README
 %dir /etc/xdg/systemd
 %config(noreplace) /etc/xdg/systemd/user
-
 /usr/lib64/security/pam_systemd.so
 /usr/lib/rpm/macros.d/macros.systemd
 
@@ -1321,10 +1379,8 @@ fi
 
 %files udev
 %ghost %dir /var/lib/systemd/backlight
-%ghost %dir /var/lib/systemd/timesync
 %ghost %dir /var/lib/systemd/rfkill
 %ghost /var/lib/systemd/random-seed
-%ghost /var/lib/systemd/timesync/clock
 /usr/sbin/udevadm
 /usr/share/bash-completion/completions/udevadm
 /usr/share/bash-completion/completions/bootctl
@@ -1332,8 +1388,6 @@ fi
 /usr/share/zsh/site-functions/_bootctl
 /usr/share/zsh/site-functions/_udevadm
 /usr/share/zsh/site-functions/_kernel-install
-/usr/share/dbus-1/system-services/org.freedesktop.timesync1.service
-/usr/share/dbus-1/system.d/org.freedesktop.timesync1.conf
 /usr/bin/systemd-hwdb
 /usr/bin/udevadm
 /usr/bin/bootctl
@@ -1343,7 +1397,6 @@ fi
 %dir /usr/lib/kernel
 %dir /usr/lib/modules-load.d
 %dir %{_systemddir}/boot
-%{_systemddir}/systemd-timesyncd
 %{_systemddir}/systemd-growfs
 %{_systemddir}/systemd-modules-load
 %dir %{_systemddir}/system-sleep
@@ -1371,7 +1424,6 @@ fi
 %dir %{_unitdir}/systemd-udev-trigger.service.d
 %{_unitdir}/systemd-random-seed.service
 %{_unitdir}/systemd-quotacheck.service
-%{_unitdir}/systemd-timesyncd.service
 %{_unitdir}/systemd-udevd-control.socket
 %{_unitdir}/hibernate.target
 %{_unitdir}/systemd-remount-fs.service
@@ -1405,7 +1457,7 @@ fi
 %{_systemddir}/system-generators/systemd-cryptsetup-generator
 %{_systemddir}/system-generators/systemd-hibernate-resume-generator
 %{_systemddir}/system-generators/systemd-gpt-auto-generator
-%{_systemddir}/ntp-units.d/80-systemd-timesync.list
+
 %dir %{_systemddir}/boot/efi
 %{_systemddir}/boot/efi/systemd-boot%{efi_arch}.efi
 %{_systemddir}/boot/efi/linux%{efi_arch}.efi.stub
@@ -1476,7 +1528,7 @@ fi
 %dir /etc/udev
 %dir /etc/kernel
 %dir /etc/modules-load.d
-%config(noreplace) /etc/systemd/timesyncd.conf
+
 %config(noreplace) /etc/systemd/sleep.conf
 %dir /etc/kernel/install.d
 %ghost /etc/udev/hwdb.bin
@@ -1486,9 +1538,7 @@ fi
 
 %files container
 /usr/share/bash-completion/completions/machinectl
-/usr/share/bash-completion/completions/systemd-nspawn
 /usr/share/zsh/site-functions/_machinectl
-/usr/share/zsh/site-functions/_systemd-nspawn
 /usr/share/dbus-1/system-services/org.freedesktop.import1.service
 /usr/share/dbus-1/system-services/org.freedesktop.machine1.service
 /usr/share/dbus-1/system.d/org.freedesktop.import1.conf
@@ -1497,7 +1547,6 @@ fi
 /usr/share/polkit-1/actions/org.freedesktop.machine1.policy
 /usr/lib64/libnss_mymachines.so.2
 /usr/bin/machinectl
-/usr/bin/systemd-nspawn
 %{_systemddir}/systemd-import
 %{_systemddir}/systemd-machined
 %{_systemddir}/systemd-importd
@@ -1512,12 +1561,8 @@ fi
 %{_unitdir}/machine.slice
 %{_unitdir}/machines.target
 %dir %{_unitdir}/machines.target.wants
-%{_unitdir}/systemd-nspawn@.service
 %{_unitdir}/machines.target.wants/var-lib-machines.mount
 %{_unitdir}/remote-fs.target.wants/var-lib-machines.mount
-%{_systemddir}/network/80-container-vz.network
-%{_systemddir}/network/80-container-ve.network
-/usr/lib/tmpfiles.d/systemd-nspawn.conf
 
 %files journal-remote
 %ghost %dir /var/log/journal/remote
@@ -1549,11 +1594,72 @@ fi
 /usr/lib/udev/net-set-sriov-names
 /usr/lib/udev/detect_virt
 
+%files resolved
+/usr/sbin/resolvconf
+/usr/bin/resolvectl
+/usr/share/bash-completion/completions/resolvectl
+/usr/share/zsh/site-functions/_resolvectl
+/usr/share/bash-completion/completions/systemd-resolve
+/usr/share/dbus-1/system-services/org.freedesktop.resolve1.service
+/usr/share/dbus-1/system.d/org.freedesktop.resolve1.conf
+/usr/share/polkit-1/actions/org.freedesktop.resolve1.policy
+/usr/bin/systemd-resolve
+%{_systemddir}/resolv.conf
+%{_systemddir}/systemd-resolved
+%config(noreplace) /etc/systemd/resolved.conf
+%{_libdir}/libnss_resolve.so.2
+%{_unitdir}/systemd-resolved.service
+
+%files nspawn
+/usr/share/bash-completion/completions/systemd-nspawn
+/usr/share/zsh/site-functions/_systemd-nspawn
+/usr/bin/systemd-nspawn
+%{_unitdir}/systemd-nspawn@.service
+/usr/lib/tmpfiles.d/systemd-nspawn.conf
+
+%files networkd
+/usr/share/bash-completion/completions/networkctl
+/usr/share/zsh/site-functions/_networkctl
+/usr/share/dbus-1/system-services/org.freedesktop.network1.service
+/usr/share/dbus-1/system.d/org.freedesktop.network1.conf
+/usr/share/polkit-1/actions/org.freedesktop.network1.policy
+/usr/share/polkit-1/rules.d/systemd-networkd.rules
+/usr/bin/networkctl
+%{_systemddir}/systemd-networkd-wait-online
+%{_systemddir}/systemd-networkd
+%{_unitdir}/systemd-networkd.socket
+%{_unitdir}/systemd-networkd-wait-online.service
+%{_unitdir}/systemd-networkd.service
+%{_systemddir}/network/80-container-host0.network
+%dir /etc/systemd/network
+%config(noreplace) /etc/systemd/networkd.conf
+%{_systemddir}/network/80-container-vz.network
+%{_systemddir}/network/80-container-ve.network
+
+%files timesyncd
+%dir %{_systemddir}/ntp-units.d
+%{_systemddir}/systemd-time-wait-sync
+%{_unitdir}/systemd-time-wait-sync.service
+%ghost %dir /var/lib/systemd/timesync
+%ghost /var/lib/systemd/timesync/clock
+/usr/share/dbus-1/system-services/org.freedesktop.timesync1.service
+/usr/share/dbus-1/system.d/org.freedesktop.timesync1.conf
+%{_systemddir}/systemd-timesyncd
+%{_unitdir}/systemd-timesyncd.service
+%{_systemddir}/ntp-units.d/80-systemd-timesync.list
+%config(noreplace) /etc/systemd/timesyncd.conf
+
+%files pam
+%{_libdir}/security/pam_systemd.so
+
 %files help
 /usr/share/man/*/*
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Aug 31 2022 yangmingtai <yangmingtai@huawei.com> - 243-54
+- divided some feature into subpackage
+
 * Thu May 26 2022 yangmingtai <yangmingtai@huawei.com> - 243-53
 - remove old device on move event
 
