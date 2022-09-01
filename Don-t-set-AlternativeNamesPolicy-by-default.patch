@@ -1,0 +1,26 @@
+From 1e3f74b7ca5ead53c10e5b37cf8660651f32d181 Mon Sep 17 00:00:00 2001
+From: xujing <xujing125@huawei.com>
+Date: Thu, 11 Aug 2022 19:53:35 +0800
+Subject: [PATCH] Don't set AlternativeNamesPolicy by default
+
+When a network adapter is renamed, the altname of the network adapter may be
+set based on AlternativeNamesPolicy. As a result, the network adapter name
+fails to be restored. For example, after enp4s0 is renamed tmp, udev sets the
+altname of tmp to enp4s0. If you want to restore tmp to enp4s0, it will fail.
+---
+ network/99-default.link | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/network/99-default.link b/network/99-default.link
+index 31aee37..db48c4d 100644
+--- a/network/99-default.link
++++ b/network/99-default.link
+@@ -12,5 +12,4 @@ OriginalName=*
+ 
+ [Link]
+ NamePolicy=keep kernel database onboard slot path
+-AlternativeNamesPolicy=database onboard slot path
+ MACAddressPolicy=none
+-- 
+2.23.0
+

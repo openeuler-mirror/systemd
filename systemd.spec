@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        31
+Release:        32
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -74,6 +74,7 @@ Patch0025:      check-whether-command_prev-is-null-before-assigning-.patch
 Patch0026:      print-the-real-reason-for-link-update.patch
 Patch0027:      core-skip-change-device-to-dead-in-manager_catchup-d.patch
 Patch0028:      revert-rpm-restart-services-in-posttrans.patch
+Patch0029:      Don-t-set-AlternativeNamesPolicy-by-default.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -106,6 +107,7 @@ Patch6026:      backport-logind.conf-Fix-name-of-option-RuntimeDirectoryInode.pa
 Patch6027:      backport-unit-coldplug-both-job-and-nop_job-if-possible.patch
 Patch6028:      backport-meson.build-change-operator-combining-bools-from-to-.patch
 Patch6029:      backport-Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
+Patch6030:      backport-journal-Only-move-to-objects-when-necessary.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1509,6 +1511,10 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Thu Sep 1 2022 hongjinghao<hongjinghao@huawei.com> -249-32
+- 1. Don't set AlternativeNamesPolicy by default
+  2. fix systemd-journald coredump
+
 * Wed Jun 22 2022 zhangyao<zhangyao108@huawei.com> -249-31
 - fix don't preset systemd-timesyncd when install systemd-udev
 
