@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        54
+Release:        55
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -182,6 +182,9 @@ Patch9009:      systemd-change-time-log-level.patch
 Patch9010:      fix-capsh-drop-but-ping-success.patch
 Patch9011:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 Patch9012:      set-kernel-core_pipe_limit-to-16.patch
+
+#rhbz 1819868
+Patch9013:    0001-Prevent-excessive-proc-1-mountinfo-reparsing.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1657,6 +1660,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Sep 1 2022 Han Jinpeng <hanjinpeng@kylinos.cn> - 243-55
+- fix create pod container fail and systemd timeout (rhbz #1819868)
+
 * Wed Aug 31 2022 yangmingtai <yangmingtai@huawei.com> - 243-54
 - divided some feature into subpackage
 
