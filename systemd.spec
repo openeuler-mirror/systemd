@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        54
+Release:        55
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -555,6 +555,20 @@ install -m 0755 %{SOURCE104} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE105} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE106} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE107} %{buildroot}/usr/lib/udev
+
+# remove rpath info
+for file in $(find %{buildroot}/ -executable -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
+do
+        if [ ! -u "$file" ]; then
+                if [ -w "$file" ]; then
+                        chrpath -d $file
+                fi
+        fi
+done
+ 
+# add rpath path /usr/lib/systemd in ld.so.conf.d
+mkdir -p %{buildroot}%{_sysconfdir}/ld.so.conf.d
+echo "/usr/lib/systemd" > %{buildroot}%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
 
 %check
 %ninja_test -C %{_vpath_builddir}
@@ -1346,6 +1360,7 @@ fi
 %config(noreplace) /etc/xdg/systemd/user
 /usr/lib64/security/pam_systemd.so
 /usr/lib/rpm/macros.d/macros.systemd
+%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
 
 %files libs
 /usr/lib64/libnss_systemd.so.2
@@ -1657,6 +1672,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Sep  5 2022 yangmingtai <yangmingtai@huawei.com> - 243-55
+- delete rpath
+
 * Wed Aug 31 2022 yangmingtai <yangmingtai@huawei.com> - 243-54
 - divided some feature into subpackage
 
