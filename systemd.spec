@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        55
+Release:        56
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -167,6 +167,7 @@ Patch0117:      backport-udev-re-assign-ID_NET_DRIVER-ID_NET_LINK_FILE-ID_NET.pa
 Patch0118:      backport-udev-allow-to-match-OriginalName-with-renamed-interf.patch
 Patch0119:      backport-udev-do-not-update-return-value-on-failure.patch
 Patch0120:      backport-test-add-test-for-device-renaming-issue-16967.patch
+Patch0121:      backport-Prevent-excessive-proc-1-mountinfo-reparsing.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -182,9 +183,6 @@ Patch9009:      systemd-change-time-log-level.patch
 Patch9010:      fix-capsh-drop-but-ping-success.patch
 Patch9011:      0998-resolved-create-etc-resolv.conf-symlink-at-runtime.patch
 Patch9012:      set-kernel-core_pipe_limit-to-16.patch
-
-#rhbz 1819868
-Patch9013:    0001-Prevent-excessive-proc-1-mountinfo-reparsing.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -558,6 +556,20 @@ install -m 0755 %{SOURCE104} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE105} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE106} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE107} %{buildroot}/usr/lib/udev
+
+# remove rpath info
+for file in $(find %{buildroot}/ -executable -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
+do
+        if [ ! -u "$file" ]; then
+                if [ -w "$file" ]; then
+                        chrpath -d $file
+                fi
+        fi
+done
+ 
+# add rpath path /usr/lib/systemd in ld.so.conf.d
+mkdir -p %{buildroot}%{_sysconfdir}/ld.so.conf.d
+echo "/usr/lib/systemd" > %{buildroot}%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
 
 %check
 %ninja_test -C %{_vpath_builddir}
@@ -1349,6 +1361,7 @@ fi
 %config(noreplace) /etc/xdg/systemd/user
 /usr/lib64/security/pam_systemd.so
 /usr/lib/rpm/macros.d/macros.systemd
+%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
 
 %files libs
 /usr/lib64/libnss_systemd.so.2
@@ -1660,8 +1673,11 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
-* Thu Sep 1 2022 Han Jinpeng <hanjinpeng@kylinos.cn> - 243-55
+* Tue Sep 6 2022 Han Jinpeng <hanjinpeng@kylinos.cn> - 243-56
 - fix create pod container fail and systemd timeout (rhbz #1819868)
+
+* Mon Sep  5 2022 yangmingtai <yangmingtai@huawei.com> - 243-55
+- delete rpath
 
 * Wed Aug 31 2022 yangmingtai <yangmingtai@huawei.com> - 243-54
 - divided some feature into subpackage
