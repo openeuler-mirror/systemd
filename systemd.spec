@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        56
+Release:        57
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -506,6 +506,20 @@ install -m 0755 %{SOURCE105} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE106} %{buildroot}/usr/lib/udev
 install -m 0755 %{SOURCE107} %{buildroot}/usr/lib/udev
 
+# remove rpath info
+for file in $(find %{buildroot}/ -executable -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
+do
+        if [ ! -u "$file" ]; then
+                if [ -w "$file" ]; then
+                        chrpath -d $file
+                fi
+        fi
+done
+ 
+# add rpath path /usr/lib/systemd in ld.so.conf.d
+mkdir -p %{buildroot}%{_sysconfdir}/ld.so.conf.d
+echo "/usr/lib/systemd" > %{buildroot}%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
+
 %check
 %ninja_test -C %{_vpath_builddir}
 
@@ -642,6 +656,7 @@ getent group systemd-resolve &>/dev/null || groupadd -r -g 193 systemd-resolve 2
 getent passwd systemd-resolve &>/dev/null || useradd -r -u 193 -l -g systemd-resolve -d / -s /sbin/nologin -c "systemd Resolver" systemd-resolve &>/dev/null || :
 
 %post
+/sbin/ldconfig
 systemd-machine-id-setup &>/dev/null || :
 systemctl daemon-reexec &>/dev/null || :
 journalctl --update-catalog &>/dev/null || :
@@ -663,6 +678,9 @@ setfacl -Rnm g:wheel:rx,d:g:wheel:rx,g:adm:rx,d:g:adm:rx /var/log/journal/ &>/de
 if [ $1 -eq 1 ] ; then
         systemctl preset-all &>/dev/null || :
 fi
+
+%postun
+/sbin/ldconfig
 
 %post libs
 %{?ldconfig}
@@ -1301,6 +1319,7 @@ fi
 %config(noreplace) /etc/rc.d/init.d/README
 %dir /etc/xdg/systemd
 %config(noreplace) /etc/xdg/systemd/user
+%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
 
 /usr/lib64/security/pam_systemd.so
 /usr/lib/rpm/macros.d/macros.systemd
@@ -1570,6 +1589,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Wed Sep  7 2022 yangmingtai <yangmingtai@huawei.com> - 243-57
+- delete rpath
+
 * Wed May 18 2022 yangmingtai <yangmingtai@huawei.com> - 243-56
 - remove old device on move event
 
