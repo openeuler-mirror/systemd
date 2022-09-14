@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        33
+Release:        34
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -109,6 +109,7 @@ Patch6028:      backport-meson.build-change-operator-combining-bools-from-to-.pa
 Patch6029:      backport-Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
 Patch6030:      backport-core-replace-slice-dependencies-as-they-get-added.patch
 Patch6031:      backport-journal-Only-move-to-objects-when-necessary.patch
+Patch6032:      backport-scsi_id-retry-inquiry-ioctl-if-host_byte-is-DID_TRAN.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1512,6 +1513,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Fri Sep 2 2022 Wenchao Hao <haowenchao@huawei.com> -249-34
+- scsi_id: retry inquiry ioctl if host_byte is DID_TRANSPORT_DISRUPTED
+
 * Thu Sep 1 2022 hongjinghao<hongjinghao@huawei.com> - 249-33
 - 1. Don't set AlternativeNamesPolicy by default
   2. fix systemd-journald coredump
