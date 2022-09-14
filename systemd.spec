@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        33
+Release:        34
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -109,6 +109,7 @@ Patch6028:      backport-meson.build-change-operator-combining-bools-from-to-.pa
 Patch6029:      backport-Avoid-tmp-being-mounted-as-tmpfs-without-the-user-s-.patch
 Patch6030:      backport-journal-Only-move-to-objects-when-necessary.patch
 Patch6031:      backport-scsi_id-retry-inquiry-ioctl-if-host_byte-is-DID_TRAN.patch
+Patch6032:      backport-revert-units-add-ProtectClock-yes.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1512,6 +1513,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Wed Sep 14 2022 xujing <xujing125@huawei.com> -249-34
+- revert add ProtectClock=yes
+
 * Fri Sep 2 2022 Wenchao Hao <haowenchao@huawei.com> -249-33
 - scsi_id: retry inquiry ioctl if host_byte is DID_TRANSPORT_DISRUPTED
 
