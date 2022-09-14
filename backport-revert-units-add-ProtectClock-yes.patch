@@ -1,0 +1,46 @@
+From cabc1c6d7adae658a2966a4b02a6faabb803e92b Mon Sep 17 00:00:00 2001
+From: Topi Miettinen <toiwoton@gmail.com>
+Date: Thu, 2 Apr 2020 21:18:11 +0300
+Subject: [PATCH] units: add ProtectClock=yes
+
+Add `ProtectClock=yes` to systemd units. Since it implies certain
+`DeviceAllow=` rules, make sure that the units have `DeviceAllow=` rules so
+they are still able to access other devices. Exclude timesyncd and timedated.
+
+===
+Conflict:this only revert systemd-udevd.service.in
+Reference:https://github.com/systemd/systemd/commit/cabc1c6d7adae658a2966a4b02a6faabb803e92b
+
+When DeviceAllow is configured, devices.deny will first be set to "a", and
+then devices.allow be set based on DeviceAllow, which makes devices.list
+between these two steps is not reliable. Only revert systemd-udevd.service.in
+because udevd can fork subprocess to execute udev rules, which may affect user
+process.
+---
+ units/systemd-udevd.service.in | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/units/systemd-udevd.service.in b/units/systemd-udevd.service.in
+index 7b6354a..30746c1 100644
+--- a/units/systemd-udevd.service.in
++++ b/units/systemd-udevd.service.in
+@@ -17,8 +17,6 @@ ConditionPathIsReadWrite=/sys
+ 
+ [Service]
+ Delegate=pids
+-DeviceAllow=block-* rwm
+-DeviceAllow=char-* rwm
+ Type=notify
+ # Note that udev will reset the value internally for its workers
+ OOMScoreAdjust=-1000
+@@ -30,7 +28,6 @@ ExecReload=udevadm control --reload --timeout 0
+ KillMode=mixed
+ TasksMax=infinity
+ PrivateMounts=yes
+-ProtectClock=yes
+ ProtectHostname=yes
+ MemoryDenyWriteExecute=yes
+ RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6
+-- 
+2.23.0
+
