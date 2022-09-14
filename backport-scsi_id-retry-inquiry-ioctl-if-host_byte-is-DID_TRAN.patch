@@ -1,0 +1,56 @@
+From 9442b2f78f17309bb1c2bca0df735728b03ee732 Mon Sep 17 00:00:00 2001
+From: Wenchao Hao <haowenchao@huawei.com>
+Date: Sun, 28 Aug 2022 16:44:56 +0800
+Subject: [PATCH] scsi_id: retry inquiry ioctl if host_byte is
+ DID_TRANSPORT_DISRUPTED
+
+The inquiry is issued to kernel via ioctl, kernelspace would set
+this inquiry command's retry count to 0 which means the command
+would not be retried in kernel space even if the LLDs returned
+a status which need to be retried. So we should take the retry
+in user space.
+---
+ src/udev/scsi_id/scsi_serial.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/udev/scsi_id/scsi_serial.c b/src/udev/scsi_id/scsi_serial.c
+index cfc13feced..992d1cf25b 100644
+--- a/src/udev/scsi_id/scsi_serial.c
++++ b/src/udev/scsi_id/scsi_serial.c
+@@ -69,6 +69,7 @@ static const char hex_str[]="0123456789abcdef";
+ #define DID_NO_CONNECT               0x01        /* Unable to connect before timeout */
+ #define DID_BUS_BUSY                 0x02        /* Bus remain busy until timeout */
+ #define DID_TIME_OUT                 0x03        /* Timed out for some other reason */
++#define DID_TRANSPORT_DISRUPTED      0x0e        /* Transport disrupted and should retry */
+ #define DRIVER_TIMEOUT               0x06
+ #define DRIVER_SENSE                 0x08        /* Sense_buffer has been set */
+ 
+@@ -79,6 +80,7 @@ static const char hex_str[]="0123456789abcdef";
+ #define SG_ERR_CAT_TIMEOUT              3
+ #define SG_ERR_CAT_RECOVERED            4        /* Successful command after recovered err */
+ #define SG_ERR_CAT_NOTSUPPORTED         5        /* Illegal / unsupported command */
++#define SG_ERR_CAT_RETRY                6        /* Command should be retried */
+ #define SG_ERR_CAT_SENSE               98        /* Something else in the sense buffer */
+ #define SG_ERR_CAT_OTHER               99        /* Some other error/warning */
+ 
+@@ -126,6 +128,8 @@ static int sg_err_category_new(int scsi_status, int msg_status, int
+         if (host_status) {
+                 if (IN_SET(host_status, DID_NO_CONNECT, DID_BUS_BUSY, DID_TIME_OUT))
+                         return SG_ERR_CAT_TIMEOUT;
++                if (host_status == DID_TRANSPORT_DISRUPTED)
++                        return SG_ERR_CAT_RETRY;
+         }
+         if (driver_status) {
+                 if (driver_status == DRIVER_TIMEOUT)
+@@ -332,6 +336,8 @@ resend:
+                 case SG_ERR_CAT_RECOVERED:
+                         retval = 0;
+                         break;
++                case SG_ERR_CAT_RETRY:
++                        break;
+ 
+                 default:
+                         if (dev_scsi->use_sg == 4)
+-- 
+2.27.0
+
