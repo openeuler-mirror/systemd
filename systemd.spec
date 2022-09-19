@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        35
+Release:        36
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -111,6 +111,7 @@ Patch6030:      backport-core-replace-slice-dependencies-as-they-get-added.patch
 Patch6031:      backport-journal-Only-move-to-objects-when-necessary.patch
 Patch6032:      backport-scsi_id-retry-inquiry-ioctl-if-host_byte-is-DID_TRAN.patch
 Patch6033:      backport-revert-units-add-ProtectClock-yes.patch
+Patch6034:      backport-revert-delete-initrd-usr-fs-target.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -921,7 +922,6 @@ fi
 /usr/lib/sysusers.d/systemd.conf
 /usr/lib/sysusers.d/basic.conf
 /usr/lib/systemd/system/hwclock-save.service
-/usr/lib/systemd/system/initrd-usr-fs.target
 /usr/lib/systemd/system/sysinit.target.wants/hwclock-save.service
 %{_systemddir}/systemd-update-done
 %{_systemddir}/systemd-update-utmp
@@ -1514,6 +1514,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Fri Sep 16 2022 yangmingtai <yangmingtai@huawei.com> -249-36
+- revert:delete the initrd-usr-fs.target
+
 * Wed Sep 14 2022 xujing <xujing125@huawei.com> -249-35
 - revert add ProtectClock=yes
 
