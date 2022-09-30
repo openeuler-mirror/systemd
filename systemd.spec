@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        36
+Release:        37
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -75,6 +75,7 @@ Patch0026:      print-the-real-reason-for-link-update.patch
 Patch0027:      core-skip-change-device-to-dead-in-manager_catchup-d.patch
 Patch0028:      revert-rpm-restart-services-in-posttrans.patch
 Patch0029:      Don-t-set-AlternativeNamesPolicy-by-default.patch
+Patch0030:      change-NTP-server-to-x.pool.ntp.org.patch
 
 #backport
 Patch6000:      backport-core-fix-free-undefined-pointer-when-strdup-failed-i.patch
@@ -112,6 +113,7 @@ Patch6031:      backport-journal-Only-move-to-objects-when-necessary.patch
 Patch6032:      backport-scsi_id-retry-inquiry-ioctl-if-host_byte-is-DID_TRAN.patch
 Patch6033:      backport-revert-units-add-ProtectClock-yes.patch
 Patch6034:      backport-revert-delete-initrd-usr-fs-target.patch
+Patch6037:      backport-login-drop-non-default-value-for-RuntimeDirectoryIno.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -1514,6 +1516,10 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Thu Sep 29 2022 yangmingtai <yangmingtai@huawei.com> -249-37
+- 1.change default ntp server
+  2.correct the default value of RuntimeDirectoryInodesMax
+
 * Fri Sep 16 2022 yangmingtai <yangmingtai@huawei.com> -249-36
 - revert:delete the initrd-usr-fs.target
 
