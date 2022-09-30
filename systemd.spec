@@ -113,7 +113,7 @@ Patch6031:      backport-journal-Only-move-to-objects-when-necessary.patch
 Patch6032:      backport-scsi_id-retry-inquiry-ioctl-if-host_byte-is-DID_TRAN.patch
 Patch6033:      backport-revert-units-add-ProtectClock-yes.patch
 Patch6034:      backport-revert-delete-initrd-usr-fs-target.patch
-Patch6037:      backport-login-drop-non-default-value-for-RuntimeDirectoryIno.patch
+Patch6035:      backport-login-drop-non-default-value-for-RuntimeDirectoryIno.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
