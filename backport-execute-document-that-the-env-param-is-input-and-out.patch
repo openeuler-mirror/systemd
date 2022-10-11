@@ -1,0 +1,30 @@
+From 5c8437361d54bd6c04d613619f71c161df32024f Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 1 Feb 2022 13:50:28 +0100
+Subject: [PATCH] execute: document that the 'env' param is input *and* output
+
+(cherry picked from commit 421bb42d1b366c00392ef5bbab6a67412295b6dc)
+(cherry picked from commit c4357f31da66b1917d3612d02c28adb300d4b0c6)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/5c8437361d54bd6c04d613619f71c161df32024f
+---
+ src/core/execute.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/core/execute.c b/src/core/execute.c
+index 1129905b61..e24775c150 100644
+--- a/src/core/execute.c
++++ b/src/core/execute.c
+@@ -1152,7 +1152,7 @@ static int setup_pam(
+                 uid_t uid,
+                 gid_t gid,
+                 const char *tty,
+-                char ***env,
++                char ***env, /* updated on success */
+                 const int fds[], size_t n_fds) {
+ 
+ #if HAVE_PAM
+-- 
+2.33.0
+

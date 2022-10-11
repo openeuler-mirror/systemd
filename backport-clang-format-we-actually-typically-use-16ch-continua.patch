@@ -1,0 +1,34 @@
+From 8282cc686bedb0cf3702ea4ac2856b39ae351ef3 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 22 Feb 2022 16:51:58 +0100
+Subject: [PATCH] clang-format: we actually typically use 16ch continuation
+ indentation
+
+We use 8 for blocks, and 16 for continuation in most cases afaics, hence
+say so in .clang-format too
+
+(cherry picked from commit 92148fb77766767fdb6ad6e52747317dae2aae85)
+(cherry picked from commit 4a90c12f4f09f23e071e649422754f04eda6d273)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/8282cc686bedb0cf3702ea4ac2856b39ae351ef3
+---
+ .clang-format | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.clang-format b/.clang-format
+index 651249c701..c94866fcd5 100644
+--- a/.clang-format
++++ b/.clang-format
+@@ -46,7 +46,7 @@ ColumnLimit:     109
+ CompactNamespaces: true
+ ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ ConstructorInitializerIndentWidth: 8
+-ContinuationIndentWidth: 8
++ContinuationIndentWidth: 16
+ Cpp11BracedListStyle: false
+ ForEachMacros:
+   - BITMAP_FOREACH
+-- 
+2.33.0
+

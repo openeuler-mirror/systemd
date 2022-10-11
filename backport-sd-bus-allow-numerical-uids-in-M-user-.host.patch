@@ -1,0 +1,75 @@
+From 93597655ac3b1ecc8411e6b1249ab6ce631e87e2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Wed, 7 Jul 2021 18:02:50 +0200
+Subject: [PATCH] sd-bus: allow numerical uids in -M user@.host
+
+UIDs don't work well over ssh, but locally or with containers they are OK.
+In particular, user@.service uses UIDs as identifiers, and it's nice to be
+able to copy&paste that UID for interaction with the user's managers.
+
+(cherry picked from commit 2da7d0bc92e2423a5c7225c5d24b99d5d52a0bc6)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/93597655ac3b1ecc8411e6b1249ab6ce631e87e2
+---
+ src/libsystemd/sd-bus/sd-bus.c | 27 ++++++++++++++++++---------
+ 1 file changed, 18 insertions(+), 9 deletions(-)
+
+diff --git a/src/libsystemd/sd-bus/sd-bus.c b/src/libsystemd/sd-bus/sd-bus.c
+index ab8d4e4a60..e85a409871 100644
+--- a/src/libsystemd/sd-bus/sd-bus.c
++++ b/src/libsystemd/sd-bus/sd-bus.c
+@@ -39,6 +39,7 @@
+ #include "parse-util.h"
+ #include "path-util.h"
+ #include "process-util.h"
++#include "stdio-util.h"
+ #include "string-util.h"
+ #include "strv.h"
+ #include "user-util.h"
+@@ -1616,7 +1617,7 @@ static int user_and_machine_valid(const char *user_and_machine) {
+                 if (!user)
+                         return -ENOMEM;
+ 
+-                if (!isempty(user) && !valid_user_group_name(user, VALID_USER_RELAX))
++                if (!isempty(user) && !valid_user_group_name(user, VALID_USER_RELAX | VALID_USER_ALLOW_NUMERIC))
+                         return false;
+ 
+                 h++;
+@@ -1647,17 +1648,25 @@ static int user_and_machine_equivalent(const char *user_and_machine) {
+ 
+         /* Otherwise, if we are root, then we can also allow the ".host" syntax, as that's the user this
+          * would connect to. */
+-        if (geteuid() == 0 && STR_IN_SET(user_and_machine, ".host", "root@.host"))
++        uid_t uid = geteuid();
++
++        if (uid == 0 && STR_IN_SET(user_and_machine, ".host", "root@.host", "0@.host"))
+                 return true;
+ 
+-        /* Otherwise, we have to figure our user name, and compare things with that. */
+-        un = getusername_malloc();
+-        if (!un)
+-                return -ENOMEM;
++        /* Otherwise, we have to figure out our user id and name, and compare things with that. */
++        char buf[DECIMAL_STR_MAX(uid_t)];
++        xsprintf(buf, UID_FMT, uid);
++
++        f = startswith(user_and_machine, buf);
++        if (!f) {
++                un = getusername_malloc();
++                if (!un)
++                        return -ENOMEM;
+ 
+-        f = startswith(user_and_machine, un);
+-        if (!f)
+-                return false;
++                f = startswith(user_and_machine, un);
++                if (!f)
++                        return false;
++        }
+ 
+         return STR_IN_SET(f, "@", "@.host");
+ }
+-- 
+2.33.0
+

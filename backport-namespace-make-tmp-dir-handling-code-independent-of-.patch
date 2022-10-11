@@ -1,0 +1,68 @@
+From 78858632566c30d2299bcdbd6efe3cbd1cc99d5a Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 12 Nov 2021 11:16:02 +0100
+Subject: [PATCH] namespace: make tmp dir handling code independent of umask
+ too
+
+Let's make all code in namespace.c robust towards weird umask. This
+doesn't matter too much given that the parent dirs we deal here almost
+certainly exist anyway, but let's clean this up anyway and make it fully
+clean.
+
+(cherry picked from commit 30443439274cc223583c6c57f7d9041e440e346f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/78858632566c30d2299bcdbd6efe3cbd1cc99d5a
+---
+ src/core/namespace.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/src/core/namespace.c b/src/core/namespace.c
+index b10a53ad2e..9251871384 100644
+--- a/src/core/namespace.c
++++ b/src/core/namespace.c
+@@ -2466,7 +2466,8 @@ static int make_tmp_prefix(const char *prefix) {
+         if (errno != ENOENT)
+                 return -errno;
+ 
+-        r = mkdir_parents(prefix, 0755);
++        RUN_WITH_UMASK(000)
++                r = mkdir_parents(prefix, 0755);
+         if (r < 0)
+                 return r;
+ 
+@@ -2474,7 +2475,8 @@ static int make_tmp_prefix(const char *prefix) {
+         if (r < 0)
+                 return r;
+ 
+-        if (mkdir(t, 0777) < 0)
++        if (mkdir(t, 0777) < 0) /* umask will corrupt this access mode, but that doesn't matter, we need to
++                                 * call chmod() anyway for the suid bit, below. */
+                 return -errno;
+ 
+         if (chmod(t, 01777) < 0) {
+@@ -2533,10 +2535,9 @@ static int setup_one_tmp_dir(const char *id, const char *prefix, char **path, ch
+                 if (!y)
+                         return -ENOMEM;
+ 
+-                RUN_WITH_UMASK(0000) {
++                RUN_WITH_UMASK(0000)
+                         if (mkdir(y, 0777 | S_ISVTX) < 0)
+                                     return -errno;
+-                }
+ 
+                 r = label_fix_container(y, prefix, 0);
+                 if (r < 0)
+@@ -2548,7 +2549,8 @@ static int setup_one_tmp_dir(const char *id, const char *prefix, char **path, ch
+                 /* Trouble: we failed to create the directory. Instead of failing, let's simulate /tmp being
+                  * read-only. This way the service will get the EROFS result as if it was writing to the real
+                  * file system. */
+-                r = mkdir_p(RUN_SYSTEMD_EMPTY, 0500);
++                RUN_WITH_UMASK(0000)
++                        r = mkdir_p(RUN_SYSTEMD_EMPTY, 0500);
+                 if (r < 0)
+                         return r;
+ 
+-- 
+2.33.0
+

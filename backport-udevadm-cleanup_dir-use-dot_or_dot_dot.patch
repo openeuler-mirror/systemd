@@ -1,0 +1,41 @@
+From 75ff2fb73ed545d0427aea251fae6d55124f0e7c Mon Sep 17 00:00:00 2001
+From: Martin Wilck <mwilck@suse.com>
+Date: Fri, 21 Jan 2022 10:44:26 +0100
+Subject: [PATCH] udevadm: cleanup_dir: use dot_or_dot_dot()
+
+which is safer than just checking dent[0].
+Also, fix two style issues.
+
+(cherry picked from commit 28d6e8545151d413f8614db9fa790f9f9edbb045)
+(cherry picked from commit 494e3c0def197abd4ec88f7b0c3ba331a708d81e)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/75ff2fb73ed545d0427aea251fae6d55124f0e7c
+---
+ src/udev/udevadm-info.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/udev/udevadm-info.c b/src/udev/udevadm-info.c
+index fa7f04f14c..f05363150e 100644
+--- a/src/udev/udevadm-info.c
++++ b/src/udev/udevadm-info.c
+@@ -224,12 +224,14 @@ static void cleanup_dir(DIR *dir, mode_t mask, int depth) {
+         if (depth <= 0)
+                 return;
+ 
++        assert(dir);
++
+         FOREACH_DIRENT_ALL(dent, dir, break) {
+                 struct stat stats;
+ 
+-                if (dent->d_name[0] == '.')
++                if (dot_or_dot_dot(dent->d_name))
+                         continue;
+-                if (fstatat(dirfd(dir), dent->d_name, &stats, AT_SYMLINK_NOFOLLOW) != 0)
++                if (fstatat(dirfd(dir), dent->d_name, &stats, AT_SYMLINK_NOFOLLOW) < 0)
+                         continue;
+                 if ((stats.st_mode & mask) != 0)
+                         continue;
+-- 
+2.33.0
+

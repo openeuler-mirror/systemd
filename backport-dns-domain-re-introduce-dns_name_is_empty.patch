@@ -1,0 +1,32 @@
+From 435a9af906c02d8024811311b012c9d7a2400009 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 24 Jan 2022 06:06:55 +0900
+Subject: [PATCH] dns-domain: re-introduce dns_name_is_empty()
+
+(cherry picked from commit 7bdf41983044268b4bc2f9d34462db7f89ba284a)
+(cherry picked from commit df08c12062dfd9903edec371598412a47a3055e0)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/435a9af906c02d8024811311b012c9d7a2400009
+---
+ src/shared/dns-domain.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/shared/dns-domain.h b/src/shared/dns-domain.h
+index c25fcaacc2..24bf00bd58 100644
+--- a/src/shared/dns-domain.h
++++ b/src/shared/dns-domain.h
+@@ -60,6 +60,10 @@ static inline int dns_name_is_valid_ldh(const char *s) {
+         return 1;
+ }
+ 
++static inline bool dns_name_is_empty(const char *s) {
++        return isempty(s) || streq(s, ".");
++}
++
+ void dns_name_hash_func(const char *s, struct siphash *state);
+ int dns_name_compare_func(const char *a, const char *b);
+ extern const struct hash_ops dns_name_hash_ops;
+-- 
+2.33.0
+

@@ -1,0 +1,36 @@
+From b246b5370e95756e9597d8ec967ae030b442e73f Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Tue, 7 Sep 2021 16:13:56 +0100
+Subject: [PATCH] core: Parse log environment settings again after applying
+ manager environment
+
+Currently, SYSTEMD_LOG_LEVEL set in the ManagerEnvironment property in system.conf
+or user.conf doesn't affect the manager's logging level. Parsing the logging environment
+variables again after pushing the manager environment into the process environment
+block makes sure any new environment changes also get taken into account for logging.
+
+(cherry picked from commit a4303b4096d9a75acd09c5b897ed3d20c9bca6de)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/b246b5370e95756e9597d8ec967ae030b442e73f
+---
+ src/core/main.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/core/main.c b/src/core/main.c
+index b32a19a1d8..c64c73883e 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -2454,6 +2454,9 @@ static int parse_configuration(const struct rlimit *saved_rlimit_nofile,
+         /* Push variables into the manager environment block */
+         setenv_manager_environment();
+ 
++        /* Parse log environment variables again to take into account any new environment variables. */
++        log_parse_environment();
++
+         return 0;
+ }
+ 
+-- 
+2.33.0
+

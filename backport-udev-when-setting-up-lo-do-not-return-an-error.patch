@@ -1,0 +1,56 @@
+From 5f2582e23f10b46052c7f83b85c1f85184b4cd0f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Mon, 26 Jul 2021 11:46:12 +0200
+Subject: [PATCH] udev: when setting up lo, do not return an error
+
+From #20300:
+> commit 70f32a260b5ebb68c19ecadf5d69b3844896ba55
+> Author: Yu Watanabe <watanabe.yu+github@gmail.com>
+> Date:   Sun May 23 16:59:40 2021 +0900
+
+>     udev/net: do not manage loopback interfaces
+
+>     There are nothing we can configure in udevd for loopback interfaces;
+>     no ethertool configs can be applied, MAC address, interface name should
+
+> introduced a regression for 'udevadm test-builtin net_setup_link /sys/class/net/lo/'.
+> Prior to this commit this command would exit with 0 whereas after this commit
+> it exists with 1. This causes cloud-init on Archlinux to fail as this command
+> is run by it and likely also netplan to have networkd rescan and re-apply a
+> bunch of things on NICs.
+
+I think it's reasonable to keep returning 0 here: we are intentatinally doing
+nothing for the device, and that is not an error, but a (noop) success.
+
+Fixes #20300.
+
+(cherry picked from commit b4f0261337c91157231452b5a258799391d7ae51)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/5f2582e23f10b46052c7f83b85c1f85184b4cd0f
+---
+ src/udev/udev-builtin-net_setup_link.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/udev/udev-builtin-net_setup_link.c b/src/udev/udev-builtin-net_setup_link.c
+index d40251331c..5964e30bf1 100644
+--- a/src/udev/udev-builtin-net_setup_link.c
++++ b/src/udev/udev-builtin-net_setup_link.c
+@@ -28,10 +28,12 @@ static int builtin_net_setup_link(sd_device *dev, int argc, char **argv, bool te
+ 
+         r = link_config_get(ctx, dev, &link);
+         if (r < 0) {
+-                if (r == -ENOENT)
+-                        return log_device_debug_errno(dev, r, "No matching link configuration found.");
+                 if (r == -ENODEV)
+                         return log_device_debug_errno(dev, r, "Link vanished while searching for configuration for it.");
++                if (r == -ENOENT) {
++                        log_device_debug_errno(dev, r, "No matching link configuration found, ignoring device.");
++                        return 0;
++                }
+ 
+                 return log_device_error_errno(dev, r, "Failed to get link config: %m");
+         }
+-- 
+2.33.0
+

@@ -1,0 +1,53 @@
+From dd6cb364bcc58b390671d4ee2ed7b30f4a5dced8 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 16 Sep 2021 11:31:52 +0200
+Subject: [PATCH] test-fileio: test read_virtual_file() with more files from
+ /proc
+
+i.e. let's pick some files we know are too large, or where struct stat's
+.st_size is zero even though non-empty, and test read_virtual_file()
+with that, to ensure things are handled sensibly. Goal is to ensure all
+three major codepaths in read_virtual_file() are tested.
+
+Prompted-by: #20743
+(cherry picked from commit f3b751220bb842ce22a4f607d817f481f0961d40)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/dd6cb364bcc58b390671d4ee2ed7b30f4a5dced8
+---
+ src/test/test-fileio.c | 12 ++++++++++--
+ 1 file changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/src/test/test-fileio.c b/src/test/test-fileio.c
+index 321b544448..c8d5bf6914 100644
+--- a/src/test/test-fileio.c
++++ b/src/test/test-fileio.c
+@@ -1028,7 +1028,11 @@ static void test_read_virtual_file(size_t max_size) {
+         FOREACH_STRING(filename,
+                        "/proc/1/cmdline",
+                        "/etc/nsswitch.conf",
+-                       "/sys/kernel/uevent_seqnum") {
++                       "/sys/kernel/uevent_seqnum",
++                       "/proc/kcore",
++                       "/proc/kallsyms",
++                       "/proc/self/exe",
++                       "/proc/self/pagemap") {
+ 
+                 _cleanup_free_ char *buf = NULL;
+                 size_t size = 0;
+@@ -1036,7 +1040,11 @@ static void test_read_virtual_file(size_t max_size) {
+                 r = read_virtual_file(filename, max_size, &buf, &size);
+                 if (r < 0) {
+                         log_info_errno(r, "read_virtual_file(\"%s\", %zu): %m", filename, max_size);
+-                        assert_se(ERRNO_IS_PRIVILEGE(r) || r == -ENOENT);
++                        assert_se(ERRNO_IS_PRIVILEGE(r) || /* /proc/kcore is not accessible to unpriv */
++                                  IN_SET(r,
++                                         -ENOENT,  /* Some of the files might be absent */
++                                         -EINVAL,  /* too small reads from /proc/self/pagemap trigger EINVAL */
++                                         -EFBIG)); /* /proc/kcore and /proc/self/pagemap should be too large */
+                 } else
+                         log_info("read_virtual_file(\"%s\", %zu): %s (%zu bytes)", filename, max_size, r ? "non-truncated" : "truncated", size);
+         }
+-- 
+2.33.0
+

@@ -1,0 +1,52 @@
+From 0c8195d673f46ab41ffbf7bb0eb54b53f202bb3f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Sat, 13 Nov 2021 16:08:25 +0100
+Subject: [PATCH] seccomp: move mprotect to @default
+
+With glibc-2.34.9000-17.fc36.x86_64, dynamically programs newly fail in early
+init with a restrictive syscall filter that does not include @system-service.
+I think this is caused by 2dd87703d4386f2776c5b5f375a494c91d7f9fe4:
+
+Author: Florian Weimer <fweimer@redhat.com>
+Date:   Mon May 10 10:31:41 2021 +0200
+
+    nptl: Move changing of stack permissions into ld.so
+
+    All the stack lists are now in _rtld_global, so it is possible
+    to change stack permissions directly from there, instead of
+    calling into libpthread to do the change.
+
+It seems that this call will now be very widely used, so let's just move it to
+default to avoid too many failures.
+
+(cherry picked from commit 4728625490b70ac4a686b1655c08ad3fe7b97359)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/0c8195d673f46ab41ffbf7bb0eb54b53f202bb3f
+---
+ src/shared/seccomp-util.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shared/seccomp-util.c b/src/shared/seccomp-util.c
+index 31d6b542c0..2d73354e1a 100644
+--- a/src/shared/seccomp-util.c
++++ b/src/shared/seccomp-util.c
+@@ -324,6 +324,7 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
+                 "membarrier\0"
+                 "mmap\0"
+                 "mmap2\0"
++                "mprotect\0"
+                 "munmap\0"
+                 "nanosleep\0"
+                 "pause\0"
+@@ -864,7 +865,6 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
+                 "ioprio_get\0"
+                 "kcmp\0"
+                 "madvise\0"
+-                "mprotect\0"
+                 "mremap\0"
+                 "name_to_handle_at\0"
+                 "oldolduname\0"
+-- 
+2.33.0
+

@@ -1,0 +1,63 @@
+From 8ece102d314cfe92aaa7a7afc853b6921da941c4 Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Thu, 30 Dec 2021 00:54:32 +0000
+Subject: [PATCH] systemd-run: ensure error logs suggest to use '--user' when
+ appropriate
+
+Before:
+
+$ systemd-run --service-type=notify --user false
+Job for run-rc3fe52ee6ddd4a6eaaf1a20e0a949cdf.service failed because the control process exited with error code.
+See "systemctl status run-rc3fe52ee6ddd4a6eaaf1a20e0a949cdf.service" and "journalctl -xeu run-rc3fe52ee6ddd4a6eaaf1a20e0a949cdf.service" for details.
+
+After:
+
+$ systemd-run --service-type=notify --user false
+Job for run-r7791e380a7b6400ea01d6a0e5a458b23.service failed because the control process exited with error code.
+See "systemctl --user status run-r7791e380a7b6400ea01d6a0e5a458b23.service" and "journalctl --user -xeu run-r7791e380a7b6400ea01d6a0e5a458b23.service" for details.
+
+Fixes https://github.com/systemd/systemd/issues/21933
+
+(cherry picked from commit 466f2351bbb5c0fdc9f153e35506570e59b14c5f)
+(cherry picked from commit b59615dc76cf82bd1fca301220ee0b7961cbcacd)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/8ece102d314cfe92aaa7a7afc853b6921da941c4
+---
+ src/run/run.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/run/run.c b/src/run/run.c
+index 9a7e1efaca..c858bf793d 100644
+--- a/src/run/run.c
++++ b/src/run/run.c
+@@ -1228,7 +1228,7 @@ static int start_transient_service(
+                 if (r < 0)
+                         return bus_log_parse_error(r);
+ 
+-                r = bus_wait_for_jobs_one(w, object, arg_quiet, NULL);
++                r = bus_wait_for_jobs_one(w, object, arg_quiet, arg_user ? STRV_MAKE_CONST("--user") : NULL);
+                 if (r < 0)
+                         return r;
+         }
+@@ -1473,7 +1473,7 @@ static int start_transient_scope(sd_bus *bus) {
+         if (r < 0)
+                 return bus_log_parse_error(r);
+ 
+-        r = bus_wait_for_jobs_one(w, object, arg_quiet, NULL);
++        r = bus_wait_for_jobs_one(w, object, arg_quiet, arg_user ? STRV_MAKE_CONST("--user") : NULL);
+         if (r < 0)
+                 return r;
+ 
+@@ -1693,7 +1693,7 @@ static int start_transient_trigger(
+         if (r < 0)
+                 return bus_log_parse_error(r);
+ 
+-        r = bus_wait_for_jobs_one(w, object, arg_quiet, NULL);
++        r = bus_wait_for_jobs_one(w, object, arg_quiet, arg_user ? STRV_MAKE_CONST("--user") : NULL);
+         if (r < 0)
+                 return r;
+ 
+-- 
+2.33.0
+

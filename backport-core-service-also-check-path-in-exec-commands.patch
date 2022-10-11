@@ -1,17 +1,21 @@
-From 8688a389cabdff61efe187bb85cc1776de03c460 Mon Sep 17 00:00:00 2001
+From b3978cf401306a793c7531299a5e9b3c63e53a27 Mon Sep 17 00:00:00 2001
 From: Yu Watanabe <watanabe.yu+github@gmail.com>
 Date: Wed, 6 Oct 2021 00:19:41 +0900
-Subject: [PATCH 2/2] core/service: also check path in exec commands
+Subject: [PATCH] core/service: also check path in exec commands
 
+(cherry picked from commit 8688a389cabdff61efe187bb85cc1776de03c460)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/b3978cf401306a793c7531299a5e9b3c63e53a27
 ---
  src/core/service.c | 8 +++++++-
  1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/src/core/service.c b/src/core/service.c
-index 4c75819a8f..54d8d0c760 100644
+index e061d488c7..701c145565 100644
 --- a/src/core/service.c
 +++ b/src/core/service.c
-@@ -567,11 +567,17 @@ static int service_verify(Service *s) {
+@@ -551,11 +551,17 @@ static int service_verify(Service *s) {
          for (ServiceExecCommand c = 0; c < _SERVICE_EXEC_COMMAND_MAX; c++) {
                  ExecCommand *command;
  
@@ -31,5 +35,5 @@ index 4c75819a8f..54d8d0c760 100644
  
          if (!s->exec_command[SERVICE_EXEC_START] && !s->exec_command[SERVICE_EXEC_STOP] &&
 -- 
-2.27.0
+2.33.0
 

@@ -1,0 +1,107 @@
+From 31f64a65423414bf1d11fc9035450e9b6256858c Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 3 Jan 2022 03:44:50 +0900
+Subject: [PATCH] missing-syscall: add __NR_openat2
+
+(cherry picked from commit d96ad9e8cb9fc8a9adfeebf69a645b809705daa0)
+(cherry picked from commit cd88d010e862d26ce816eb3bd6735a80999ac41e)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/31f64a65423414bf1d11fc9035450e9b6256858c
+---
+ src/basic/missing_syscall_def.h | 66 +++++++++++++++++++++++++++++++++
+ src/basic/missing_syscalls.py   |  1 +
+ 2 files changed, 67 insertions(+)
+
+diff --git a/src/basic/missing_syscall_def.h b/src/basic/missing_syscall_def.h
+index 6a48c2a0c5..29dfd2e5fa 100644
+--- a/src/basic/missing_syscall_def.h
++++ b/src/basic/missing_syscall_def.h
+@@ -679,6 +679,72 @@ assert_cc(__NR_open_tree == systemd_NR_open_tree);
+ #  endif
+ #endif
+ 
++#ifndef __IGNORE_openat2
++#  if defined(__aarch64__)
++#    define systemd_NR_openat2 437
++#  elif defined(__alpha__)
++#    define systemd_NR_openat2 547
++#  elif defined(__arc__) || defined(__tilegx__)
++#    define systemd_NR_openat2 437
++#  elif defined(__arm__)
++#    define systemd_NR_openat2 437
++#  elif defined(__i386__)
++#    define systemd_NR_openat2 437
++#  elif defined(__ia64__)
++#    define systemd_NR_openat2 1461
++#  elif defined(__loongarch64)
++#    define systemd_NR_openat2 437
++#  elif defined(__m68k__)
++#    define systemd_NR_openat2 437
++#  elif defined(_MIPS_SIM)
++#    if _MIPS_SIM == _MIPS_SIM_ABI32
++#      define systemd_NR_openat2 4437
++#    elif _MIPS_SIM == _MIPS_SIM_NABI32
++#      define systemd_NR_openat2 6437
++#    elif _MIPS_SIM == _MIPS_SIM_ABI64
++#      define systemd_NR_openat2 5437
++#    else
++#      error "Unknown MIPS ABI"
++#    endif
++#  elif defined(__powerpc__)
++#    define systemd_NR_openat2 437
++#  elif defined(__riscv)
++#    if __riscv_xlen == 32
++#      define systemd_NR_openat2 437
++#    elif __riscv_xlen == 64
++#      define systemd_NR_openat2 437
++#    else
++#      error "Unknown RISC-V ABI"
++#    endif
++#  elif defined(__s390__)
++#    define systemd_NR_openat2 437
++#  elif defined(__sparc__)
++#    define systemd_NR_openat2 437
++#  elif defined(__x86_64__)
++#    if defined(__ILP32__)
++#      define systemd_NR_openat2 (437 | /* __X32_SYSCALL_BIT */ 0x40000000)
++#    else
++#      define systemd_NR_openat2 437
++#    endif
++#  elif !defined(missing_arch_template)
++#    warning "openat2() syscall number is unknown for your architecture"
++#  endif
++
++/* may be an (invalid) negative number due to libseccomp, see PR 13319 */
++#  if defined __NR_openat2 && __NR_openat2 >= 0
++#    if defined systemd_NR_openat2
++assert_cc(__NR_openat2 == systemd_NR_openat2);
++#    endif
++#  else
++#    if defined __NR_openat2
++#      undef __NR_openat2
++#    endif
++#    if defined systemd_NR_openat2 && systemd_NR_openat2 >= 0
++#      define __NR_openat2 systemd_NR_openat2
++#    endif
++#  endif
++#endif
++
+ #ifndef __IGNORE_pidfd_open
+ #  if defined(__aarch64__)
+ #    define systemd_NR_pidfd_open 434
+diff --git a/src/basic/missing_syscalls.py b/src/basic/missing_syscalls.py
+index 19f9726d4e..dd458994f2 100644
+--- a/src/basic/missing_syscalls.py
++++ b/src/basic/missing_syscalls.py
+@@ -16,6 +16,7 @@ SYSCALLS = [
+     'move_mount',
+     'name_to_handle_at',
+     'open_tree',
++    'openat2',
+     'pidfd_open',
+     'pidfd_send_signal',
+     'pkey_mprotect',
+-- 
+2.33.0
+

@@ -1,0 +1,148 @@
+From d7ff7e3b6e2bd9eee809880d3632b293097e22e7 Mon Sep 17 00:00:00 2001
+From: Tobias Stoeckmann <tobias@stoeckmann.org>
+Date: Wed, 2 Mar 2022 22:03:26 +0100
+Subject: [PATCH] core: check size before mmap
+
+The data type off_t can be 64 on 32 bit systems if they have large
+file support. Since mmap expects a size_t with 32 bits as second
+argument truncation could occur. At worst these huge files could
+lead to mmaps smaller than the previous check for small files.
+
+This in turn shouldn't have a lot of impact because mmap allocates
+at page size boundaries. This also made the PAGE_ALIGN call in
+open_mmap unneeded. In fact it was neither in sync with other mmap
+calls nor with its own munmap counterpart in error path.
+
+If such large files are encountered, which is very unlikely in these
+code paths, treat them with the same error as if they are too small.
+
+(cherry picked from commit 1a823cdeb9faea3849843e0b3dae0fbdd607e8b7)
+(cherry picked from commit 6b37adf4a16c8f7e917dfd9f19dab259cda878b2)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/d7ff7e3b6e2bd9eee809880d3632b293097e22e7
+---
+ src/basic/fileio.h                   | 6 ++++++
+ src/basic/locale-util.c              | 4 ++++
+ src/boot/bootctl.c                   | 2 +-
+ src/libsystemd/sd-hwdb/sd-hwdb.c     | 4 ++++
+ src/libsystemd/sd-journal/catalog.c  | 4 ++--
+ src/libsystemd/sd-journal/compress.c | 4 ++++
+ 6 files changed, 21 insertions(+), 3 deletions(-)
+
+diff --git a/src/basic/fileio.h b/src/basic/fileio.h
+index 9bd2037f5b..ee356ddb02 100644
+--- a/src/basic/fileio.h
++++ b/src/basic/fileio.h
+@@ -112,6 +112,12 @@ typedef enum ReadLineFlags {
+ 
+ int read_line_full(FILE *f, size_t limit, ReadLineFlags flags, char **ret);
+ 
++static inline bool file_offset_beyond_memory_size(off_t x) {
++        if (x < 0) /* off_t is signed, filter that out */
++                return false;
++        return (uint64_t) x > (uint64_t) SIZE_MAX;
++}
++
+ static inline int read_line(FILE *f, size_t limit, char **ret) {
+         return read_line_full(f, limit, 0, ret);
+ }
+diff --git a/src/basic/locale-util.c b/src/basic/locale-util.c
+index fd6b01cfaa..b181646abe 100644
+--- a/src/basic/locale-util.c
++++ b/src/basic/locale-util.c
+@@ -15,6 +15,7 @@
+ #include "dirent-util.h"
+ #include "env-util.h"
+ #include "fd-util.h"
++#include "fileio.h"
+ #include "hashmap.h"
+ #include "locale-util.h"
+ #include "path-util.h"
+@@ -113,6 +114,9 @@ static int add_locales_from_archive(Set *locales) {
+         if (st.st_size < (off_t) sizeof(struct locarhead))
+                 return -EBADMSG;
+ 
++        if (file_offset_beyond_memory_size(st.st_size))
++                return -EFBIG;
++
+         p = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+         if (p == MAP_FAILED)
+                 return -errno;
+diff --git a/src/boot/bootctl.c b/src/boot/bootctl.c
+index bd96812246..d6eb6d00a5 100644
+--- a/src/boot/bootctl.c
++++ b/src/boot/bootctl.c
+@@ -145,7 +145,7 @@ static int get_file_version(int fd, char **v) {
+         if (r < 0)
+                 return log_error_errno(r, "EFI binary is not a regular file: %m");
+ 
+-        if (st.st_size < 27) {
++        if (st.st_size < 27 || file_offset_beyond_memory_size(st.st_size)) {
+                 *v = NULL;
+                 return 0;
+         }
+diff --git a/src/libsystemd/sd-hwdb/sd-hwdb.c b/src/libsystemd/sd-hwdb/sd-hwdb.c
+index 53601765fe..748cf26934 100644
+--- a/src/libsystemd/sd-hwdb/sd-hwdb.c
++++ b/src/libsystemd/sd-hwdb/sd-hwdb.c
+@@ -15,6 +15,7 @@
+ 
+ #include "alloc-util.h"
+ #include "fd-util.h"
++#include "fileio.h"
+ #include "hashmap.h"
+ #include "hwdb-internal.h"
+ #include "nulstr-util.h"
+@@ -312,6 +313,9 @@ _public_ int sd_hwdb_new(sd_hwdb **ret) {
+         if (hwdb->st.st_size < (off_t) offsetof(struct trie_header_f, strings_len) + 8)
+                 return log_debug_errno(SYNTHETIC_ERRNO(EIO),
+                                        "File %s is too short: %m", hwdb_bin_path);
++        if (file_offset_beyond_memory_size(hwdb->st.st_size))
++                return log_debug_errno(SYNTHETIC_ERRNO(EFBIG),
++                                       "File %s is too long: %m", hwdb_bin_path);
+ 
+         hwdb->map = mmap(0, hwdb->st.st_size, PROT_READ, MAP_SHARED, fileno(hwdb->f), 0);
+         if (hwdb->map == MAP_FAILED)
+diff --git a/src/libsystemd/sd-journal/catalog.c b/src/libsystemd/sd-journal/catalog.c
+index ce8d47ccc3..f2ad1a2039 100644
+--- a/src/libsystemd/sd-journal/catalog.c
++++ b/src/libsystemd/sd-journal/catalog.c
+@@ -524,10 +524,10 @@ static int open_mmap(const char *database, int *_fd, struct stat *_st, void **_p
+         if (fstat(fd, &st) < 0)
+                 return -errno;
+ 
+-        if (st.st_size < (off_t) sizeof(CatalogHeader))
++        if (st.st_size < (off_t) sizeof(CatalogHeader) || file_offset_beyond_memory_size(st.st_size))
+                 return -EINVAL;
+ 
+-        p = mmap(NULL, PAGE_ALIGN(st.st_size), PROT_READ, MAP_SHARED, fd, 0);
++        p = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+         if (p == MAP_FAILED)
+                 return -errno;
+ 
+diff --git a/src/libsystemd/sd-journal/compress.c b/src/libsystemd/sd-journal/compress.c
+index 837abab76c..cb2e82667f 100644
+--- a/src/libsystemd/sd-journal/compress.c
++++ b/src/libsystemd/sd-journal/compress.c
+@@ -25,6 +25,7 @@
+ #include "alloc-util.h"
+ #include "compress.h"
+ #include "fd-util.h"
++#include "fileio.h"
+ #include "io-util.h"
+ #include "journal-def.h"
+ #include "macro.h"
+@@ -807,6 +808,9 @@ int decompress_stream_lz4(int in, int out, uint64_t max_bytes) {
+         if (fstat(in, &st) < 0)
+                 return log_debug_errno(errno, "fstat() failed: %m");
+ 
++        if (file_offset_beyond_memory_size(st.st_size))
++                return -EFBIG;
++
+         buf = malloc(LZ4_BUFSIZE);
+         if (!buf)
+                 return -ENOMEM;
+-- 
+2.33.0
+

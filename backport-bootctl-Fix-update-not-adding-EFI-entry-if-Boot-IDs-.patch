@@ -1,0 +1,45 @@
+From 0028a3eb976dfa7209433dfa3a24b785f05fd352 Mon Sep 17 00:00:00 2001
+From: Anssi Hannula <anssi.hannula@bitwise.fi>
+Date: Thu, 23 Sep 2021 12:08:05 +0300
+Subject: [PATCH] bootctl: Fix update not adding EFI entry if Boot IDs are
+ non-consecutive
+
+"bootctl update" tries to add sd-boot to the EFI boot loader list if it
+is not already there. To do so, it uses find_slot() which finds the
+proper BootXXXX slot ID to use and also returns 1 if an existing sd-boot
+entry was found at this ID or 0 if it is a new unused ID. In "update"
+case install_variables() only writes the entry in case 0 (no existing
+entry).
+
+However, find_slot() erroneously returns 1 if it finds a gap in the Boot
+IDs (i.e. when not resorting to max(ids) + 1). This causes
+"bootctl update" to not add a missing systemd-boot boot entry if the
+existing BootXXXX entry IDs are not consecutive.
+
+Fix that by returning 0 in find_slot() when an empty gap ID is selected
+to make it match the behavior when selecting an empty non-gap ID.
+
+(cherry picked from commit 26d54e1263dcb58daa6578595cc6ab1037315593)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/0028a3eb976dfa7209433dfa3a24b785f05fd352
+---
+ src/boot/bootctl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/boot/bootctl.c b/src/boot/bootctl.c
+index fa8c600321..bd96812246 100644
+--- a/src/boot/bootctl.c
++++ b/src/boot/bootctl.c
+@@ -711,7 +711,7 @@ static int find_slot(sd_id128_t uuid, const char *path, uint16_t *id) {
+         for (i = 0; i < n; i++)
+                 if (i != options[i]) {
+                         *id = i;
+-                        return 1;
++                        return 0;
+                 }
+ 
+         /* use the next one */
+-- 
+2.33.0
+

@@ -1,0 +1,32 @@
+From 7b9aa956fbf9fc342a4e35fbcf90e7083cccbf6c Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 10 Feb 2022 17:47:14 +0900
+Subject: [PATCH] network: bridge: fix endian of vlan protocol
+
+Fixes #22469.
+
+(cherry picked from commit 6eb35be8e0fa5f1f00dddd558cf4dc3642d9e53e)
+(cherry picked from commit 514a4c051ce6cceaa5417a2044e708bd5105131d)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7b9aa956fbf9fc342a4e35fbcf90e7083cccbf6c
+---
+ src/network/netdev/bridge.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/network/netdev/bridge.c b/src/network/netdev/bridge.c
+index 99fb9e1c3c..b9a0136843 100644
+--- a/src/network/netdev/bridge.c
++++ b/src/network/netdev/bridge.c
+@@ -126,7 +126,7 @@ static int netdev_bridge_post_create(NetDev *netdev, Link *link, sd_netlink_mess
+         }
+ 
+         if (b->vlan_protocol >= 0) {
+-                r = sd_netlink_message_append_u16(req, IFLA_BR_VLAN_PROTOCOL, b->vlan_protocol);
++                r = sd_netlink_message_append_u16(req, IFLA_BR_VLAN_PROTOCOL, htobe16(b->vlan_protocol));
+                 if (r < 0)
+                         return log_netdev_error_errno(netdev, r, "Could not append IFLA_BR_VLAN_PROTOCOL attribute: %m");
+         }
+-- 
+2.33.0
+

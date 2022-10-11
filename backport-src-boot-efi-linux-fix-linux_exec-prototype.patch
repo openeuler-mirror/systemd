@@ -1,0 +1,48 @@
+From a825ced57fa8533ba54fec4c4476400e122ddbc3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alfonso=20S=C3=A1nchez-Beato?=
+ <alfonso.sanchez-beato@canonical.com>
+Date: Thu, 19 Aug 2021 12:21:12 +0200
+Subject: [PATCH] src/boot/efi/linux: fix linux_exec prototype
+
+Callers to linux_exec() are actually passing an EFI_HANDLE, not a pointer to
+it. linux_efi_handover(), which is called by linux_exec(), also expects an
+EFI_HANDLE.
+
+(cherry picked from commit d48f9174cf211a235193963a06b3d28537fc6529)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/a825ced57fa8533ba54fec4c4476400e122ddbc3
+---
+ src/boot/efi/linux.c | 2 +-
+ src/boot/efi/linux.h | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/boot/efi/linux.c b/src/boot/efi/linux.c
+index 4d44671315..b5d6120493 100644
+--- a/src/boot/efi/linux.c
++++ b/src/boot/efi/linux.c
+@@ -25,7 +25,7 @@ static VOID linux_efi_handover(EFI_HANDLE image, struct boot_params *params) {
+         handover(image, ST, params);
+ }
+ 
+-EFI_STATUS linux_exec(EFI_HANDLE *image,
++EFI_STATUS linux_exec(EFI_HANDLE image,
+                       CHAR8 *cmdline, UINTN cmdline_len,
+                       UINTN linux_addr,
+                       UINTN initrd_addr, UINTN initrd_size) {
+diff --git a/src/boot/efi/linux.h b/src/boot/efi/linux.h
+index 09be2de27b..53270e16b3 100644
+--- a/src/boot/efi/linux.h
++++ b/src/boot/efi/linux.h
+@@ -83,7 +83,7 @@ struct boot_params {
+         UINT8  _pad9[276];
+ } __attribute__((packed));
+ 
+-EFI_STATUS linux_exec(EFI_HANDLE *image,
++EFI_STATUS linux_exec(EFI_HANDLE image,
+                       CHAR8 *cmdline, UINTN cmdline_size,
+                       UINTN linux_addr,
+                       UINTN initrd_addr, UINTN initrd_size);
+-- 
+2.33.0
+

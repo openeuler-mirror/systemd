@@ -1,0 +1,32 @@
+From fc88dc07544978b1bda9c192481a07d43d384f81 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 7 Sep 2021 21:46:50 +0900
+Subject: [PATCH] network: fix wrong flag: manage_foreign_routes ->
+ manage_foreign_rules
+
+Fixes a bug in d94dfe7053d49fa62c4bfc07b7f3fc2227c10aff.
+
+(cherry picked from commit 771a36439e955906290afc16a6fb3b10401892cf)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/fc88dc07544978b1bda9c192481a07d43d384f81
+---
+ src/network/networkd-routing-policy-rule.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/network/networkd-routing-policy-rule.c b/src/network/networkd-routing-policy-rule.c
+index 03ccbd8e85..b7e0fd779d 100644
+--- a/src/network/networkd-routing-policy-rule.c
++++ b/src/network/networkd-routing-policy-rule.c
+@@ -1115,7 +1115,7 @@ int manager_rtnl_process_rule(sd_netlink *rtnl, sd_netlink_message *message, Man
+                         r = routing_policy_rule_update_priority(rule, tmp->priority);
+                         if (r < 0)
+                                 log_warning_errno(r, "Failed to update priority of remembered routing policy rule, ignoring: %m");
+-                } else if (!m->manage_foreign_routes)
++                } else if (!m->manage_foreign_rules)
+                         log_routing_policy_rule_debug(tmp, "Ignoring received foreign", NULL, m);
+                 else {
+                         log_routing_policy_rule_debug(tmp, "Remembering foreign", NULL, m);
+-- 
+2.33.0
+

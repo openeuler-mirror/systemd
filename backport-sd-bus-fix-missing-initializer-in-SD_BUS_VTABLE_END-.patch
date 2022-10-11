@@ -1,0 +1,93 @@
+From cdaf655f73bb3be10d47ab6f00d71a8d0b1a81e3 Mon Sep 17 00:00:00 2001
+From: Matthijs van Duin <matthijsvanduin@gmail.com>
+Date: Wed, 21 Jul 2021 11:10:36 +0200
+Subject: [PATCH] sd-bus: fix missing initializer in SD_BUS_VTABLE_END (#20253)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When two fields were added to the vtable.x.start struct, no initializers
+for these were added to SD_BUS_VTABLE_END which also (ab)used that
+struct (albeit sneakily by using non-designated initialization).
+
+While C tolerates this, C++ prohibits these missing initializers, and
+both g++ and clang++ will complain when using -Wextra.
+
+This patch gives SD_BUS_VTABLE_END its own case in the union and
+clarifies its initialization.
+
+I tested the behaviour of g++ 10.2 and clang 11 in various cases. Both will warn
+(-Wmissing-field-initializers, implied by -Wextra) if you provide initializers for some
+but not all fields of a struct. Declaring x.end as empty struct or using an empty initializer
+{} to initialize the union or one of its members is valid C++ but not C, although both gcc
+and clang accept it without warning (even at -Wall -Wextra -std=c90/c++11) unless you
+use -pedantic (which requires -std=c99/c++2a to support designated initializers).
+
+Interestingly, .x = { .start = { 0, 0, NULL } } is the only initializer I found for the union
+(among candidates for SD_BUS_VTABLE_END) where gcc doesn't zero-fill it entirely
+when allocated on stack, it looked like it did in all other cases (I only examined this on
+32-bit arm). clang always seems to initialize all bytes of the union.
+
+[zjs: test case:
+$ cat vtable-test.cc
+#include "sd-bus.h"
+
+const sd_bus_vtable vtable[] = {
+   SD_BUS_VTABLE_END
+};
+
+$ g++ -I src/systemd/ -Wall -Wmissing-field-initializers -c vtable-test.cc
+vtable-test.cc:5:1: warning: missing initializer for member ‘sd_bus_vtable::<unnamed union>::<unnamed struct>::features’ [-Wmissing-field-initializers]
+    5 | };
+      | ^
+vtable-test.cc:5:1: warning: missing initializer for member ‘sd_bus_vtable::<unnamed union>::<unnamed struct>::vtable_format_reference’ [-Wmissing-field-initializers]
+
+$ clang++ -I src/systemd/ -Wmissing-field-initializers -c vtable-test.cc
+vtable-test.cc:4:4: warning: missing field 'features' initializer [-Wmissing-field-initializers]
+   SD_BUS_VTABLE_END
+   ^
+src/systemd/sd-bus-vtable.h:188:28: note: expanded from macro 'SD_BUS_VTABLE_END'
+                .x = { { 0 } },                                         \
+                           ^
+1 warning generated.
+
+Both warnings are gone with the patch.]
+
+(cherry picked from commit 654eaa403070d3c897454a5190603fda4071c3ff)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/cdaf655f73bb3be10d47ab6f00d71a8d0b1a81e3
+---
+ src/systemd/sd-bus-vtable.h | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/systemd/sd-bus-vtable.h b/src/systemd/sd-bus-vtable.h
+index 75f8848360..35c942b16c 100644
+--- a/src/systemd/sd-bus-vtable.h
++++ b/src/systemd/sd-bus-vtable.h
+@@ -75,6 +75,9 @@ struct sd_bus_vtable {
+                         uint64_t features;
+                         const unsigned *vtable_format_reference;
+                 } start;
++                struct {
++                        size_t reserved;
++                } end;
+                 struct {
+                         const char *member;
+                         const char *signature;
+@@ -185,7 +188,11 @@ struct sd_bus_vtable {
+         {                                                               \
+                 .type = _SD_BUS_VTABLE_END,                             \
+                 .flags = 0,                                             \
+-                .x = { { 0 } },                                         \
++                .x = {                                                  \
++                    .end = {                                            \
++                        .reserved = 0,                                  \
++                    },                                                  \
++                },                                                      \
+         }
+ 
+ #define _SD_ECHO(X) X
+-- 
+2.33.0
+

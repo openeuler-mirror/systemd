@@ -1,0 +1,48 @@
+From 2f5b486edfdb6dc3d5465fe7569c19560208813c Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Tue, 14 Sep 2021 15:08:46 +0100
+Subject: [PATCH] sd-journal: Don't compare hashes from different journal files
+
+In sd_journal_enumerate_fields(), we check if we've already handled
+a field by checking if we can find it in any of the already processed
+journal files. We do this by calling
+journal_file_find_field_object_with_hash(), which compares the size,
+payload and hash of the given field against all fields in a journal file,
+trying to find a match. However, since we now use per file hash functions,
+hashes for the same fields will differ between different journal files,
+meaning we'll never find an actual match.
+
+To fix the issue(), let's use journal_file_find_field_object() when one
+or more of the files we're comparing is using per file keyed hashes.
+journal_file_find_field_object() only takes the field payload and size
+as arguments and calculates the hash itself using the hash function from
+the journal file we're searching in.
+
+(cherry picked from commit 27bf0ab76e13611dce10210f2a22fb5fba05adbb)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/2f5b486edfdb6dc3d5465fe7569c19560208813c
+---
+ src/libsystemd/sd-journal/sd-journal.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/libsystemd/sd-journal/sd-journal.c b/src/libsystemd/sd-journal/sd-journal.c
+index 5728c537bc..a2fbc1b037 100644
+--- a/src/libsystemd/sd-journal/sd-journal.c
++++ b/src/libsystemd/sd-journal/sd-journal.c
+@@ -3158,7 +3158,11 @@ _public_ int sd_journal_enumerate_fields(sd_journal *j, const char **field) {
+                         if (JOURNAL_HEADER_CONTAINS(of->header, n_fields) && le64toh(of->header->n_fields) <= 0)
+                                 continue;
+ 
+-                        r = journal_file_find_field_object_with_hash(of, o->field.payload, sz, le64toh(o->field.hash), NULL, NULL);
++                        if (!JOURNAL_HEADER_KEYED_HASH(f->header) && !JOURNAL_HEADER_KEYED_HASH(of->header))
++                                r = journal_file_find_field_object_with_hash(of, o->field.payload, sz,
++                                                                             le64toh(o->field.hash), NULL, NULL);
++                        else
++                                r = journal_file_find_field_object(of, o->field.payload, sz, NULL, NULL);
+                         if (r < 0)
+                                 return r;
+                         if (r > 0) {
+-- 
+2.33.0
+

@@ -1,0 +1,55 @@
+From 765c366274db3ff841da237769f2b20a4ec3a045 Mon Sep 17 00:00:00 2001
+From: Sergei Trofimovich <slyfox@gentoo.org>
+Date: Sat, 31 Jul 2021 13:07:54 +0100
+Subject: [PATCH] coredump/stacktrace.c: avoid crash on binaries without NHDR
+
+Observed as a crash on binaries built with gcc-master:
+
+```
+ 3  0x00005573b8841d6a in parse_package_metadata (name=name@entry=0x5573b901a620 "/a", id_json=0x0,
+    elf=0x5573b9028730, c=c@entry=0x7fffc688f790) at ../systemd-stable-249.2/src/coredump/stacktrace.c:157
+ 4  0x00005573b884209e in module_callback (mod=0x7fffc688f6c0, userdata=<optimized out>,
+    name=0x5573b901a620 "/a", start=<optimized out>, arg=0x7fffc688f790)
+    at ../systemd-stable-249.2/src/coredump/stacktrace.c:306
+ 5  0x00007f56d60dcbd5 in dwfl_getmodules (dwfl=0x5573b901fda0,
+    callback=callback@entry=0x5573b8841eb0 <module_callback>, arg=arg@entry=0x7fffc688f790, offset=offset@entry=0)
+    at ../../elfutils-0.185/libdwfl/dwfl_getmodules.c:86
+ 6  0x00005573b884231b in parse_core (ret_package_metadata=0x7fffc688f848, ret=0x7fffc688f850,
+    executable=0x7fffc688f790 "\200\332\001\271sU", fd=21) at ../systemd-stable-249.2/src/coredump/stacktrace.c:366
+ 7  coredump_parse_core (fd=fd@entry=6, executable=0x7fffc688f790 "\200\332\001\271sU", ret=ret@entry=0x7fffc688f850,
+    ret_package_metadata=ret_package_metadata@entry=0x7fffc688f848)
+    at ../systemd-stable-249.2/src/coredump/stacktrace.c:406
+ 8  0x00005573b883f897 in submit_coredump (context=context@entry=0x7fffc688fa10, iovw=iovw@entry=0x7fffc688f990,
+    input_fd=input_fd@entry=5) at ../systemd-stable-249.2/src/coredump/coredump.c:827
+ 9  0x00005573b883d339 in process_socket (fd=3) at ../systemd-stable-249.2/src/coredump/coredump.c:1041
+ 10 run (argv=<optimized out>, argc=-964101648) at ../systemd-stable-249.2/src/coredump/coredump.c:1416
+ 11 main (argc=-964101648, argv=<optimized out>) at ../systemd-stable-249.2/src/coredump/coredump.c:1422
+```
+
+Happens only on enabled elfutils symbolizer.
+
+Signed-off-by: Sergei Trofimovich <slyfox@gentoo.org>
+(cherry picked from commit 1da3eef262078905ec14c707eeab655a17ae8bd2)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/765c366274db3ff841da237769f2b20a4ec3a045
+---
+ src/coredump/stacktrace.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/coredump/stacktrace.c b/src/coredump/stacktrace.c
+index 0edb1b40a7..e46b324cdf 100644
+--- a/src/coredump/stacktrace.c
++++ b/src/coredump/stacktrace.c
+@@ -153,6 +153,8 @@ static int parse_package_metadata(const char *name, JsonVariant *id_json, Elf *e
+                                             program_header->p_offset,
+                                             program_header->p_filesz,
+                                             ELF_T_NHDR);
++                if (!data)
++                        continue;
+ 
+                 while (note_offset < data->d_size &&
+                        (note_offset = gelf_getnote(data, note_offset, &note_header, &name_offset, &desc_offset)) > 0) {
+-- 
+2.33.0
+

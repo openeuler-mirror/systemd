@@ -1,0 +1,29 @@
+From e5c19733785558e6fc17f96e6c18219d46179a2d Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Thu, 9 Dec 2021 12:35:23 +0100
+Subject: [PATCH] mkosi: Build Fedora 35 images
+
+(cherry picked from commit 808b23ecf681c12493cbb84958e75ea300ebbeab)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e5c19733785558e6fc17f96e6c18219d46179a2d
+---
+ .mkosi/mkosi.fedora | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.mkosi/mkosi.fedora b/.mkosi/mkosi.fedora
+index cc3a5a2d1a..3e7462e477 100644
+--- a/.mkosi/mkosi.fedora
++++ b/.mkosi/mkosi.fedora
+@@ -5,7 +5,7 @@
+ 
+ [Distribution]
+ Distribution=fedora
+-Release=34
++Release=35
+ 
+ [Packages]
+ BuildPackages=
+-- 
+2.33.0
+

@@ -1,0 +1,93 @@
+From e8a54526d8a89097742d808a53956a54431ded06 Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Wed, 17 Nov 2021 15:54:35 +0000
+Subject: [PATCH] journal: Skip over corrupt entry items in enumerate_data()
+
+Similar to sd_journal_next(), if trying to access an entry item
+offset's data results in EBADMSG, skip to the next entry item so
+we handle corruption better.
+
+Fixes #21407
+
+(cherry picked from commit 5a94a2bf2b9c9ae362dd4a7c2e6b263c55545036)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e8a54526d8a89097742d808a53956a54431ded06
+---
+ src/libsystemd/sd-journal/sd-journal.c | 47 ++++++++++++++++----------
+ 1 file changed, 29 insertions(+), 18 deletions(-)
+
+diff --git a/src/libsystemd/sd-journal/sd-journal.c b/src/libsystemd/sd-journal/sd-journal.c
+index b3240177cb..02d4582c98 100644
+--- a/src/libsystemd/sd-journal/sd-journal.c
++++ b/src/libsystemd/sd-journal/sd-journal.c
+@@ -2425,10 +2425,8 @@ static int return_data(
+ 
+ _public_ int sd_journal_enumerate_data(sd_journal *j, const void **data, size_t *size) {
+         JournalFile *f;
+-        uint64_t p, n;
+-        le64_t le_hash;
+-        int r;
+         Object *o;
++        int r;
+ 
+         assert_return(j, -EINVAL);
+         assert_return(!journal_pid_changed(j), -ECHILD);
+@@ -2446,26 +2444,39 @@ _public_ int sd_journal_enumerate_data(sd_journal *j, const void **data, size_t
+         if (r < 0)
+                 return r;
+ 
+-        n = journal_file_entry_n_items(o);
+-        if (j->current_field >= n)
+-                return 0;
++        for (uint64_t n = journal_file_entry_n_items(o); j->current_field < n; j->current_field++) {
++                uint64_t p;
++                le64_t le_hash;
+ 
+-        p = le64toh(o->entry.items[j->current_field].object_offset);
+-        le_hash = o->entry.items[j->current_field].hash;
+-        r = journal_file_move_to_object(f, OBJECT_DATA, p, &o);
+-        if (r < 0)
+-                return r;
++                p = le64toh(o->entry.items[j->current_field].object_offset);
++                le_hash = o->entry.items[j->current_field].hash;
++                r = journal_file_move_to_object(f, OBJECT_DATA, p, &o);
++                if (r == -EBADMSG) {
++                        log_debug("Entry item %"PRIu64" data object is bad, skipping over it.", j->current_field);
++                        continue;
++                }
++                if (r < 0)
++                        return r;
+ 
+-        if (le_hash != o->data.hash)
+-                return -EBADMSG;
++                if (le_hash != o->data.hash) {
++                        log_debug("Entry item %"PRIu64" hash is bad, skipping over it.", j->current_field);
++                        continue;
++                }
+ 
+-        r = return_data(j, f, o, data, size);
+-        if (r < 0)
+-                return r;
++                r = return_data(j, f, o, data, size);
++                if (r == -EBADMSG) {
++                        log_debug("Entry item %"PRIu64" data payload is bad, skipping over it.", j->current_field);
++                        continue;
++                }
++                if (r < 0)
++                        return r;
+ 
+-        j->current_field++;
++                j->current_field++;
+ 
+-        return 1;
++                return 1;
++        }
++
++        return 0;
+ }
+ 
+ _public_ int sd_journal_enumerate_available_data(sd_journal *j, const void **data, size_t *size) {
+-- 
+2.33.0
+

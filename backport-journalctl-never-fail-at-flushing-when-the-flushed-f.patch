@@ -1,4 +1,4 @@
-From f6fca35e642a112e80cc9bddb9a2b4805ad40df2 Mon Sep 17 00:00:00 2001
+From dc331f4c9268d17a66f4393cfd0dba14c7022d41 Mon Sep 17 00:00:00 2001
 From: Franck Bui <fbui@suse.com>
 Date: Wed, 4 Aug 2021 11:20:07 +0200
 Subject: [PATCH] journalctl: never fail at flushing when the flushed flag is
@@ -14,15 +14,20 @@ flushed flag anymore.
 
 This patch restores the previous behavior since there's no reason to fail when
 journalctl can figure out that the flush is not necessary.
+
+(cherry picked from commit f6fca35e642a112e80cc9bddb9a2b4805ad40df2)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/dc331f4c9268d17a66f4393cfd0dba14c7022d41
 ---
  src/journal/journalctl.c | 5 +++++
  1 file changed, 5 insertions(+)
 
 diff --git a/src/journal/journalctl.c b/src/journal/journalctl.c
-index 4a2343a63d..73e4fafdff 100644
+index c8fb726d42..3eac97510d 100644
 --- a/src/journal/journalctl.c
 +++ b/src/journal/journalctl.c
-@@ -2064,6 +2064,11 @@ static int simple_varlink_call(const char *option, const char *method) {
+@@ -2074,6 +2074,11 @@ static int simple_varlink_call(const char *option, const char *method) {
  }
  
  static int flush_to_var(void) {
@@ -35,5 +40,5 @@ index 4a2343a63d..73e4fafdff 100644
  }
  
 -- 
-2.27.0
+2.33.0
 

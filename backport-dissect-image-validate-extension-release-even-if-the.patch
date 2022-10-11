@@ -1,0 +1,42 @@
+From 4b14a6aafe45270b50b4a0b75d0cce11a9ac738d Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Wed, 19 Jan 2022 00:01:48 +0000
+Subject: [PATCH] dissect-image: validate extension-release even if the host
+ has only ID in os-release
+
+A rolling distro won't set VERSION_ID or SYSEXT_LEVEL in os-release,
+which means we skip validation of ExtensionImages.
+Validate even with just an ID, the lower level helper already
+recognizes and accepts this use case.
+
+Fixes https://github.com/systemd/systemd/issues/22146
+
+(cherry picked from commit 37361f46d571ad0b71ef99dec6a9b76edbab38bb)
+(cherry picked from commit 0dab9e5f057380322755e90ee4d35716d5bf6232)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/4b14a6aafe45270b50b4a0b75d0cce11a9ac738d
+---
+ src/shared/dissect-image.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/shared/dissect-image.c b/src/shared/dissect-image.c
+index 714baa8572..9b30c86a53 100644
+--- a/src/shared/dissect-image.c
++++ b/src/shared/dissect-image.c
+@@ -3015,9 +3015,9 @@ int verity_dissect_and_mount(
+         /* If we got os-release values from the caller, then we need to match them with the image's
+          * extension-release.d/ content. Return -EINVAL if there's any mismatch.
+          * First, check the distro ID. If that matches, then check the new SYSEXT_LEVEL value if
+-         * available, or else fallback to VERSION_ID. */
+-        if (required_host_os_release_id &&
+-            (required_host_os_release_version_id || required_host_os_release_sysext_level)) {
++         * available, or else fallback to VERSION_ID. If neither is present (eg: rolling release),
++         * then a simple match on the ID will be performed. */
++        if (required_host_os_release_id) {
+                 _cleanup_strv_free_ char **extension_release = NULL;
+ 
+                 r = load_extension_release_pairs(dest, dissected_image->image_name, &extension_release);
+-- 
+2.33.0
+

@@ -1,0 +1,182 @@
+From 2bd5bbbd39d5c825ed520e8282840b76b8f7fc79 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sat, 21 Aug 2021 03:51:39 +0900
+Subject: [PATCH] network: fix logic for checking gateway address is ready
+
+This fixes the followings:
+- The corresponding route or address to the gateway address must be in
+  the same link.
+- IPv6 link local address is not necessary to be reachable.
+
+Fixes an issue reported in https://github.com/systemd/systemd/issues/8686#issuecomment-902562324.
+
+(cherry picked from commit 3333350a0e1917395d3654731ca985ea668bca9b)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/2bd5bbbd39d5c825ed520e8282840b76b8f7fc79
+---
+ src/network/networkd-nexthop.c |  7 +---
+ src/network/networkd-route.c   | 72 ++++++++++++++++++++--------------
+ src/network/networkd-route.h   |  2 +-
+ 3 files changed, 44 insertions(+), 37 deletions(-)
+
+diff --git a/src/network/networkd-nexthop.c b/src/network/networkd-nexthop.c
+index a52e5dcb16..c5cba88f46 100644
+--- a/src/network/networkd-nexthop.c
++++ b/src/network/networkd-nexthop.c
+@@ -791,12 +791,7 @@ static bool nexthop_is_ready_to_configure(Link *link, const NextHop *nexthop) {
+                 }
+         }
+ 
+-        if (nexthop->onlink <= 0 &&
+-            in_addr_is_set(nexthop->family, &nexthop->gw) &&
+-            !manager_address_is_reachable(link->manager, nexthop->family, &nexthop->gw))
+-                return false;
+-
+-        return true;
++        return gateway_is_ready(link, nexthop->onlink, nexthop->family, &nexthop->gw);
+ }
+ 
+ int request_process_nexthop(Request *req) {
+diff --git a/src/network/networkd-route.c b/src/network/networkd-route.c
+index 068915616e..b7852f6eec 100644
+--- a/src/network/networkd-route.c
++++ b/src/network/networkd-route.c
+@@ -753,6 +753,8 @@ static bool prefix_route_address_is_reachable(const Address *a, int family, cons
+ 
+         if (a->family != family)
+                 return false;
++        if (!address_is_ready(a))
++                return false;
+         if (FLAGS_SET(a->flags, IFA_F_NOPREFIXROUTE))
+                 return false;
+         if (in_addr_is_set(a->family, &a->in_addr_peer))
+@@ -766,37 +768,34 @@ static bool prefix_route_address_is_reachable(const Address *a, int family, cons
+                         FAMILY_ADDRESS_SIZE(family) * 8) > 0;
+ }
+ 
+-bool manager_address_is_reachable(Manager *manager, int family, const union in_addr_union *address) {
+-        Link *link;
++static bool link_address_is_reachable(Link *link, int family, const union in_addr_union *address) {
++        Route *route;
+ 
+-        assert(manager);
++        assert(link);
++        assert(link->manager);
+         assert(IN_SET(family, AF_INET, AF_INET6));
+         assert(address);
+ 
+-        HASHMAP_FOREACH(link, manager->links_by_index) {
+-                Route *route;
+ 
+-                SET_FOREACH(route, link->routes)
+-                        if (route_address_is_reachable(route, family, address))
+-                                return true;
+-                SET_FOREACH(route, link->routes_foreign)
+-                        if (route_address_is_reachable(route, family, address))
+-                                return true;
+-        }
++        SET_FOREACH(route, link->routes)
++                if (route_address_is_reachable(route, family, address))
++                        return true;
++        SET_FOREACH(route, link->routes_foreign)
++                if (route_address_is_reachable(route, family, address))
++                        return true;
+ 
+         /* If we do not manage foreign routes, then there may exist a prefix route we do not know,
+          * which was created on configuring an address. Hence, also check the addresses. */
+-        if (!manager->manage_foreign_routes)
+-                HASHMAP_FOREACH(link, manager->links_by_index) {
+-                        Address *a;
+-
+-                        SET_FOREACH(a, link->addresses)
+-                                if (prefix_route_address_is_reachable(a, family, address))
+-                                        return true;
+-                        SET_FOREACH(a, link->addresses_foreign)
+-                                if (prefix_route_address_is_reachable(a, family, address))
+-                                        return true;
+-                }
++        if (!link->manager->manage_foreign_routes) {
++                Address *a;
++
++                SET_FOREACH(a, link->addresses)
++                        if (prefix_route_address_is_reachable(a, family, address))
++                                return true;
++                SET_FOREACH(a, link->addresses_foreign)
++                        if (prefix_route_address_is_reachable(a, family, address))
++                                return true;
++        }
+ 
+         return false;
+ }
+@@ -1692,6 +1691,22 @@ int link_request_static_routes(Link *link, bool only_ipv4) {
+         return 0;
+ }
+ 
++bool gateway_is_ready(Link *link, int onlink, int family, const union in_addr_union *gw) {
++        assert(link);
++        assert(gw);
++
++        if (onlink > 0)
++                return true;
++
++        if (!in_addr_is_set(family, gw))
++                return true;
++
++        if (family == AF_INET6 && in6_addr_is_link_local(&gw->in6))
++                return true;
++
++        return link_address_is_reachable(link, family, gw);
++}
++
+ static int route_is_ready_to_configure(const Route *route, Link *link) {
+         MultipathRoute *m;
+         NextHop *nh = NULL;
+@@ -1735,19 +1750,13 @@ static int route_is_ready_to_configure(const Route *route, Link *link) {
+                         return r;
+         }
+ 
+-        if (route->gateway_onlink <= 0 &&
+-            in_addr_is_set(route->gw_family, &route->gw) > 0 &&
+-            !manager_address_is_reachable(link->manager, route->gw_family, &route->gw))
++        if (!gateway_is_ready(link, route->gateway_onlink, route->gw_family, &route->gw))
+                 return false;
+ 
+         ORDERED_SET_FOREACH(m, route->multipath_routes) {
+                 union in_addr_union a = m->gateway.address;
+                 Link *l = NULL;
+ 
+-                if (route->gateway_onlink <= 0 &&
+-                    !manager_address_is_reachable(link->manager, m->gateway.family, &a))
+-                        return false;
+-
+                 if (m->ifname) {
+                         if (link_get_by_name(link->manager, m->ifname, &l) < 0)
+                                 return false;
+@@ -1759,6 +1768,9 @@ static int route_is_ready_to_configure(const Route *route, Link *link) {
+                 }
+                 if (l && !link_is_ready_to_configure(l, true))
+                         return false;
++
++                if (!gateway_is_ready(l ?: link, route->gateway_onlink, m->gateway.family, &a))
++                        return false;
+         }
+ 
+         return true;
+diff --git a/src/network/networkd-route.h b/src/network/networkd-route.h
+index 2d262819ad..235a91f08d 100644
+--- a/src/network/networkd-route.h
++++ b/src/network/networkd-route.h
+@@ -78,8 +78,8 @@ int route_configure_handler_internal(sd_netlink *rtnl, sd_netlink_message *m, Li
+ int route_remove(const Route *route, Manager *manager, Link *link);
+ 
+ int link_has_route(Link *link, const Route *route);
+-bool manager_address_is_reachable(Manager *manager, int family, const union in_addr_union *address);
+ int manager_find_uplink(Manager *m, int family, Link *exclude, Link **ret);
++bool gateway_is_ready(Link *link, int onlink, int family, const union in_addr_union *gw);
+ 
+ int link_drop_routes(Link *link);
+ int link_drop_foreign_routes(Link *link);
+-- 
+2.33.0
+

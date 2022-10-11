@@ -1,0 +1,123 @@
+From 7a23db67795b6583028b7d7c0d5d8ef63c67d8c9 Mon Sep 17 00:00:00 2001
+From: Martin Wilck <mwilck@suse.com>
+Date: Thu, 20 Jan 2022 14:31:45 +0100
+Subject: [PATCH] udevadm: cleanup-db: don't delete information for kept db
+ entries
+
+devices with the db_persist property won't be deleted during database
+cleanup. This applies to dm and md devices in particular.
+For such devices, we should also keep the files under /run/udev/links,
+/run/udev/tags, and /run/udev/watch, to make sure that after restart,
+udevd has the same information about the devices as it did before
+the cleanup.
+
+If we don't do this, a lower-priority device that is discovered in
+the coldplug phase may take over symlinks from a device that persisted.
+Not removing the watches also enables udevd to resume watching a device
+after restart.
+
+Signed-off-by: Martin Wilck <mwilck@suse.com>
+(cherry picked from commit 7ec624147a41d80f8e492c9fe19a24e2cda58c25)
+(cherry picked from commit ef7ceef26adb714ef44b2fbc07a219c05a012b42)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7a23db67795b6583028b7d7c0d5d8ef63c67d8c9
+---
+ src/udev/udevadm-info.c | 64 +++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 61 insertions(+), 3 deletions(-)
+
+diff --git a/src/udev/udevadm-info.c b/src/udev/udevadm-info.c
+index f05363150e..3314d6335e 100644
+--- a/src/udev/udevadm-info.c
++++ b/src/udev/udevadm-info.c
+@@ -248,6 +248,64 @@ static void cleanup_dir(DIR *dir, mode_t mask, int depth) {
+         }
+ }
+ 
++/*
++ * Assume that dir is a directory with file names matching udev data base
++ * entries for devices in /run/udev/data (such as "b8:16"), and removes
++ * all files except those that haven't been deleted in /run/udev/data
++ * (i.e. they were skipped during db cleanup because of the db_persist flag).
++ * Returns true if the directory is empty after cleanup.
++ */
++static bool cleanup_dir_after_db_cleanup(DIR *dir, DIR *datadir) {
++        unsigned int kept = 0;
++        struct dirent *dent;
++
++        assert(dir && datadir);
++
++        FOREACH_DIRENT_ALL(dent, dir, break) {
++                struct stat data_stats, link_stats;
++
++                if (dot_or_dot_dot(dent->d_name))
++                        continue;
++                if (fstatat(dirfd(dir), dent->d_name, &link_stats, AT_SYMLINK_NOFOLLOW) < 0) {
++                        if (errno != ENOENT)
++                                kept++;
++                        continue;
++                }
++
++                if (fstatat(dirfd(datadir), dent->d_name, &data_stats, 0) < 0)
++                        (void) unlinkat(dirfd(dir), dent->d_name,
++                                        S_ISDIR(link_stats.st_mode) ? AT_REMOVEDIR : 0);
++                else
++                        /* The entry still exists under /run/udev/data */
++                        kept++;
++        }
++
++        return kept == 0;
++}
++
++static void cleanup_dirs_after_db_cleanup(DIR *dir, DIR *datadir) {
++        struct dirent *dent;
++
++        assert(dir && datadir);
++
++        FOREACH_DIRENT_ALL(dent, dir, break) {
++                struct stat stats;
++
++                if (dot_or_dot_dot(dent->d_name))
++                        continue;
++                if (fstatat(dirfd(dir), dent->d_name, &stats, AT_SYMLINK_NOFOLLOW) < 0)
++                        continue;
++                if (S_ISDIR(stats.st_mode)) {
++                        _cleanup_closedir_ DIR *dir2 = NULL;
++
++                        dir2 = fdopendir(openat(dirfd(dir), dent->d_name, O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC));
++                        if (dir2 && cleanup_dir_after_db_cleanup(dir2, datadir))
++                                (void) unlinkat(dirfd(dir), dent->d_name, AT_REMOVEDIR);
++                } else
++                        (void) unlinkat(dirfd(dir), dent->d_name, 0);
++        }
++}
++
+ static void cleanup_db(void) {
+         _cleanup_closedir_ DIR *dir1 = NULL, *dir2 = NULL, *dir3 = NULL, *dir4 = NULL, *dir5 = NULL;
+ 
+@@ -257,11 +315,11 @@ static void cleanup_db(void) {
+ 
+         dir2 = opendir("/run/udev/links");
+         if (dir2)
+-                cleanup_dir(dir2, 0, 2);
++                cleanup_dirs_after_db_cleanup(dir2, dir1);
+ 
+         dir3 = opendir("/run/udev/tags");
+         if (dir3)
+-                cleanup_dir(dir3, 0, 2);
++                cleanup_dirs_after_db_cleanup(dir3, dir1);
+ 
+         dir4 = opendir("/run/udev/static_node-tags");
+         if (dir4)
+@@ -269,7 +327,7 @@ static void cleanup_db(void) {
+ 
+         dir5 = opendir("/run/udev/watch");
+         if (dir5)
+-                cleanup_dir(dir5, 0, 1);
++                cleanup_dir_after_db_cleanup(dir5, dir1);
+ }
+ 
+ static int query_device(QueryType query, sd_device* device) {
+-- 
+2.33.0
+

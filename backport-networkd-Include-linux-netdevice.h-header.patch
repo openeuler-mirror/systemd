@@ -1,0 +1,37 @@
+From 898949f71513da918c4aa94a0681fbc6b868e00f Mon Sep 17 00:00:00 2001
+From: Khem Raj <raj.khem@gmail.com>
+Date: Mon, 26 Jul 2021 10:58:46 -0700
+Subject: [PATCH] networkd: Include linux/netdevice.h header
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This header provides definitions for NET_NAME_UNKNOWN ånd NET_NAME_ENUM
+Fixes build issue found with non-glibc systems
+
+../git/src/network/networkd-link.c:1203:52: error: 'NET_NAME_UNKNOWN' undeclared (first use in this function)
+
+Signed-off-by: Khem Raj <raj.khem@gmail.com>
+(cherry picked from commit 2a0d07d6a0d5be63c6c10cb0789412f584858ec1)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/898949f71513da918c4aa94a0681fbc6b868e00f
+---
+ src/network/networkd-link.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index c1ab14ebec..9421ce1aa6 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -4,6 +4,7 @@
+ #include <linux/if.h>
+ #include <linux/if_arp.h>
+ #include <linux/if_link.h>
++#include <linux/netdevice.h>
+ #include <sys/socket.h>
+ #include <unistd.h>
+ 
+-- 
+2.33.0
+

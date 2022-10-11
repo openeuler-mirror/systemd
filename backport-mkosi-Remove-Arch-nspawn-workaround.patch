@@ -1,0 +1,43 @@
+From c24f4e86781d866894128a56fbc03f4302f737f6 Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Fri, 25 Feb 2022 11:01:07 +0000
+Subject: [PATCH] mkosi: Remove Arch nspawn workaround
+
+This has been fixed so the workaround can be removed.
+
+(cherry picked from commit 6b2ab8fc5cc0f706b85cbd559e8dcf4e05d7687d)
+(cherry picked from commit f0cc6d2f99b2510c57fa36ad7f28cc42c0b724b3)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/c24f4e86781d866894128a56fbc03f4302f737f6
+---
+ .github/workflows/mkosi.yml | 13 -------------
+ 1 file changed, 13 deletions(-)
+
+diff --git a/.github/workflows/mkosi.yml b/.github/workflows/mkosi.yml
+index 489eb01880..c8d572a4d8 100644
+--- a/.github/workflows/mkosi.yml
++++ b/.github/workflows/mkosi.yml
+@@ -37,19 +37,6 @@ jobs:
+     - name: Symlink
+       run: ln -s .mkosi/mkosi.${{ matrix.distro }} mkosi.default
+ 
+-    # Ubuntu's systemd-nspawn doesn't support faccessat2() syscall, which is
+-    # required, since current Arch's glibc implements faccessat() via faccessat2().
+-    - name: Update systemd-nspawn
+-      if: ${{ matrix.distro == 'arch' }}
+-      run: |
+-        echo "deb-src http://archive.ubuntu.com/ubuntu/ $(lsb_release -cs) main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+-        sudo apt update
+-        sudo apt build-dep systemd
+-        meson build
+-        ninja -C build
+-        sudo ln -svf $PWD/build/systemd-nspawn `which systemd-nspawn`
+-        systemd-nspawn --version
+-
+     - name: Build ${{ matrix.distro }}
+       run: sudo python3 -m mkosi --password= --qemu-headless build
+ 
+-- 
+2.33.0
+

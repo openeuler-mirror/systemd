@@ -1,0 +1,71 @@
+From d2895063305712cd9e5d7f4361f9343bf3b3f00b Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 12 Jul 2021 21:23:41 +0900
+Subject: [PATCH] network: check the received interface name is actually new
+
+For some reasons I do not know, on interface renaming, kernel once send
+netlink message with old interface name, and then send with new name.
+If eth0 is renamed, and then new interface appears as eth0, then the
+message with the old name 'eth0' makes the interface enters failed
+state.
+
+To ignore such invalid(?) rename event messages, let's confirm the
+received interface name.
+
+Fixes #20203.
+
+(cherry picked from commit 176b8be10ffce2f8c1fc931a37904a528057016f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/d2895063305712cd9e5d7f4361f9343bf3b3f00b
+---
+ src/network/networkd-link.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/src/network/networkd-link.c b/src/network/networkd-link.c
+index 9421ce1aa6..d58b700050 100644
+--- a/src/network/networkd-link.c
++++ b/src/network/networkd-link.c
+@@ -1,5 +1,6 @@
+ /* SPDX-License-Identifier: LGPL-2.1-or-later */
+ 
++#include <net/if.h>
+ #include <netinet/in.h>
+ #include <linux/if.h>
+ #include <linux/if_arp.h>
+@@ -21,6 +22,7 @@
+ #include "ethtool-util.h"
+ #include "fd-util.h"
+ #include "fileio.h"
++#include "format-util.h"
+ #include "fs-util.h"
+ #include "ipvlan.h"
+ #include "missing_network.h"
+@@ -2161,6 +2163,7 @@ static int link_update_alternative_names(Link *link, sd_netlink_message *message
+ }
+ 
+ static int link_update_name(Link *link, sd_netlink_message *message) {
++        char ifname_from_index[IF_NAMESIZE + 1];
+         const char *ifname;
+         int r;
+ 
+@@ -2177,6 +2180,16 @@ static int link_update_name(Link *link, sd_netlink_message *message) {
+         if (streq(ifname, link->ifname))
+                 return 0;
+ 
++        if (!format_ifname(link->ifindex, ifname_from_index))
++                return log_link_debug_errno(link, SYNTHETIC_ERRNO(ENXIO), "Could not get interface name for index %i.", link->ifindex);
++
++        if (!streq(ifname, ifname_from_index)) {
++                log_link_debug(link, "New interface name '%s' received from the kernel does not correspond "
++                               "with the name currently configured on the actual interface '%s'. Ignoring.",
++                               ifname, ifname_from_index);
++                return 0;
++        }
++
+         log_link_info(link, "Interface name change detected, renamed to %s.", ifname);
+ 
+         hashmap_remove(link->manager->links_by_name, link->ifname);
+-- 
+2.33.0
+

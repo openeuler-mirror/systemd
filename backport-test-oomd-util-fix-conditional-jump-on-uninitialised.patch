@@ -1,0 +1,32 @@
+From bb0bb8afe78c699a1334fdd7df78d71427596d2e Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 22 Feb 2022 20:23:58 +0900
+Subject: [PATCH] test-oomd-util: fix conditional jump on uninitialised value
+
+Fixes #22577.
+
+(cherry picked from commit a6d6a51d83fae32212e1780e71b16517a4df9a57)
+(cherry picked from commit b10cc2de7dc6ac8d7d72d576100dd3a37ddb588a)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/bb0bb8afe78c699a1334fdd7df78d71427596d2e
+---
+ src/oom/test-oomd-util.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/oom/test-oomd-util.c b/src/oom/test-oomd-util.c
+index 02034c1293..a152387a26 100644
+--- a/src/oom/test-oomd-util.c
++++ b/src/oom/test-oomd-util.c
+@@ -283,7 +283,7 @@ static void test_oomd_system_context_acquire(void) {
+ static void test_oomd_pressure_above(void) {
+         _cleanup_hashmap_free_ Hashmap *h1 = NULL, *h2 = NULL;
+         _cleanup_set_free_ Set *t1 = NULL, *t2 = NULL, *t3 = NULL;
+-        OomdCGroupContext ctx[2], *c;
++        OomdCGroupContext ctx[2] = {}, *c;
+         loadavg_t threshold;
+ 
+         assert_se(store_loadavg_fixed_point(80, 0, &threshold) == 0);
+-- 
+2.33.0
+

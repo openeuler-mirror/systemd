@@ -1,0 +1,30 @@
+From efd98964fb9202451293043dcffb3898b176a7d0 Mon Sep 17 00:00:00 2001
+From: Vladimir Panteleev <git@cy.md>
+Date: Tue, 17 Aug 2021 18:30:29 +0000
+Subject: [PATCH] fstab-generator: Respect nofail when ordering
+
+(cherry picked from commit e9aee932409754c9f709a8ea3ad13caf39fce7d2)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/efd98964fb9202451293043dcffb3898b176a7d0
+---
+ src/fstab-generator/fstab-generator.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/fstab-generator/fstab-generator.c b/src/fstab-generator/fstab-generator.c
+index a4e3ea5311..b6582c9538 100644
+--- a/src/fstab-generator/fstab-generator.c
++++ b/src/fstab-generator/fstab-generator.c
+@@ -435,7 +435,8 @@ static int add_mount(
+ 
+         /* Order the mount unit we generate relative to the post unit, so that DefaultDependencies= on the
+          * target unit won't affect us. */
+-        if (post && !FLAGS_SET(flags, MOUNT_AUTOMOUNT) && !FLAGS_SET(flags, MOUNT_NOAUTO))
++        if (post && !FLAGS_SET(flags, MOUNT_AUTOMOUNT) && !FLAGS_SET(flags, MOUNT_NOAUTO) &&
++            !FLAGS_SET(flags, MOUNT_NOFAIL))
+                 fprintf(f, "Before=%s\n", post);
+ 
+         if (passno != 0) {
+-- 
+2.33.0
+

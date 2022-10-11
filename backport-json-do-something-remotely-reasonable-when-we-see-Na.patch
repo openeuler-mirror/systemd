@@ -1,0 +1,50 @@
+From 06444b314b863facdb173f10f2d1ff11196755d2 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 26 Oct 2021 15:45:49 +0200
+Subject: [PATCH] json: do something remotely reasonable when we see
+ NaN/infinity
+
+JSON doesn't have NaN/infinity/-infinity concepts in the spec.
+Implementations vary what they do with it. JSON5 + Python simply
+generate special words "NAN" and "Inifinity" from it. Others generate
+"null" for it.
+
+At this point we never actually want to output this, so let's be
+conservative and generate RFC compliant JSON, i.e. convert to null.
+
+One day should JSON5 actually become a thing we can revisit this, but in
+that case we should implement things via a flag, and only optinally
+process nan/infinity/-infinity.
+
+This patch is extremely simple: whenever accepting a
+nan/infinity/-infinity from outside it converts it to NULL. I.e. we
+convert on input, not output.
+
+(cherry picked from commit 8f1daefce6e952f2fad9510e5101b5fc675d363f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/06444b314b863facdb173f10f2d1ff11196755d2
+---
+ src/shared/json.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/shared/json.c b/src/shared/json.c
+index c52460a3ec..d72b1e3a38 100644
+--- a/src/shared/json.c
++++ b/src/shared/json.c
+@@ -359,6 +359,12 @@ int json_variant_new_real(JsonVariant **ret, long double d) {
+         }
+         REENABLE_WARNING;
+ 
++        /* JSON doesn't know NaN, +Infinity or -Infinity. Let's silently convert to 'null'. */
++        if (isnan(d) || isinf(d)) {
++                *ret = JSON_VARIANT_MAGIC_NULL;
++                return 0;
++        }
++
+         r = json_variant_new(&v, JSON_VARIANT_REAL, sizeof(d));
+         if (r < 0)
+                 return r;
+-- 
+2.33.0
+

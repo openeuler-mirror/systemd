@@ -1,0 +1,194 @@
+From 00a2361bb5d3fccfa5b4fdb4d73b7aa7938e2449 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 24 Sep 2021 17:26:35 +0900
+Subject: [PATCH] libsystemd-network: disable event sources before unref them
+
+Fixes #20825.
+
+(cherry picked from commit eb2f750242d6c4c0963887dbd561d8bafa318685)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/00a2361bb5d3fccfa5b4fdb4d73b7aa7938e2449
+---
+ src/libsystemd-network/sd-dhcp-client.c | 12 +++++-------
+ src/libsystemd-network/sd-dhcp-server.c |  4 ++--
+ src/libsystemd-network/sd-ipv4acd.c     |  5 ++---
+ src/libsystemd-network/sd-lldp.c        |  7 ++++---
+ src/libsystemd-network/sd-ndisc.c       |  9 +++++----
+ src/libsystemd-network/sd-radv.c        |  6 ++----
+ 6 files changed, 20 insertions(+), 23 deletions(-)
+
+diff --git a/src/libsystemd-network/sd-dhcp-client.c b/src/libsystemd-network/sd-dhcp-client.c
+index 030b50cf2a..46191e58f5 100644
+--- a/src/libsystemd-network/sd-dhcp-client.c
++++ b/src/libsystemd-network/sd-dhcp-client.c
+@@ -726,7 +726,7 @@ static int client_notify(sd_dhcp_client *client, int event) {
+ static int client_initialize(sd_dhcp_client *client) {
+         assert_return(client, -EINVAL);
+ 
+-        client->receive_message = sd_event_source_unref(client->receive_message);
++        client->receive_message = sd_event_source_disable_unref(client->receive_message);
+ 
+         client->fd = safe_close(client->fd);
+ 
+@@ -1492,7 +1492,7 @@ static int client_timeout_t2(sd_event_source *s, uint64_t usec, void *userdata)
+ 
+         assert(client);
+ 
+-        client->receive_message = sd_event_source_unref(client->receive_message);
++        client->receive_message = sd_event_source_disable_unref(client->receive_message);
+         client->fd = safe_close(client->fd);
+ 
+         client->state = DHCP_STATE_REBINDING;
+@@ -1847,7 +1847,7 @@ static int client_handle_message(sd_dhcp_client *client, DHCPMessage *message, i
+ 
+                 client->start_delay = 0;
+                 (void) event_source_disable(client->timeout_resend);
+-                client->receive_message = sd_event_source_unref(client->receive_message);
++                client->receive_message = sd_event_source_disable_unref(client->receive_message);
+                 client->fd = safe_close(client->fd);
+ 
+                 client->state = DHCP_STATE_BOUND;
+@@ -2229,17 +2229,15 @@ static sd_dhcp_client *dhcp_client_free(sd_dhcp_client *client) {
+ 
+         log_dhcp_client(client, "FREE");
+ 
++        client_initialize(client);
++
+         client->timeout_resend = sd_event_source_unref(client->timeout_resend);
+         client->timeout_t1 = sd_event_source_unref(client->timeout_t1);
+         client->timeout_t2 = sd_event_source_unref(client->timeout_t2);
+         client->timeout_expire = sd_event_source_unref(client->timeout_expire);
+ 
+-        client_initialize(client);
+-
+         sd_dhcp_client_detach_event(client);
+ 
+-        sd_dhcp_lease_unref(client->lease);
+-
+         set_free(client->req_opts);
+         free(client->hostname);
+         free(client->vendor_class_identifier);
+diff --git a/src/libsystemd-network/sd-dhcp-server.c b/src/libsystemd-network/sd-dhcp-server.c
+index 9ae884b0fc..3f4af8440e 100644
+--- a/src/libsystemd-network/sd-dhcp-server.c
++++ b/src/libsystemd-network/sd-dhcp-server.c
+@@ -267,8 +267,8 @@ int sd_dhcp_server_stop(sd_dhcp_server *server) {
+         if (!server)
+                 return 0;
+ 
+-        server->receive_message = sd_event_source_unref(server->receive_message);
+-        server->receive_broadcast = sd_event_source_unref(server->receive_broadcast);
++        server->receive_message = sd_event_source_disable_unref(server->receive_message);
++        server->receive_broadcast = sd_event_source_disable_unref(server->receive_broadcast);
+ 
+         server->fd_raw = safe_close(server->fd_raw);
+         server->fd = safe_close(server->fd);
+diff --git a/src/libsystemd-network/sd-ipv4acd.c b/src/libsystemd-network/sd-ipv4acd.c
+index 9a77a33317..ebd4764840 100644
+--- a/src/libsystemd-network/sd-ipv4acd.c
++++ b/src/libsystemd-network/sd-ipv4acd.c
+@@ -120,7 +120,7 @@ static void ipv4acd_reset(sd_ipv4acd *acd) {
+         assert(acd);
+ 
+         (void) event_source_disable(acd->timer_event_source);
+-        acd->receive_message_event_source = sd_event_source_unref(acd->receive_message_event_source);
++        acd->receive_message_event_source = sd_event_source_disable_unref(acd->receive_message_event_source);
+ 
+         acd->fd = safe_close(acd->fd);
+ 
+@@ -130,9 +130,8 @@ static void ipv4acd_reset(sd_ipv4acd *acd) {
+ static sd_ipv4acd *ipv4acd_free(sd_ipv4acd *acd) {
+         assert(acd);
+ 
+-        acd->timer_event_source = sd_event_source_unref(acd->timer_event_source);
+-
+         ipv4acd_reset(acd);
++        sd_event_source_unref(acd->timer_event_source);
+         sd_ipv4acd_detach_event(acd);
+         free(acd->ifname);
+         return mfree(acd);
+diff --git a/src/libsystemd-network/sd-lldp.c b/src/libsystemd-network/sd-lldp.c
+index 49aa876a53..b38d6dbd1e 100644
+--- a/src/libsystemd-network/sd-lldp.c
++++ b/src/libsystemd-network/sd-lldp.c
+@@ -239,7 +239,7 @@ static void lldp_reset(sd_lldp *lldp) {
+         assert(lldp);
+ 
+         (void) event_source_disable(lldp->timer_event_source);
+-        lldp->io_event_source = sd_event_source_unref(lldp->io_event_source);
++        lldp->io_event_source = sd_event_source_disable_unref(lldp->io_event_source);
+         lldp->fd = safe_close(lldp->fd);
+ }
+ 
+@@ -365,10 +365,11 @@ const char *sd_lldp_get_ifname(sd_lldp *lldp) {
+ static sd_lldp* lldp_free(sd_lldp *lldp) {
+         assert(lldp);
+ 
+-        lldp->timer_event_source = sd_event_source_unref(lldp->timer_event_source);
+-
+         lldp_reset(lldp);
++
++        sd_event_source_unref(lldp->timer_event_source);
+         sd_lldp_detach_event(lldp);
++
+         lldp_flush_neighbors(lldp);
+ 
+         hashmap_free(lldp->neighbor_by_id);
+diff --git a/src/libsystemd-network/sd-ndisc.c b/src/libsystemd-network/sd-ndisc.c
+index 4d5f1b54cd..9b3a89378c 100644
+--- a/src/libsystemd-network/sd-ndisc.c
++++ b/src/libsystemd-network/sd-ndisc.c
+@@ -133,18 +133,19 @@ static void ndisc_reset(sd_ndisc *nd) {
+         (void) event_source_disable(nd->timeout_event_source);
+         (void) event_source_disable(nd->timeout_no_ra);
+         nd->retransmit_time = 0;
+-        nd->recv_event_source = sd_event_source_unref(nd->recv_event_source);
++        nd->recv_event_source = sd_event_source_disable_unref(nd->recv_event_source);
+         nd->fd = safe_close(nd->fd);
+ }
+ 
+ static sd_ndisc *ndisc_free(sd_ndisc *nd) {
+         assert(nd);
+ 
+-        nd->timeout_event_source = sd_event_source_unref(nd->timeout_event_source);
+-        nd->timeout_no_ra = sd_event_source_unref(nd->timeout_no_ra);
+-
+         ndisc_reset(nd);
++
++        sd_event_source_unref(nd->timeout_event_source);
++        sd_event_source_unref(nd->timeout_no_ra);
+         sd_ndisc_detach_event(nd);
++
+         free(nd->ifname);
+         return mfree(nd);
+ }
+diff --git a/src/libsystemd-network/sd-radv.c b/src/libsystemd-network/sd-radv.c
+index 857401bf6e..eac8aa385b 100644
+--- a/src/libsystemd-network/sd-radv.c
++++ b/src/libsystemd-network/sd-radv.c
+@@ -89,8 +89,7 @@ static void radv_reset(sd_radv *ra) {
+ 
+         (void) event_source_disable(ra->timeout_event_source);
+ 
+-        ra->recv_event_source =
+-                sd_event_source_unref(ra->recv_event_source);
++        ra->recv_event_source = sd_event_source_disable_unref(ra->recv_event_source);
+ 
+         ra->ra_sent = 0;
+ }
+@@ -116,10 +115,9 @@ static sd_radv *radv_free(sd_radv *ra) {
+         free(ra->rdnss);
+         free(ra->dnssl);
+ 
+-        ra->timeout_event_source = sd_event_source_unref(ra->timeout_event_source);
+-
+         radv_reset(ra);
+ 
++        sd_event_source_unref(ra->timeout_event_source);
+         sd_radv_detach_event(ra);
+ 
+         ra->fd = safe_close(ra->fd);
+-- 
+2.33.0
+

@@ -11,8 +11,8 @@ index e1c2baf..b64d279 100644
 --- a/src/udev/udev-event.c
 +++ b/src/udev/udev-event.c
 @@ -820,6 +820,7 @@ static int rename_netif(UdevEvent *event) {
-         sd_device *dev = event->dev;
          const char *oldname;
+         unsigned flags;
          int ifindex, r;
 +        char name[IFNAMSIZ];
  

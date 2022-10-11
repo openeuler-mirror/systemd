@@ -1,0 +1,52 @@
+From 6a8b886fef4ad101108126cab2125a90f7aa6441 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 11 Aug 2021 00:12:40 +0900
+Subject: [PATCH] hostname: fix off-by-one issue in gethostname()
+
+gethostname() returns null-terminated hostname.
+
+Fixes #20309 and #20417.
+
+(cherry picked from commit ccdf235464297c2ca4c1dea8733a6bad423084d5)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/6a8b886fef4ad101108126cab2125a90f7aa6441
+---
+ src/shared/hostname-setup.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/shared/hostname-setup.c b/src/shared/hostname-setup.c
+index 511aa7d031..742174d6c8 100644
+--- a/src/shared/hostname-setup.c
++++ b/src/shared/hostname-setup.c
+@@ -20,11 +20,11 @@
+ #include "util.h"
+ 
+ static int sethostname_idempotent_full(const char *s, bool really) {
+-        char buf[HOST_NAME_MAX + 1] = {};
++        char buf[HOST_NAME_MAX + 1];
+ 
+         assert(s);
+ 
+-        if (gethostname(buf, sizeof(buf) - 1) < 0)
++        if (gethostname(buf, sizeof(buf)) < 0)
+                 return -errno;
+ 
+         if (streq(buf, s))
+@@ -42,11 +42,11 @@ int sethostname_idempotent(const char *s) {
+ }
+ 
+ bool get_hostname_filtered(char ret[static HOST_NAME_MAX + 1]) {
+-        char buf[HOST_NAME_MAX + 1] = {};
++        char buf[HOST_NAME_MAX + 1];
+ 
+         /* Returns true if we got a good hostname, false otherwise. */
+ 
+-        if (gethostname(buf, sizeof(buf) - 1) < 0)
++        if (gethostname(buf, sizeof(buf)) < 0)
+                 return false;  /* This can realistically only fail with ENAMETOOLONG.
+                                 * Let's treat that case the same as an invalid hostname. */
+ 
+-- 
+2.33.0
+

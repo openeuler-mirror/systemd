@@ -1,0 +1,38 @@
+From 5d3466ec91b05853b815db509b901e6a6d5f4db4 Mon Sep 17 00:00:00 2001
+From: Benjamin Berg <bberg@redhat.com>
+Date: Mon, 10 Jan 2022 12:35:46 +0100
+Subject: [PATCH] xdg-autostart-service: Ignore missing desktop-sepcific
+ condition binary
+
+If a desktop specific ExecCondition= binary does not exist, this just
+means that the desktop environment is not available. As such, it is not
+an error condition that should prevent the service from being installed
+in the .wants target.
+
+Fix this by simply returning zero.
+
+(cherry picked from commit 6d0aef1dd15088e7379681b3bd93c3cb450f3c55)
+(cherry picked from commit 19fbd7764da2e23a89e27b4d95afd77b99f4be87)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/5d3466ec91b05853b815db509b901e6a6d5f4db4
+---
+ src/xdg-autostart-generator/xdg-autostart-service.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/xdg-autostart-generator/xdg-autostart-service.c b/src/xdg-autostart-generator/xdg-autostart-service.c
+index fe73bfe9db..16545beb50 100644
+--- a/src/xdg-autostart-generator/xdg-autostart-service.c
++++ b/src/xdg-autostart-generator/xdg-autostart-service.c
+@@ -486,7 +486,7 @@ static int xdg_autostart_generate_desktop_condition(
+                         log_full_errno(r == -ENOENT ? LOG_DEBUG : LOG_WARNING, r,
+                                        "%s not found: %m", test_binary);
+                         fprintf(f, "# ExecCondition using %s skipped due to missing binary.\n", test_binary);
+-                        return r;
++                        return 0;
+                 }
+ 
+                 e_autostart_condition = cescape(condition);
+-- 
+2.33.0
+

@@ -1,0 +1,46 @@
+From b1bb976219e4c63d4b8099a2820fedbedf0aa8a5 Mon Sep 17 00:00:00 2001
+From: Franck Bui <fbui@suse.com>
+Date: Fri, 3 Dec 2021 11:23:36 +0100
+Subject: [PATCH] Bump the max number of inodes for /dev to 128k
+
+Follow-up for 7d85383edbab73274dc81cc888d884bb01070bc2.
+
+Apparently the previous limit set on the max number of inodes for /dev was too
+small as a system with 4096 LUNs attached can consume up to 95k inodes for
+symlinks:
+
+  # /bin/df -i
+  Filesystem                 Inodes  IUsed    IFree IUse% Mounted on
+  devtmpfs                 49274377  95075 49179302    1% /dev
+
+Hence this patch bumps the limit from 64k to 128k although the new limit is
+still pretty arbitrary (that said, not sure if it really makes sense to put
+such absolute limit number).
+
+(cherry picked from commit 4c733d3046942984c5f73b40c3af39cc218c103f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/b1bb976219e4c63d4b8099a2820fedbedf0aa8a5
+---
+ src/shared/mount-util.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/shared/mount-util.h b/src/shared/mount-util.h
+index 36501c2c4a..c5bd881070 100644
+--- a/src/shared/mount-util.h
++++ b/src/shared/mount-util.h
+@@ -11,9 +11,9 @@
+ #include "errno-util.h"
+ #include "macro.h"
+ 
+-/* 4MB for contents of regular files, 64k inodes for directories, symbolic links and device specials, using
++/* 4MB for contents of regular files, 128k inodes for directories, symbolic links and device specials, using
+  * large storage array systems as a baseline */
+-#define TMPFS_LIMITS_DEV             ",size=4m,nr_inodes=64k"
++#define TMPFS_LIMITS_DEV             ",size=4m,nr_inodes=128k"
+ 
+ /* Very little, if any use expected */
+ #define TMPFS_LIMITS_EMPTY_OR_ALMOST ",size=4m,nr_inodes=1k"
+-- 
+2.33.0
+

@@ -1,0 +1,30 @@
+From f41b77e9788541244ad6d6bafe3e130fbabace84 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 31 Aug 2021 10:47:02 +0200
+Subject: [PATCH] homed: fix log message referring to fsck, when we actually
+ mean mount
+
+(cherry picked from commit e070b9eac92993422db25c72ebdbdcc1cf424a0f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/f41b77e9788541244ad6d6bafe3e130fbabace84
+---
+ src/home/homework-cifs.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/home/homework-cifs.c b/src/home/homework-cifs.c
+index cf3c58431a..a697f7e5ee 100644
+--- a/src/home/homework-cifs.c
++++ b/src/home/homework-cifs.c
+@@ -71,7 +71,7 @@ int home_prepare_cifs(
+                                       h->cifs_service, "/run/systemd/user-home-mount",
+                                       "-o", options, NULL);
+ 
+-                                log_error_errno(errno, "Failed to execute fsck: %m");
++                                log_error_errno(errno, "Failed to execute mount: %m");
+                                 _exit(EXIT_FAILURE);
+                         }
+ 
+-- 
+2.33.0
+

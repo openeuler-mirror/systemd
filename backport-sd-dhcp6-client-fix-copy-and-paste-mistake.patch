@@ -1,0 +1,31 @@
+From 1c71cba86be4818c1546d5f84fde5138f737e180 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 10 Aug 2021 21:36:04 +0900
+Subject: [PATCH] sd-dhcp6-client: fix copy-and-paste mistake
+
+Fix bug introduced by b47fb949b338a8e77be789542fffb8c86da79284.
+
+(cherry picked from commit 0c42b613485978eb82d7aff7ed426b8a8bb327af)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/1c71cba86be4818c1546d5f84fde5138f737e180
+---
+ src/libsystemd-network/sd-dhcp6-client.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/libsystemd-network/sd-dhcp6-client.c b/src/libsystemd-network/sd-dhcp6-client.c
+index e8c47f429a..afeb346944 100644
+--- a/src/libsystemd-network/sd-dhcp6-client.c
++++ b/src/libsystemd-network/sd-dhcp6-client.c
+@@ -1219,7 +1219,7 @@ static int client_parse_message(
+ 
+                         if (lease->ia.addresses) {
+                                 lt_t1 = MIN(lt_t1, be32toh(lease->ia.ia_na.lifetime_t1));
+-                                lt_t2 = MIN(lt_t2, be32toh(lease->ia.ia_na.lifetime_t1));
++                                lt_t2 = MIN(lt_t2, be32toh(lease->ia.ia_na.lifetime_t2));
+                         }
+ 
+                         break;
+-- 
+2.33.0
+

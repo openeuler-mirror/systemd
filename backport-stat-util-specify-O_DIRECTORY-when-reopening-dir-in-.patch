@@ -1,0 +1,36 @@
+From e1e32516f98a1f39ce763545de9a8664526d0b8a Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 21 Oct 2021 18:07:06 +0200
+Subject: [PATCH] stat-util: specify O_DIRECTORY when reopening dir in
+ dir_is_empty_at()
+
+That way we can fail earlier if the specified fd is not actually a
+directory.
+
+(Also, it's not exactly according to standards to open things without
+either O_RDONLY/O_RDWR...)
+
+(cherry picked from commit b9d06522631a22d242374dc44a74c3b6459e3cb3)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e1e32516f98a1f39ce763545de9a8664526d0b8a
+---
+ src/basic/stat-util.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/basic/stat-util.c b/src/basic/stat-util.c
+index 72a7e4a48b..56f7652cec 100644
+--- a/src/basic/stat-util.c
++++ b/src/basic/stat-util.c
+@@ -79,7 +79,7 @@ int dir_is_empty_at(int dir_fd, const char *path) {
+         } else {
+                 /* Note that DUPing is not enough, as the internal pointer
+                  * would still be shared and moved by FOREACH_DIRENT. */
+-                fd = fd_reopen(dir_fd, O_CLOEXEC);
++                fd = fd_reopen(dir_fd, O_RDONLY|O_DIRECTORY|O_CLOEXEC);
+                 if (fd < 0)
+                         return fd;
+         }
+-- 
+2.33.0
+

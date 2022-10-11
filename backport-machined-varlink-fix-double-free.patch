@@ -1,0 +1,30 @@
+From 1600b38cd2029533547f8c3d4abfa12911ca0630 Mon Sep 17 00:00:00 2001
+From: David Tardon <dtardon@redhat.com>
+Date: Mon, 2 Aug 2021 13:31:04 +0200
+Subject: [PATCH] machined-varlink: fix double free
+
+Fixes: #18599
+(cherry picked from commit feac9a1d1bf3f59adaa85f58b655ec01a111a29a)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/1600b38cd2029533547f8c3d4abfa12911ca0630
+---
+ src/machine/machined-varlink.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/machine/machined-varlink.c b/src/machine/machined-varlink.c
+index 009d283acc..fc0b0f11ad 100644
+--- a/src/machine/machined-varlink.c
++++ b/src/machine/machined-varlink.c
+@@ -297,7 +297,7 @@ static int group_lookup_name(Manager *m, const char *name, gid_t *ret_gid, char
+                 desc = mfree(desc);
+ 
+         *ret_gid = converted_gid;
+-        *ret_description = desc;
++        *ret_description = TAKE_PTR(desc);
+         return 0;
+ }
+ 
+-- 
+2.33.0
+
