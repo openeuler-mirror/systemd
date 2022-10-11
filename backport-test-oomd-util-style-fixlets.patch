@@ -1,0 +1,52 @@
+From 76b5fae410a2434e8fadab07700d1480566e8ddd Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 22 Feb 2022 20:21:45 +0900
+Subject: [PATCH] test-oomd-util: style fixlets
+
+(cherry picked from commit d9fe39b24a0a5464c83c7a754752ca21dbd2578f)
+(cherry picked from commit 1343c2efd5401aa52f7790fff4ad7e2d70173f01)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/76b5fae410a2434e8fadab07700d1480566e8ddd
+---
+ src/oom/test-oomd-util.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/src/oom/test-oomd-util.c b/src/oom/test-oomd-util.c
+index 29f2c54ab1..02034c1293 100644
+--- a/src/oom/test-oomd-util.c
++++ b/src/oom/test-oomd-util.c
+@@ -300,12 +300,11 @@ static void test_oomd_pressure_above(void) {
+         assert_se(store_loadavg_fixed_point(1, 11, &(ctx[1].memory_pressure.avg300)) == 0);
+         ctx[1].mem_pressure_limit = threshold;
+ 
+-
+         /* High memory pressure */
+         assert_se(h1 = hashmap_new(&string_hash_ops));
+         assert_se(hashmap_put(h1, "/herp.slice", &ctx[0]) >= 0);
+         assert_se(oomd_pressure_above(h1, 0 /* duration */, &t1) == 1);
+-        assert_se(set_contains(t1, &ctx[0]) == true);
++        assert_se(set_contains(t1, &ctx[0]));
+         assert_se(c = hashmap_get(h1, "/herp.slice"));
+         assert_se(c->mem_pressure_limit_hit_start > 0);
+ 
+@@ -313,14 +312,14 @@ static void test_oomd_pressure_above(void) {
+         assert_se(h2 = hashmap_new(&string_hash_ops));
+         assert_se(hashmap_put(h2, "/derp.slice", &ctx[1]) >= 0);
+         assert_se(oomd_pressure_above(h2, 0 /* duration */, &t2) == 0);
+-        assert_se(t2 == NULL);
++        assert_se(!t2);
+         assert_se(c = hashmap_get(h2, "/derp.slice"));
+         assert_se(c->mem_pressure_limit_hit_start == 0);
+ 
+         /* High memory pressure w/ multiple cgroups */
+         assert_se(hashmap_put(h1, "/derp.slice", &ctx[1]) >= 0);
+         assert_se(oomd_pressure_above(h1, 0 /* duration */, &t3) == 1);
+-        assert_se(set_contains(t3, &ctx[0]) == true);
++        assert_se(set_contains(t3, &ctx[0]));
+         assert_se(set_size(t3) == 1);
+         assert_se(c = hashmap_get(h1, "/herp.slice"));
+         assert_se(c->mem_pressure_limit_hit_start > 0);
+-- 
+2.33.0
+

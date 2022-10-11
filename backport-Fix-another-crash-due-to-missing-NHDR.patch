@@ -1,0 +1,29 @@
+From 60630b5e812ce103e9625bcc87778165374a455e Mon Sep 17 00:00:00 2001
+From: Kevin Orr <kevinorr54@gmail.com>
+Date: Thu, 26 Aug 2021 17:04:53 -0400
+Subject: [PATCH] Fix another crash due to missing NHDR
+
+(cherry picked from commit a3a5446b7675696f43c2d8a2a0b898d72228a53d)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/60630b5e812ce103e9625bcc87778165374a455e
+---
+ src/coredump/stacktrace.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/coredump/stacktrace.c b/src/coredump/stacktrace.c
+index e46b324cdf..f855a370ff 100644
+--- a/src/coredump/stacktrace.c
++++ b/src/coredump/stacktrace.c
+@@ -299,6 +299,8 @@ static int module_callback(Dwfl_Module *mod, void **userdata, const char *name,
+                                             program_header->p_offset,
+                                             program_header->p_filesz,
+                                             ELF_T_NHDR);
++                if (!data)
++                        continue;
+ 
+                 Elf *memelf = elf_memory(data->d_buf, data->d_size);
+                 if (!memelf)
+-- 
+2.33.0
+

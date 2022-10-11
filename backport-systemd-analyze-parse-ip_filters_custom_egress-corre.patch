@@ -1,0 +1,31 @@
+From 2d8f28adf58c58d99c19da9d53c6c66a9b952ce4 Mon Sep 17 00:00:00 2001
+From: Maanya Goenka <t-magoenka@microsoft.com>
+Date: Tue, 10 Aug 2021 14:30:46 -0700
+Subject: [PATCH] systemd-analyze: parse ip_filters_custom_egress correctly
+
+Fixed bug in original assignment of security_info variable: ip_filters_custom_egress.
+
+(cherry picked from commit 3da57008e743643d45d3dc05eacac1a4623539a4)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/2d8f28adf58c58d99c19da9d53c6c66a9b952ce4
+---
+ src/analyze/analyze-security.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/analyze/analyze-security.c b/src/analyze/analyze-security.c
+index f20606c17c..309e9a81b5 100644
+--- a/src/analyze/analyze-security.c
++++ b/src/analyze/analyze-security.c
+@@ -1910,7 +1910,7 @@ static int property_read_ip_filters(
+         if (streq(member, "IPIngressFilterPath"))
+                 info->ip_filters_custom_ingress = !strv_isempty(l);
+         else if (streq(member, "IPEgressFilterPath"))
+-                info->ip_filters_custom_ingress = !strv_isempty(l);
++                info->ip_filters_custom_egress = !strv_isempty(l);
+ 
+         return 0;
+ }
+-- 
+2.33.0
+

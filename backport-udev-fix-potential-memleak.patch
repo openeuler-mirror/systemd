@@ -1,17 +1,21 @@
-From 4154524d47d24bcee3ebfed939912a847ebeb1b3 Mon Sep 17 00:00:00 2001
+From f4a8e2c2115fc901e588a1672f129e7e3371f5d7 Mon Sep 17 00:00:00 2001
 From: Yu Watanabe <watanabe.yu+github@gmail.com>
 Date: Fri, 27 Aug 2021 17:27:26 +0900
 Subject: [PATCH] udev: fix potential memleak
 
+(cherry picked from commit 4154524d47d24bcee3ebfed939912a847ebeb1b3)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/f4a8e2c2115fc901e588a1672f129e7e3371f5d7
 ---
  src/udev/udev-builtin-net_id.c | 3 +--
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/src/udev/udev-builtin-net_id.c b/src/udev/udev-builtin-net_id.c
-index 0aede28f7d..9578fa00c3 100644
+index 92917852ba..2699a8929f 100644
 --- a/src/udev/udev-builtin-net_id.c
 +++ b/src/udev/udev-builtin-net_id.c
-@@ -101,7 +101,6 @@ static int get_virtfn_info(sd_device *dev, struct netnames *names, struct virtfn
+@@ -103,7 +103,6 @@ static int get_virtfn_info(sd_device *dev, struct netnames *names, struct virtfn
          _cleanup_(sd_device_unrefp) sd_device *physfn_pcidev = NULL;
          const char *physfn_link_file, *syspath;
          _cleanup_free_ char *physfn_pci_syspath = NULL;
@@ -19,7 +23,7 @@ index 0aede28f7d..9578fa00c3 100644
          struct dirent *dent;
          _cleanup_closedir_ DIR *dir = NULL;
          char suffix[ALTIFNAMSIZ];
-@@ -132,7 +131,7 @@ static int get_virtfn_info(sd_device *dev, struct netnames *names, struct virtfn
+@@ -134,7 +133,7 @@ static int get_virtfn_info(sd_device *dev, struct netnames *names, struct virtfn
                  return -errno;
  
          FOREACH_DIRENT_ALL(dent, dir, break) {
@@ -29,5 +33,5 @@ index 0aede28f7d..9578fa00c3 100644
                  if (!startswith(dent->d_name, "virtfn"))
                          continue;
 -- 
-2.27.0
+2.33.0
 

@@ -1,0 +1,117 @@
+From 77cfa37459fbd350c67c08597aaa5cc098fcc1ee Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 12 Nov 2021 11:06:46 +0100
+Subject: [PATCH] umask-util: add helper that resets umask until end of current
+ code block
+
+(cherry picked from commit 52f05ef21d7790f37bc3cd6e54fb9a4bcb16efa5)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/77cfa37459fbd350c67c08597aaa5cc098fcc1ee
+---
+ src/basic/umask-util.h  | 3 +++
+ src/nspawn/nspawn.c     | 9 +++------
+ src/shared/dev-setup.c  | 3 +--
+ src/test/test-fs-util.c | 3 ++-
+ 4 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/src/basic/umask-util.h b/src/basic/umask-util.h
+index bd7c2bdb8c..90d18f70ba 100644
+--- a/src/basic/umask-util.h
++++ b/src/basic/umask-util.h
+@@ -24,3 +24,6 @@ assert_cc((S_IFMT & 0777) == 0);
+         for (_cleanup_umask_ mode_t _saved_umask_ = umask(mask) | S_IFMT; \
+              FLAGS_SET(_saved_umask_, S_IFMT);                          \
+              _saved_umask_ &= 0777)
++
++#define BLOCK_WITH_UMASK(mask) \
++        _unused_ _cleanup_umask_ mode_t _saved_umask_ = umask(mask);
+diff --git a/src/nspawn/nspawn.c b/src/nspawn/nspawn.c
+index 575b9da447..1c468b310f 100644
+--- a/src/nspawn/nspawn.c
++++ b/src/nspawn/nspawn.c
+@@ -2201,13 +2201,12 @@ static int copy_devnodes(const char *dest) {
+                 "tty\0"
+                 "net/tun\0";
+ 
+-        _cleanup_umask_ mode_t u;
+         const char *d;
+         int r = 0;
+ 
+         assert(dest);
+ 
+-        u = umask(0000);
++        BLOCK_WITH_UMASK(0000);
+ 
+         /* Create /dev/net, so that we can create /dev/net/tun in it */
+         if (userns_mkdir(dest, "/dev/net", 0755, 0, 0) < 0)
+@@ -2284,11 +2283,10 @@ static int copy_devnodes(const char *dest) {
+ }
+ 
+ static int make_extra_nodes(const char *dest) {
+-        _cleanup_umask_ mode_t u;
+         size_t i;
+         int r;
+ 
+-        u = umask(0000);
++        BLOCK_WITH_UMASK(0000);
+ 
+         for (i = 0; i < arg_n_extra_nodes; i++) {
+                 _cleanup_free_ char *path = NULL;
+@@ -2485,12 +2483,11 @@ static int setup_kmsg(int kmsg_socket) {
+         _cleanup_(unlink_and_freep) char *from = NULL;
+         _cleanup_free_ char *fifo = NULL;
+         _cleanup_close_ int fd = -1;
+-        _cleanup_umask_ mode_t u;
+         int r;
+ 
+         assert(kmsg_socket >= 0);
+ 
+-        u = umask(0000);
++        BLOCK_WITH_UMASK(0000);
+ 
+         /* We create the kmsg FIFO as as temporary file in /run, but immediately delete it after bind mounting it to
+          * /proc/kmsg. While FIFOs on the reading side behave very similar to /proc/kmsg, their writing side behaves
+diff --git a/src/shared/dev-setup.c b/src/shared/dev-setup.c
+index b788b06913..0390abbfdc 100644
+--- a/src/shared/dev-setup.c
++++ b/src/shared/dev-setup.c
+@@ -81,13 +81,12 @@ int make_inaccessible_nodes(
+                 { "inaccessible/blk",  S_IFBLK  | 0000 },
+         };
+ 
+-        _cleanup_umask_ mode_t u;
+         int r;
+ 
+         if (!parent_dir)
+                 parent_dir = "/run/systemd";
+ 
+-        u = umask(0000);
++        BLOCK_WITH_UMASK(0000);
+ 
+         /* Set up inaccessible (and empty) file nodes of all types. This are used to as mount sources for over-mounting
+          * ("masking") file nodes that shall become inaccessible and empty for specific containers or services. We try
+diff --git a/src/test/test-fs-util.c b/src/test/test-fs-util.c
+index 08bebcf0e8..a24558f25b 100644
+--- a/src/test/test-fs-util.c
++++ b/src/test/test-fs-util.c
+@@ -763,7 +763,6 @@ static void test_rename_noreplace(void) {
+ 
+ static void test_chmod_and_chown(void) {
+         _cleanup_(rm_rf_physical_and_freep) char *d = NULL;
+-        _unused_ _cleanup_umask_ mode_t u = umask(0000);
+         struct stat st;
+         const char *p;
+ 
+@@ -772,6 +771,8 @@ static void test_chmod_and_chown(void) {
+ 
+         log_info("/* %s */", __func__);
+ 
++        BLOCK_WITH_UMASK(0000);
++
+         assert_se(mkdtemp_malloc(NULL, &d) >= 0);
+ 
+         p = strjoina(d, "/reg");
+-- 
+2.33.0
+

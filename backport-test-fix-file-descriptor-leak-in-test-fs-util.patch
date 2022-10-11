@@ -1,0 +1,52 @@
+From 4a247759a008f0a80f03a80c78efcde2e23e5ae5 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 22 Feb 2022 21:42:22 +0900
+Subject: [PATCH] test: fix file descriptor leak in test-fs-util
+
+Fixes an issue reported in #22576.
+
+(cherry picked from commit 19962747ca86a25e7102c536380bb2e9d7cfee9a)
+(cherry picked from commit cfe1cd0a066b29e5508b4a2c388fd919fd5e0c9f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/4a247759a008f0a80f03a80c78efcde2e23e5ae5
+---
+ src/test/test-fs-util.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/test/test-fs-util.c b/src/test/test-fs-util.c
+index a24558f25b..98ce3d96ef 100644
+--- a/src/test/test-fs-util.c
++++ b/src/test/test-fs-util.c
+@@ -27,10 +27,11 @@ static const char *arg_test_dir = NULL;
+ 
+ static void test_chase_symlinks(void) {
+         _cleanup_free_ char *result = NULL;
++        _cleanup_close_ int pfd = -1;
+         char *temp;
+         const char *top, *p, *pslash, *q, *qslash;
+         struct stat st;
+-        int r, pfd;
++        int r;
+ 
+         log_info("/* %s */", __func__);
+ 
+@@ -318,6 +319,7 @@ static void test_chase_symlinks(void) {
+         assert_se(fstat(pfd, &st) >= 0);
+         assert_se(S_ISLNK(st.st_mode));
+         result = mfree(result);
++        pfd = safe_close(pfd);
+ 
+         /* s1 -> s2 -> nonexistent */
+         q = strjoina(temp, "/s1");
+@@ -331,6 +333,7 @@ static void test_chase_symlinks(void) {
+         assert_se(fstat(pfd, &st) >= 0);
+         assert_se(S_ISLNK(st.st_mode));
+         result = mfree(result);
++        pfd = safe_close(pfd);
+ 
+         /* Test CHASE_STEP */
+ 
+-- 
+2.33.0
+

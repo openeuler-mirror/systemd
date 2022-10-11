@@ -1,0 +1,34 @@
+From e1cc12ee2ba089bc126764be509b6b0ed8e8a68b Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 23 Feb 2022 01:52:29 +0900
+Subject: [PATCH] test-journal-send: close fd opend by syslog()
+
+Fixes an issue reported in #22576.
+
+(cherry picked from commit 9048a6ccf3bd4f6794fc1ac9a838e1a0bfbcabf1)
+(cherry picked from commit 4d24a369908f9915757632fa196deda14c172f9e)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e1cc12ee2ba089bc126764be509b6b0ed8e8a68b
+---
+ src/libsystemd/sd-journal/test-journal-send.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/libsystemd/sd-journal/test-journal-send.c b/src/libsystemd/sd-journal/test-journal-send.c
+index 75bd8e7b85..b6644e65c1 100644
+--- a/src/libsystemd/sd-journal/test-journal-send.c
++++ b/src/libsystemd/sd-journal/test-journal-send.c
+@@ -90,6 +90,10 @@ static void test_journal_send(void) {
+         assert_se(sd_journal_sendv(graph2, 1) == 0);
+         assert_se(sd_journal_sendv(message1, 1) == 0);
+         assert_se(sd_journal_sendv(message2, 1) == 0);
++
++        /* The above syslog() opens a fd which is stored in libc, and the valgrind reports the fd is
++         * leaked when we do not call closelog(). */
++        closelog();
+ }
+ 
+ int main(int argc, char *argv[]) {
+-- 
+2.33.0
+

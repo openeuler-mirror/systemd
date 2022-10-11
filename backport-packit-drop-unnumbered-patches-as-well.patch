@@ -1,0 +1,33 @@
+From d566e288f2fb1935261d36c0c35effc4489da5e6 Mon Sep 17 00:00:00 2001
+From: Frantisek Sumsal <frantisek@sumsal.cz>
+Date: Thu, 17 Feb 2022 14:02:04 +0100
+Subject: [PATCH] packit: drop unnumbered patches as well
+
+(cherry picked from commit 729c6b6af8e3cef259b80746f7f7f10cc63d309f)
+(cherry picked from commit 477b85f43871c78fce053ebbd9592bf71d49dd30)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/d566e288f2fb1935261d36c0c35effc4489da5e6
+---
+ .packit.yml | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/.packit.yml b/.packit.yml
+index fb2cb5a7c3..3a47c6a6a1 100644
+--- a/.packit.yml
++++ b/.packit.yml
+@@ -21,9 +21,9 @@ actions:
+     # Drop the "sources" file so rebase-helper doesn't think we're a dist-git
+     - "rm -fv .packit_rpm/sources"
+     # Drop backported patches from the specfile, but keep the downstream-only ones
+-    # - Patch0000-0499: backported patches from upstream
++    # - Patch(0000-0499): backported patches from upstream
+     # - Patch0500-9999: downstream-only patches
+-    - "sed -ri '/^Patch0[0-4]?[0-9]{0,2}\\:.+\\.patch/d' .packit_rpm/systemd.spec"
++    - "sed -ri '/^Patch(0[0-4]?[0-9]{0,2})?\\:.+\\.patch/d' .packit_rpm/systemd.spec"
+     # Build the RPM with --werror. Even though --werror doesn't work in all
+     # cases (see [0]), we can't use -Dc_args=/-Dcpp_args= here because of the
+     # RPM hardening macros, that use $CFLAGS/$CPPFLAGS (see [1]).
+-- 
+2.33.0
+

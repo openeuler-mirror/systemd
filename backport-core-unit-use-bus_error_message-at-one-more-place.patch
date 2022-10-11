@@ -1,0 +1,36 @@
+From aa25320dbbc2b239d9f551cffac39263814a3dfa Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 30 Jan 2022 05:38:01 +0900
+Subject: [PATCH] core/unit: use bus_error_message() at one more place
+
+(cherry picked from commit 33322185554799b08e94aca036dd109aaee52408)
+(cherry picked from commit 81e59411161078f4f90d80e2e111755adc16db33)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/aa25320dbbc2b239d9f551cffac39263814a3dfa
+---
+ src/core/unit.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/unit.c b/src/core/unit.c
+index dfe200ee20..0e8a01966a 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -3422,8 +3422,12 @@ static int get_name_owner_handler(sd_bus_message *message, void *userdata, sd_bu
+ 
+         e = sd_bus_message_get_error(message);
+         if (e) {
+-                if (!sd_bus_error_has_name(e, "org.freedesktop.DBus.Error.NameHasNoOwner"))
+-                        log_unit_error(u, "Unexpected error response from GetNameOwner(): %s", e->message);
++                if (!sd_bus_error_has_name(e, "org.freedesktop.DBus.Error.NameHasNoOwner")) {
++                        r = sd_bus_error_get_errno(e);
++                        log_unit_error_errno(u, r,
++                                             "Unexpected error response from GetNameOwner(): %s",
++                                             bus_error_message(e, r));
++                }
+ 
+                 new_owner = NULL;
+         } else {
+-- 
+2.33.0
+

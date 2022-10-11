@@ -3,15 +3,12 @@ From: Lennart Poettering <lennart@poettering.net>
 Date: Fri, 26 Mar 2021 22:40:40 +0100
 Subject: [PATCH] fstab-generator: if usr= is specified, mount it to
  /sysusr/usr/ first.
-
+ 
  This reverts 29a24ab28e9790680348b1ffab653a321fa49a67
 
-Reason: In systemd 249, at initrd stage, /usr fs will be mounted on
-/sysroot, or on /sysusr.
-This will cause sysroot.mount to be run ahead of time. But at this time,
-the lvm of extra file directory is inactive,
-This will make the crashed system have to wait 5 minutes. So we revert
-the commit, and don't mount sysroot in advance.
+Reason: In systemd 249, at initrd stage, /usr fs will be mounted on /sysroot, or on /sysusr.
+This will cause sysroot.mount to be run ahead of time. But at this time, the lvm of extra file directory is inactive,
+This will make the crashed system have to wait 5 minutes. So we revert the commit, and don't mount sysroot in advance. 
 
 Conflict:NA
 Reference:https://github.com/systemd/systemd/commit/29a24ab28e9790680348b1ffab653a321fa49a67
@@ -236,5 +233,5 @@ index 5a0ec89..37eb23c 100644
  AssertPathExists=/etc/initrd-release
  
 -- 
-2.27.0
+2.33.0
 

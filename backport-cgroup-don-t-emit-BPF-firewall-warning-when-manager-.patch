@@ -1,0 +1,45 @@
+From f4472e406eaa1087534066d09a4b7f2fd1de2a06 Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Tue, 30 Nov 2021 23:49:33 +0000
+Subject: [PATCH] cgroup: don't emit BPF firewall warning when manager is in
+ test mode
+
+Support for BPF might not have been checked, since it's not necessary
+in test mode (eg: running offline analysis of units). This causes an
+assert:
+
+Assertion '(_error) != 0' failed at src/core/bpf-firewall.c:914, function emit_bpf_firewall_warning(). Aborting.
+
+Export SYSTEMD_LOG_LEVEl=debug in TEST-65-ANALYZE is enough to trigger
+this assert while doing an offline analysis of a unit that has some
+firewall/network restrictions set.
+
+Skip the warning if the manager is in test mode.
+
+(cherry picked from commit a42232a18c5716f69efc67c779dd2ef6c4b9d6c2)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/f4472e406eaa1087534066d09a4b7f2fd1de2a06
+---
+ src/core/bpf-firewall.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/bpf-firewall.c b/src/core/bpf-firewall.c
+index 4a92052925..c4989a3ea6 100644
+--- a/src/core/bpf-firewall.c
++++ b/src/core/bpf-firewall.c
+@@ -911,7 +911,10 @@ int bpf_firewall_supported(void) {
+ void emit_bpf_firewall_warning(Unit *u) {
+         static bool warned = false;
+ 
+-        if (!warned) {
++        assert(u);
++        assert(u->manager);
++
++        if (!warned && !MANAGER_IS_TEST_RUN(u->manager)) {
+                 bool quiet = bpf_firewall_unsupported_reason == -EPERM && detect_container() > 0;
+ 
+                 log_unit_full_errno(u, quiet ? LOG_DEBUG : LOG_WARNING, bpf_firewall_unsupported_reason,
+-- 
+2.33.0
+

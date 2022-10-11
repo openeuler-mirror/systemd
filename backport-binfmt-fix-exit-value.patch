@@ -1,0 +1,32 @@
+From d4406e94a32d423d8a73deb7757fb09890afe2c4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Wed, 10 Nov 2021 13:58:32 +0100
+Subject: [PATCH] binfmt: fix exit value
+
+Positive values are mapped to 0 by DEFINE_MAIN_FUNCTION(), so e.g.
+systemd-binfmt --foobar would "succeed".
+
+(cherry picked from commit 52707598d5c0dbbc8a967e4874b0b08ee2486772)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/d4406e94a32d423d8a73deb7757fb09890afe2c4
+---
+ src/binfmt/binfmt.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/binfmt/binfmt.c b/src/binfmt/binfmt.c
+index 29530bb691..981218f52f 100644
+--- a/src/binfmt/binfmt.c
++++ b/src/binfmt/binfmt.c
+@@ -189,7 +189,7 @@ static int run(int argc, char *argv[]) {
+ 
+         r = parse_argv(argc, argv);
+         if (r <= 0)
+-                return r < 0 ? EXIT_FAILURE : EXIT_SUCCESS;
++                return r;
+ 
+         log_setup();
+ 
+-- 
+2.33.0
+

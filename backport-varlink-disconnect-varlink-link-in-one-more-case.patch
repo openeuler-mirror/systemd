@@ -1,0 +1,41 @@
+From 968f2f3f5a76b05142e1de447bb79f4f97868721 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 21 Oct 2021 17:29:48 +0200
+Subject: [PATCH] varlink: disconnect varlink link in one more case
+
+Previously we'd possibly see POLLHUP on a varlink link, and continue to
+run epoll on it even though we have nothing to read nor write anymore.
+
+Let's fix that, and once we know that there's nothing to write anymore
+(or we saw a write error already) we'll disconnect after POLLHUP.
+
+Fixes: #20062
+(cherry picked from commit 7c26a631ad8bf91016db156b7d299ca68fd7866e)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/968f2f3f5a76b05142e1de447bb79f4f97868721
+---
+ src/shared/varlink.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/shared/varlink.c b/src/shared/varlink.c
+index 8da568e208..a57475b5ba 100644
+--- a/src/shared/varlink.c
++++ b/src/shared/varlink.c
+@@ -417,9 +417,10 @@ static int varlink_test_disconnect(Varlink *v) {
+         if (IN_SET(v->state, VARLINK_IDLE_CLIENT) && (v->write_disconnected || v->got_pollhup))
+                 goto disconnect;
+ 
+-        /* The server is still expecting to write more, but its write end is disconnected and it got a POLLHUP
+-         * (i.e. from a disconnected client), so disconnect. */
+-        if (IN_SET(v->state, VARLINK_PENDING_METHOD, VARLINK_PENDING_METHOD_MORE) && v->write_disconnected && v->got_pollhup)
++        /* We are on the server side and still want to send out more replies, but we saw POLLHUP already, and
++         * either got no buffered bytes to write anymore or already saw a write error. In that case we should
++         * shut down the varlink link. */
++        if (IN_SET(v->state, VARLINK_PENDING_METHOD, VARLINK_PENDING_METHOD_MORE) && (v->write_disconnected || v->output_buffer_size == 0) && v->got_pollhup)
+                 goto disconnect;
+ 
+         return 0;
+-- 
+2.33.0
+

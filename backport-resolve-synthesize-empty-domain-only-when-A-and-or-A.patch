@@ -1,0 +1,105 @@
+From 76016b82c683bcb15c155a8ab7ca45004894c134 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 4 Feb 2022 12:05:33 +0900
+Subject: [PATCH] resolve: synthesize empty domain only when A and/or AAAA key
+ is requested
+
+Follow-up for 3b2ac14ac45bef01cf489c3231b868936866444b (#22231).
+
+Before this commit.
+---
+$ dig -t SRV '.'
+
+; <<>> DiG 9.16.24-RH <<>> -t SRV .
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 16836
+;; flags: qr aa rd ra ad; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 65494
+;; QUESTION SECTION:
+;.				IN	SRV
+
+;; Query time: 1 msec
+;; SERVER: 127.0.0.53#53(127.0.0.53)
+;; WHEN: Fri Feb 04 12:01:09 JST 2022
+;; MSG SIZE  rcvd: 28
+---
+
+After this commit.
+---
+$ dig -t SRV '.'
+
+; <<>> DiG 9.16.24-RH <<>> -t SRV .
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 19861
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 65494
+;; QUESTION SECTION:
+;.				IN	SRV
+
+;; AUTHORITY SECTION:
+.			86394	IN	SOA	a.root-servers.net. nstld.verisign-grs.com. 2022020302 1800 900 604800 86400
+
+;; Query time: 20 msec
+;; SERVER: 127.0.0.53#53(127.0.0.53)
+;; WHEN: Fri Feb 04 12:00:12 JST 2022
+;; MSG SIZE  rcvd: 103
+---
+
+Fixes #22401.
+
+(cherry picked from commit 30fa3aa1fa56d9a1a4f3a26c0bc02253d44dfa0f)
+(cherry picked from commit d57147ef5698c50e02e5e74df8d0936230032cfe)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/76016b82c683bcb15c155a8ab7ca45004894c134
+---
+ src/resolve/resolved-dns-scope.c | 20 ++++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/src/resolve/resolved-dns-scope.c b/src/resolve/resolved-dns-scope.c
+index 47edba6bc3..360ceecdb7 100644
+--- a/src/resolve/resolved-dns-scope.c
++++ b/src/resolve/resolved-dns-scope.c
+@@ -626,10 +626,6 @@ DnsScopeMatch dns_scope_good_domain(
+         if ((SD_RESOLVED_FLAGS_MAKE(s->protocol, s->family, false, false) & flags) == 0)
+                 return DNS_SCOPE_NO;
+ 
+-        /* Never resolve empty name. */
+-        if (dns_name_is_empty(domain))
+-                return DNS_SCOPE_NO;
+-
+         /* Never resolve any loopback hostname or IP address via DNS, LLMNR or mDNS. Instead, always rely on
+          * synthesized RRs for these. */
+         if (is_localhost(domain) ||
+@@ -658,6 +654,22 @@ DnsScopeMatch dns_scope_good_domain(
+                 DnsScopeMatch m;
+                 int n_best = -1;
+ 
++                if (dns_name_is_empty(domain)) {
++                        DnsResourceKey *t;
++                        bool found = false;
++
++                        /* Refuse empty name if only A and/or AAAA records are requested. */
++
++                        DNS_QUESTION_FOREACH(t, question)
++                                if (!IN_SET(t->type, DNS_TYPE_A, DNS_TYPE_AAAA)) {
++                                        found = true;
++                                        break;
++                                }
++
++                        if (!found)
++                                return DNS_SCOPE_NO;
++                }
++
+                 /* Never route things to scopes that lack DNS servers */
+                 if (!dns_scope_get_dns_server(s))
+                         return DNS_SCOPE_NO;
+-- 
+2.33.0
+

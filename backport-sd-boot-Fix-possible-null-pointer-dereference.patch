@@ -1,0 +1,32 @@
+From 872d101c2308e07c523fd6ca84bd774447f05b7e Mon Sep 17 00:00:00 2001
+From: Jan Janssen <medhefgo@web.de>
+Date: Wed, 11 Aug 2021 14:59:46 +0200
+Subject: [PATCH] sd-boot: Fix possible null pointer dereference
+
+Auto entries are showing garbage for the version in print_status()
+because StrDuplicate does not expect null pointers.
+
+(cherry picked from commit b52fafb26d90b77cfc259fcbdab3c95a571bacb1)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/872d101c2308e07c523fd6ca84bd774447f05b7e
+---
+ src/boot/efi/boot.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/boot/efi/boot.c b/src/boot/efi/boot.c
+index 3249171ec1..13940a6df7 100644
+--- a/src/boot/efi/boot.c
++++ b/src/boot/efi/boot.c
+@@ -1724,7 +1724,7 @@ static ConfigEntry *config_entry_add_loader(
+         *entry = (ConfigEntry) {
+                 .type = type,
+                 .title = StrDuplicate(title),
+-                .version = StrDuplicate(version),
++                .version = version ? StrDuplicate(version) : NULL,
+                 .device = device,
+                 .loader = StrDuplicate(loader),
+                 .id = StrDuplicate(id),
+-- 
+2.33.0
+

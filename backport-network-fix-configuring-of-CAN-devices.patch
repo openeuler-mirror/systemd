@@ -1,0 +1,40 @@
+From 9bf50758426a3d8dd4b40e28c960e920d41444ba Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 12 Aug 2021 13:39:53 +0900
+Subject: [PATCH] network: fix configuring of CAN devices
+
+Fix a bug introduced by 7558f9e717381eef0ddc8ddfb5a754ea4b0f3e6c.
+
+Fixes #20428.
+
+(cherry picked from commit 1e8cce8f1e61e01db844d518b7051b6ce69867fd)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9bf50758426a3d8dd4b40e28c960e920d41444ba
+---
+ src/network/networkd-setlink.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/network/networkd-setlink.c b/src/network/networkd-setlink.c
+index 10c312c480..13c4cedd10 100644
+--- a/src/network/networkd-setlink.c
++++ b/src/network/networkd-setlink.c
+@@ -229,10 +229,14 @@ static int link_configure(
+ 
+         log_link_debug(link, "Setting %s", set_link_operation_to_string(op));
+ 
+-        if (IN_SET(op, SET_LINK_BOND, SET_LINK_CAN)) {
++        if (op == SET_LINK_BOND) {
+                 r = sd_rtnl_message_new_link(link->manager->rtnl, &req, RTM_NEWLINK, link->master_ifindex);
+                 if (r < 0)
+                         return log_link_debug_errno(link, r, "Could not allocate RTM_NEWLINK message: %m");
++        } else if (op == SET_LINK_CAN) {
++                r = sd_rtnl_message_new_link(link->manager->rtnl, &req, RTM_NEWLINK, link->ifindex);
++                if (r < 0)
++                        return log_link_debug_errno(link, r, "Could not allocate RTM_NEWLINK message: %m");
+         } else {
+                 r = sd_rtnl_message_new_link(link->manager->rtnl, &req, RTM_SETLINK, link->ifindex);
+                 if (r < 0)
+-- 
+2.33.0
+

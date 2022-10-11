@@ -1,0 +1,35 @@
+From 22239a861897fcd7c4d16f728c4bb40d84793961 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 2 Feb 2022 14:05:45 +0900
+Subject: [PATCH] core/mount: fail early if directory cannot be created
+
+Prompted by #22334.
+
+(cherry picked from commit e4de58c8231e47509ffeb3aa47620ca42f22d7f6)
+(cherry picked from commit 1d7e0b68048ba0760f8fdf6a26c7a5017ac38569)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/22239a861897fcd7c4d16f728c4bb40d84793961
+---
+ src/core/mount.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/mount.c b/src/core/mount.c
+index af39db214b..673eec32b8 100644
+--- a/src/core/mount.c
++++ b/src/core/mount.c
+@@ -1035,8 +1035,10 @@ static void mount_enter_mounting(Mount *m) {
+                 r = mkdir_p_label(p->what, m->directory_mode);
+                 /* mkdir_p_label() can return -EEXIST if the target path exists and is not a directory - which is
+                  * totally OK, in case the user wants us to overmount a non-directory inode. */
+-                if (r < 0 && r != -EEXIST)
++                if (r < 0 && r != -EEXIST) {
+                         log_unit_error_errno(UNIT(m), r, "Failed to make bind mount source '%s': %m", p->what);
++                        goto fail;
++                }
+         }
+ 
+         if (p) {
+-- 
+2.33.0
+

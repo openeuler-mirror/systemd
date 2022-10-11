@@ -1,0 +1,130 @@
+From 4b05527fe35de9602cdcd68a9812d67cd0892e00 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 24 Sep 2021 15:00:43 +0900
+Subject: [PATCH] sd-dhcp6-client: do not merge NTP and SNTP options
+
+Previously, SNTP option is ignored when it appears after NTP option(s),
+but merged later NTP options when it appears first.
+This makes split the NTP and SNTP addresses, and use SNTP addresses only
+when no NTP option is provided.
+
+(cherry picked from commit e693e969614062fea1746399cf5cff4c09526c6a)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/4b05527fe35de9602cdcd68a9812d67cd0892e00
+---
+ src/libsystemd-network/dhcp6-lease-internal.h |  4 ++-
+ src/libsystemd-network/sd-dhcp6-client.c      |  2 +-
+ src/libsystemd-network/sd-dhcp6-lease.c       | 26 ++++++++++---------
+ src/libsystemd-network/test-dhcp6-client.c    |  3 +--
+ 4 files changed, 19 insertions(+), 16 deletions(-)
+
+diff --git a/src/libsystemd-network/dhcp6-lease-internal.h b/src/libsystemd-network/dhcp6-lease-internal.h
+index 41b43ba7a4..dbcb6d040f 100644
+--- a/src/libsystemd-network/dhcp6-lease-internal.h
++++ b/src/libsystemd-network/dhcp6-lease-internal.h
+@@ -33,6 +33,8 @@ struct sd_dhcp6_lease {
+         size_t ntp_count;
+         char **ntp_fqdn;
+         size_t ntp_fqdn_count;
++        struct in6_addr *sntp;
++        size_t sntp_count;
+         char *fqdn;
+ };
+ 
+@@ -53,7 +55,7 @@ int dhcp6_lease_get_pd_iaid(sd_dhcp6_lease *lease, be32_t *iaid);
+ int dhcp6_lease_set_dns(sd_dhcp6_lease *lease, const uint8_t *optval, size_t optlen);
+ int dhcp6_lease_set_domains(sd_dhcp6_lease *lease, const uint8_t *optval, size_t optlen);
+ int dhcp6_lease_set_ntp(sd_dhcp6_lease *lease, const uint8_t *optval, size_t optlen);
+-int dhcp6_lease_set_sntp(sd_dhcp6_lease *lease, const uint8_t *optval, size_t optlen) ;
++int dhcp6_lease_add_sntp(sd_dhcp6_lease *lease, const uint8_t *optval, size_t optlen) ;
+ int dhcp6_lease_set_fqdn(sd_dhcp6_lease *lease, const uint8_t *optval, size_t optlen);
+ 
+ int dhcp6_lease_new(sd_dhcp6_lease **ret);
+diff --git a/src/libsystemd-network/sd-dhcp6-client.c b/src/libsystemd-network/sd-dhcp6-client.c
+index efbf7d7df3..a31dd16c01 100644
+--- a/src/libsystemd-network/sd-dhcp6-client.c
++++ b/src/libsystemd-network/sd-dhcp6-client.c
+@@ -1265,7 +1265,7 @@ static int client_parse_message(
+                         break;
+ 
+                 case SD_DHCP6_OPTION_SNTP_SERVERS:
+-                        r = dhcp6_lease_set_sntp(lease, optval, optlen);
++                        r = dhcp6_lease_add_sntp(lease, optval, optlen);
+                         if (r < 0)
+                                 return r;
+ 
+diff --git a/src/libsystemd-network/sd-dhcp6-lease.c b/src/libsystemd-network/sd-dhcp6-lease.c
+index 4804f0941a..e424aa15b6 100644
+--- a/src/libsystemd-network/sd-dhcp6-lease.c
++++ b/src/libsystemd-network/sd-dhcp6-lease.c
+@@ -294,31 +294,32 @@ int dhcp6_lease_set_ntp(sd_dhcp6_lease *lease, const uint8_t *optval, size_t opt
+         return 0;
+ }
+ 
+-int dhcp6_lease_set_sntp(sd_dhcp6_lease *lease, const uint8_t *optval, size_t optlen) {
++int dhcp6_lease_add_sntp(sd_dhcp6_lease *lease, const uint8_t *optval, size_t optlen) {
+         assert_return(lease, -EINVAL);
+         assert_return(optval, -EINVAL);
+ 
+         if (optlen == 0)
+                 return 0;
+ 
+-        if (lease->ntp || lease->ntp_fqdn)
+-                return -EEXIST;
+-
+-        /* Using deprecated SNTP information */
+-
+-        return dhcp6_option_parse_addresses(optval, optlen, &lease->ntp, &lease->ntp_count);
++        /* SNTP option is defined in RFC4075, and deprecated by RFC5908. */
++        return dhcp6_option_parse_addresses(optval, optlen, &lease->sntp, &lease->sntp_count);
+ }
+ 
+-int sd_dhcp6_lease_get_ntp_addrs(sd_dhcp6_lease *lease,
+-                                 const struct in6_addr **addrs) {
++int sd_dhcp6_lease_get_ntp_addrs(sd_dhcp6_lease *lease, const struct in6_addr **ret) {
+         assert_return(lease, -EINVAL);
+-        assert_return(addrs, -EINVAL);
++        assert_return(ret, -EINVAL);
+ 
+-        if (lease->ntp_count) {
+-                *addrs = lease->ntp;
++        if (lease->ntp) {
++                *ret = lease->ntp;
+                 return lease->ntp_count;
+         }
+ 
++        if (lease->sntp && !lease->ntp_fqdn) {
++                /* Fallback to the deprecated SNTP option. */
++                *ret = lease->sntp;
++                return lease->sntp_count;
++        }
++
+         return -ENOENT;
+ }
+ 
+@@ -377,6 +378,7 @@ static sd_dhcp6_lease *dhcp6_lease_free(sd_dhcp6_lease *lease) {
+         strv_free(lease->domains);
+         free(lease->ntp);
+         strv_free(lease->ntp_fqdn);
++        free(lease->sntp);
+ 
+         return mfree(lease);
+ }
+diff --git a/src/libsystemd-network/test-dhcp6-client.c b/src/libsystemd-network/test-dhcp6-client.c
+index b22297dcd5..429687562c 100644
+--- a/src/libsystemd-network/test-dhcp6-client.c
++++ b/src/libsystemd-network/test-dhcp6-client.c
+@@ -521,8 +521,7 @@ static int test_advertise_option(sd_event *e) {
+ 
+                 case SD_DHCP6_OPTION_SNTP_SERVERS:
+                         assert_se(optlen == 16);
+-                        assert_se(dhcp6_lease_set_sntp(lease, optval,
+-                                                       optlen) >= 0);
++                        assert_se(dhcp6_lease_add_sntp(lease, optval, optlen) >= 0);
+                         break;
+ 
+                 default:
+-- 
+2.33.0
+

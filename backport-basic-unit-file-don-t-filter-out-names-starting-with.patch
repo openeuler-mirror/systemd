@@ -1,0 +1,32 @@
+From d21bfe5c06688a5b6aa0a0b4eae0b05bc45475fb Mon Sep 17 00:00:00 2001
+From: Anita Zhang <the.anitazha@gmail.com>
+Date: Tue, 28 Sep 2021 23:52:39 -0700
+Subject: [PATCH] basic/unit-file: don't filter out names starting with dot
+
+Fixes #20859
+Reverts 3796bdc55d6ba499d1049f749072218879e619a7
+
+(cherry picked from commit 14bb72953458caace048b55ead7ea06a592b864f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/d21bfe5c06688a5b6aa0a0b4eae0b05bc45475fb
+---
+ src/basic/unit-file.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/basic/unit-file.c b/src/basic/unit-file.c
+index 884a0674a9..0d58b1c4fe 100644
+--- a/src/basic/unit-file.c
++++ b/src/basic/unit-file.c
+@@ -284,7 +284,7 @@ int unit_file_build_name_map(
+                         continue;
+                 }
+ 
+-                FOREACH_DIRENT(de, d, log_warning_errno(errno, "Failed to read \"%s\", ignoring: %m", *dir)) {
++                FOREACH_DIRENT_ALL(de, d, log_warning_errno(errno, "Failed to read \"%s\", ignoring: %m", *dir)) {
+                         char *filename;
+                         _cleanup_free_ char *_filename_free = NULL, *simplified = NULL;
+                         const char *suffix, *dst = NULL;
+-- 
+2.33.0
+

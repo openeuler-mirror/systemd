@@ -1,0 +1,43 @@
+From 38787a985396277058a20ac0c6f66fd1377d0737 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sat, 11 Sep 2021 20:37:50 +0900
+Subject: [PATCH] test-oomd-util: skip tests if cgroup memory controller is not
+ available
+
+Fixes #20593 and #20655.
+
+(cherry picked from commit 8b2e22579a6549ab8423858819703fc142862bcb)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/38787a985396277058a20ac0c6f66fd1377d0737
+---
+ src/oom/test-oomd-util.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/oom/test-oomd-util.c b/src/oom/test-oomd-util.c
+index 776c65820e..29f2c54ab1 100644
+--- a/src/oom/test-oomd-util.c
++++ b/src/oom/test-oomd-util.c
+@@ -90,6 +90,7 @@ static void test_oomd_cgroup_context_acquire_and_insert(void) {
+         _cleanup_free_ char *cgroup = NULL;
+         ManagedOOMPreference root_pref;
+         OomdCGroupContext *c1, *c2;
++        CGroupMask mask;
+         bool test_xattrs;
+         int root_xattrs, r;
+ 
+@@ -102,6 +103,11 @@ static void test_oomd_cgroup_context_acquire_and_insert(void) {
+         if (cg_all_unified() <= 0)
+                 return (void) log_tests_skipped("cgroups are not running in unified mode");
+ 
++        assert_se(cg_mask_supported(&mask) >= 0);
++
++        if (!FLAGS_SET(mask, CGROUP_MASK_MEMORY))
++                return (void) log_tests_skipped("cgroup memory controller is not available");
++
+         assert_se(cg_pid_get_path(NULL, 0, &cgroup) >= 0);
+ 
+         /* If we don't have permissions to set xattrs we're likely in a userns or missing capabilities
+-- 
+2.33.0
+

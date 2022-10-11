@@ -1,0 +1,34 @@
+From 0c136b86d6c32445c6b503c87ba5fa348f34e22b Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 4 Aug 2021 13:53:21 +0900
+Subject: [PATCH] network: ignore errors on setting bridge config
+
+For some setups, kernel refuses to set bridge configs with -EOPNOTSUPP.
+See kernel's rtnl_bridge_setlink() in net/core/rtnetlink.c.
+
+Fixes #20373.
+
+(cherry picked from commit 1171f3f030319155914c2bb90655f46653f88cbf)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/0c136b86d6c32445c6b503c87ba5fa348f34e22b
+---
+ src/network/networkd-setlink.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/network/networkd-setlink.c b/src/network/networkd-setlink.c
+index fa1dd9b3ba..8130bb6bcc 100644
+--- a/src/network/networkd-setlink.c
++++ b/src/network/networkd-setlink.c
+@@ -124,7 +124,7 @@ static int link_set_bond_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *
+ }
+ 
+ static int link_set_bridge_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) {
+-        return set_link_handler_internal(rtnl, m, link, SET_LINK_BRIDGE, /* ignore = */ false, NULL);
++        return set_link_handler_internal(rtnl, m, link, SET_LINK_BRIDGE, /* ignore = */ true, NULL);
+ }
+ 
+ static int link_set_bridge_vlan_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) {
+-- 
+2.33.0
+

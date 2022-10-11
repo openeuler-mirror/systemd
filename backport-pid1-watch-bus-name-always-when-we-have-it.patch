@@ -1,0 +1,57 @@
+From b301230a6ce52989053b12324fcaef0d45610ee6 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 17 Feb 2022 17:23:48 +0100
+Subject: [PATCH] pid1: watch bus name always when we have it
+
+Previously we'd only watch configured service bus names if Type=dbus was
+set. Let's also watch it for other types. This is useful to pick up the
+main PID of such a service. In fact the code to pick it up was already
+in place, alas it didn't do anything given the signal was never received
+for it. Fix that.
+
+(It's also useful for debugging)
+
+(cherry picked from commit 1e8b312e5a22538f91defb89cf2997e09e106297)
+(cherry picked from commit a51e540b278827c0fc59760b9c77cd42cbddc0d2)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/b301230a6ce52989053b12324fcaef0d45610ee6
+---
+ src/core/service.c | 18 ++++++++++--------
+ 1 file changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/src/core/service.c b/src/core/service.c
+index 7b90822f68..5f56217904 100644
+--- a/src/core/service.c
++++ b/src/core/service.c
+@@ -685,17 +685,19 @@ static int service_setup_bus_name(Service *s) {
+         assert(s);
+ 
+         /* If s->bus_name is not set, then the unit will be refused by service_verify() later. */
+-        if (s->type != SERVICE_DBUS || !s->bus_name)
++        if (!s->bus_name)
+                 return 0;
+ 
+-        r = unit_add_dependency_by_name(UNIT(s), UNIT_REQUIRES, SPECIAL_DBUS_SOCKET, true, UNIT_DEPENDENCY_FILE);
+-        if (r < 0)
+-                return log_unit_error_errno(UNIT(s), r, "Failed to add dependency on " SPECIAL_DBUS_SOCKET ": %m");
++        if (s->type == SERVICE_DBUS) {
++                r = unit_add_dependency_by_name(UNIT(s), UNIT_REQUIRES, SPECIAL_DBUS_SOCKET, true, UNIT_DEPENDENCY_FILE);
++                if (r < 0)
++                        return log_unit_error_errno(UNIT(s), r, "Failed to add dependency on " SPECIAL_DBUS_SOCKET ": %m");
+ 
+-        /* We always want to be ordered against dbus.socket if both are in the transaction. */
+-        r = unit_add_dependency_by_name(UNIT(s), UNIT_AFTER, SPECIAL_DBUS_SOCKET, true, UNIT_DEPENDENCY_FILE);
+-        if (r < 0)
+-                return log_unit_error_errno(UNIT(s), r, "Failed to add dependency on " SPECIAL_DBUS_SOCKET ": %m");
++                /* We always want to be ordered against dbus.socket if both are in the transaction. */
++                r = unit_add_dependency_by_name(UNIT(s), UNIT_AFTER, SPECIAL_DBUS_SOCKET, true, UNIT_DEPENDENCY_FILE);
++                if (r < 0)
++                        return log_unit_error_errno(UNIT(s), r, "Failed to add dependency on " SPECIAL_DBUS_SOCKET ": %m");
++        }
+ 
+         r = unit_watch_bus_name(UNIT(s), s->bus_name);
+         if (r == -EEXIST)
+-- 
+2.33.0
+

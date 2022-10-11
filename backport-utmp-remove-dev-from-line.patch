@@ -1,0 +1,44 @@
+From 09534e85b5c51c664077637e7e8c7c68dec52972 Mon Sep 17 00:00:00 2001
+From: Vincent Bernat <vincent@bernat.ch>
+Date: Mon, 18 Oct 2021 20:58:43 +0200
+Subject: [PATCH] utmp: remove /dev from line
+
+utmp(5) says `ut_line` is the device name minus the leading "/dev/". Therefore,
+remove it. Without that, when using UtmpMode=user, we get `/dev/tty` in the
+output of `last`/`w`.
+
+(cherry picked from commit 33331d116db2eaf1189ea56ee4b36540179ac3dd)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/09534e85b5c51c664077637e7e8c7c68dec52972
+---
+ src/core/execute.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/execute.c b/src/core/execute.c
+index 2a337b55a2..6ff757ff04 100644
+--- a/src/core/execute.c
++++ b/src/core/execute.c
+@@ -4059,13 +4059,17 @@ static int exec_child(
+                 }
+         }
+ 
+-        if (context->utmp_id)
++        if (context->utmp_id) {
++                const char *line = context->tty_path ?
++                        (path_startswith(context->tty_path, "/dev/") ?: context->tty_path) :
++                        NULL;
+                 utmp_put_init_process(context->utmp_id, getpid_cached(), getsid(0),
+-                                      context->tty_path,
++                                      line,
+                                       context->utmp_mode == EXEC_UTMP_INIT  ? INIT_PROCESS :
+                                       context->utmp_mode == EXEC_UTMP_LOGIN ? LOGIN_PROCESS :
+                                       USER_PROCESS,
+                                       username);
++        }
+ 
+         if (uid_is_valid(uid)) {
+                 r = chown_terminal(STDIN_FILENO, uid);
+-- 
+2.33.0
+

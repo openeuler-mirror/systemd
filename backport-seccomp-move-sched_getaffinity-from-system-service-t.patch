@@ -1,0 +1,49 @@
+From 77681242c8c6d7693814b8245e9096e43faa21be Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 27 Jul 2021 17:11:09 +0200
+Subject: [PATCH] seccomp: move sched_getaffinity() from @system-service to
+ @default
+
+See: https://github.com/systemd/systemd/pull/20191#issuecomment-881982739
+
+In general, we shouldn't blanket move syscalls like this into @default,
+given that glibc actually does have fallbacks, afaics. However, as
+long as the syscalls are "read-only" and thus benign, I figure it's a
+safe thing to do. But we should probably stick to a "if in doubt, don't"
+rule, and put these syscalls in @system-service as default, but not into
+@default.
+
+I think in the real world @system-service is the sensible group people
+should use, and not @default actually.
+
+(cherry picked from commit 7df660e45682af5c40a236abe1bdc5ddcf3b3533)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/77681242c8c6d7693814b8245e9096e43faa21be
+---
+ src/shared/seccomp-util.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shared/seccomp-util.c b/src/shared/seccomp-util.c
+index 703d5a939c..631ca5dd34 100644
+--- a/src/shared/seccomp-util.c
++++ b/src/shared/seccomp-util.c
+@@ -331,6 +331,7 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
+                 "restart_syscall\0"
+                 "rseq\0"
+                 "rt_sigreturn\0"
++                "sched_getaffinity\0"
+                 "sched_yield\0"
+                 "set_robust_list\0"
+                 "set_thread_area\0"
+@@ -874,7 +875,6 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
+                 "remap_file_pages\0"
+                 "sched_get_priority_max\0"
+                 "sched_get_priority_min\0"
+-                "sched_getaffinity\0"
+                 "sched_getattr\0"
+                 "sched_getparam\0"
+                 "sched_getscheduler\0"
+-- 
+2.33.0
+

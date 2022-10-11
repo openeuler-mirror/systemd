@@ -1,0 +1,38 @@
+From f1f790658be65ba281d101d651f853701a829250 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Thu, 3 Mar 2022 19:13:20 +0100
+Subject: [PATCH] portable: inline one variable declaration
+
+(cherry picked from commit 90e3f3581dd578a23aec9f63ca846babfe4fcaa0)
+(cherry picked from commit 06d466a05c69e39058f109700c8a6c10bd4c2c89)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/f1f790658be65ba281d101d651f853701a829250
+---
+ src/portable/portabled-image-bus.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/portable/portabled-image-bus.c b/src/portable/portabled-image-bus.c
+index 3e6310f23e..964035ec15 100644
+--- a/src/portable/portabled-image-bus.c
++++ b/src/portable/portabled-image-bus.c
+@@ -109,7 +109,6 @@ int bus_image_common_get_metadata(
+         _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
+         _cleanup_free_ PortableMetadata **sorted = NULL;
+         PortableFlags flags = 0;
+-        size_t i;
+         int r;
+ 
+         assert(name_or_path || image);
+@@ -216,7 +215,7 @@ int bus_image_common_get_metadata(
+                 }
+         }
+ 
+-        for (i = 0; i < hashmap_size(unit_files); i++) {
++        for (size_t i = 0; i < hashmap_size(unit_files); i++) {
+ 
+                 r = sd_bus_message_open_container(reply, 'e', "say");
+                 if (r < 0)
+-- 
+2.33.0
+

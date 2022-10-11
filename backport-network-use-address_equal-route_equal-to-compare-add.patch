@@ -1,0 +1,68 @@
+From ea4d7828fe525201ffb98ff2a31fde8a12e0a4c4 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 4 Aug 2021 13:14:03 +0900
+Subject: [PATCH] network: use address_equal()/route_equal() to compare
+ addresses or routes configured by NDisc
+
+Fixes #20244.
+
+(cherry picked from commit 10e417b3eac03c1bcd0b5f3d5c24291ac644e164)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/ea4d7828fe525201ffb98ff2a31fde8a12e0a4c4
+---
+ src/network/networkd-address.c | 2 +-
+ src/network/networkd-route.c   | 4 ++--
+ src/network/networkd-route.h   | 1 +
+ 3 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/network/networkd-address.c b/src/network/networkd-address.c
+index 35305aff99..6b2230b725 100644
+--- a/src/network/networkd-address.c
++++ b/src/network/networkd-address.c
+@@ -165,7 +165,7 @@ Address *address_free(Address *address) {
+                 set_remove(address->link->dhcp6_pd_addresses, address);
+                 set_remove(address->link->dhcp6_pd_addresses_old, address);
+                 SET_FOREACH(n, address->link->ndisc_addresses)
+-                        if (n->address == address)
++                        if (address_equal(n->address, address))
+                                 free(set_remove(address->link->ndisc_addresses, n));
+ 
+                 if (address->family == AF_INET6 &&
+diff --git a/src/network/networkd-route.c b/src/network/networkd-route.c
+index 7b36b48141..77a93beca9 100644
+--- a/src/network/networkd-route.c
++++ b/src/network/networkd-route.c
+@@ -279,7 +279,7 @@ Route *route_free(Route *route) {
+                 set_remove(route->link->dhcp6_pd_routes, route);
+                 set_remove(route->link->dhcp6_pd_routes_old, route);
+                 SET_FOREACH(n, route->link->ndisc_routes)
+-                        if (n->route == route)
++                        if (route_equal(n->route, route))
+                                 free(set_remove(route->link->ndisc_routes, n));
+         }
+ 
+@@ -435,7 +435,7 @@ DEFINE_HASH_OPS_WITH_KEY_DESTRUCTOR(
+                 route_compare_func,
+                 route_free);
+ 
+-static bool route_equal(const Route *r1, const Route *r2) {
++bool route_equal(const Route *r1, const Route *r2) {
+         if (r1 == r2)
+                 return true;
+ 
+diff --git a/src/network/networkd-route.h b/src/network/networkd-route.h
+index fa0b3ba0fc..2d262819ad 100644
+--- a/src/network/networkd-route.h
++++ b/src/network/networkd-route.h
+@@ -66,6 +66,7 @@ typedef struct Route {
+ 
+ void route_hash_func(const Route *route, struct siphash *state);
+ int route_compare_func(const Route *a, const Route *b);
++bool route_equal(const Route *r1, const Route *r2);
+ extern const struct hash_ops route_hash_ops;
+ 
+ int route_new(Route **ret);
+-- 
+2.33.0
+

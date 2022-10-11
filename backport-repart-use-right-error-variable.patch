@@ -1,0 +1,38 @@
+From b57f76bff912de738a8da8feceb298160bebab26 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 5 Oct 2021 14:10:27 +0200
+Subject: [PATCH] repart: use right error variable
+
+(cherry picked from commit 8ac04a65477b59c9143b635c0c0daa5152d9b466)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/b57f76bff912de738a8da8feceb298160bebab26
+---
+ src/partition/repart.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/partition/repart.c b/src/partition/repart.c
+index 851c68cc4b..3c80d1380a 100644
+--- a/src/partition/repart.c
++++ b/src/partition/repart.c
+@@ -2784,7 +2784,7 @@ static int context_copy_blocks(Context *context) {
+                         return log_error_errno(r, "Failed to copy in data from '%s': %m", p->copy_blocks_path);
+ 
+                 if (fsync(target_fd) < 0)
+-                        return log_error_errno(r, "Failed to synchronize copied data blocks: %m");
++                        return log_error_errno(errno, "Failed to synchronize copied data blocks: %m");
+ 
+                 if (p->encrypt != ENCRYPT_OFF) {
+                         encrypted_dev_fd = safe_close(encrypted_dev_fd);
+@@ -3060,7 +3060,7 @@ static int context_mkfs(Context *context) {
+ 
+                 if (p->encrypt != ENCRYPT_OFF) {
+                         if (fsync(encrypted_dev_fd) < 0)
+-                                return log_error_errno(r, "Failed to synchronize LUKS volume: %m");
++                                return log_error_errno(errno, "Failed to synchronize LUKS volume: %m");
+                         encrypted_dev_fd = safe_close(encrypted_dev_fd);
+ 
+                         r = deactivate_luks(cd, encrypted);
+-- 
+2.33.0
+

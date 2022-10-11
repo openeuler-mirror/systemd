@@ -1,0 +1,45 @@
+From 05189e8c961c6b4ac8ef79c8911cb56965a5034f Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 31 Dec 2021 09:13:00 +0900
+Subject: [PATCH] nss-myhostname: do not apply non-zero offset to null pointer
+
+Fixes https://github.com/systemd/systemd/issues/21935#issuecomment-1003216503.
+
+(cherry picked from commit 92e9df9ca031b9b04487a46afd986ab3122183fd)
+(cherry picked from commit a473bfb4332ad6b0a0894135c4de0f8cc324d378)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/05189e8c961c6b4ac8ef79c8911cb56965a5034f
+---
+ src/nss-myhostname/nss-myhostname.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/nss-myhostname/nss-myhostname.c b/src/nss-myhostname/nss-myhostname.c
+index 3536c5fc83..67b1554d27 100644
+--- a/src/nss-myhostname/nss-myhostname.c
++++ b/src/nss-myhostname/nss-myhostname.c
+@@ -39,10 +39,8 @@ enum nss_status _nss_myhostname_gethostbyname4_r(
+         const char *canonical = NULL;
+         int n_addresses = 0;
+         uint32_t local_address_ipv4;
+-        struct local_address *a;
+         size_t l, idx, ms;
+         char *r_name;
+-        unsigned n;
+ 
+         PROTECT_ERRNO;
+         BLOCK_SIGNALS(NSS_SIGNALS_BLOCK);
+@@ -136,7 +134,9 @@ enum nss_status _nss_myhostname_gethostbyname4_r(
+         }
+ 
+         /* Fourth, fill actual addresses in, but in backwards order */
+-        for (a = addresses + n_addresses - 1, n = 0; (int) n < n_addresses; n++, a--) {
++        for (int i = n_addresses; i > 0; i--) {
++                struct local_address *a = addresses + i - 1;
++
+                 r_tuple = (struct gaih_addrtuple*) (buffer + idx);
+                 r_tuple->next = r_tuple_prev;
+                 r_tuple->name = r_name;
+-- 
+2.33.0
+

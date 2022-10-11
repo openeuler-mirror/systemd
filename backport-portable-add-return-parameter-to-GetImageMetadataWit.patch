@@ -1,0 +1,393 @@
+From 594b9adc847c4b759d1e51559fceb617015f8575 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Thu, 3 Mar 2022 16:26:36 +0100
+Subject: [PATCH] portable: add return parameter to
+ GetImageMetadataWithExtensions
+
+The complaint was that the output array was used for two kinds of data, and the
+input flag decided whether this extra data should be included. The flag is
+removed, and instead the old method is changed to include the data always as
+a separate parameter.
+
+This breaks backward compatibility, but  the old method is effectively broken
+and does not appear to be used yet, at least in open source code, by
+searching on codesearch.debian.net and github.com.
+
+Fixes #22404.
+
+Co-authored-by: Luca Boccassi <bluca@debian.org>
+(cherry picked from commit 087a799f64560bb0379b8a99ebbd9ca84804e4c3)
+(cherry picked from commit 00b5aa8d741ad17f6b8f5f03d901b038e3a27d04)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/594b9adc847c4b759d1e51559fceb617015f8575
+---
+ man/org.freedesktop.portable1.xml  |  21 ++---
+ src/portable/portable.h            |  13 ++-
+ src/portable/portablectl.c         | 142 +++++++++++++++--------------
+ src/portable/portabled-bus.c       |   1 +
+ src/portable/portabled-image-bus.c |  30 +++---
+ 5 files changed, 110 insertions(+), 97 deletions(-)
+
+diff --git a/man/org.freedesktop.portable1.xml b/man/org.freedesktop.portable1.xml
+index 053f2a5434..8f960cc28d 100644
+--- a/man/org.freedesktop.portable1.xml
++++ b/man/org.freedesktop.portable1.xml
+@@ -54,6 +54,7 @@ node /org/freedesktop/portable1 {
+                                      in  t flags,
+                                      out s image,
+                                      out ay os_release,
++                                     out a{say} extensions,
+                                      out a{say} units);
+       GetImageState(in  s image,
+                     out s state);
+@@ -183,19 +184,12 @@ node /org/freedesktop/portable1 {
+       and a list of portable units contained in the image, in the form of a string (unit name) and
+       an array of bytes with the content.</para>
+ 
+-      <para><function>GetImageMetadataWithExtensions()</function> retrieves metadata associated with an image.
+-      This method is a superset of <function>GetImageMetadata()</function> with the addition of
+-      a list of extensions as input parameter, which were overlaid on top of the main
+-      image via <function>AttachImageWithExtensions()</function>.
+-      The <varname>flag</varname> parameter can be used to request that, before the units, the path of
+-      each extension and an array of bytes with the content of the respective extension-release file
+-      are sent. One such structure will be sent for each extension named in the input arguments. The
+-      flag value to enable this functionality is defined as follows:</para>
+-
+-      <programlisting>
+-#define PORTABLE_INSPECT_EXTENSION_RELEASES  (UINT64_C(1) &lt;&lt; 1)
+-      </programlisting>
+-
++      <para><function>GetImageMetadataWithExtensions()</function> retrieves metadata associated with an
++      image. This method is a superset of <function>GetImageMetadata()</function> with the addition of a list
++      of extensions as input parameter, which were overlaid on top of the main image via
++      <function>AttachImageWithExtensions()</function>. The path of each extension and an array of bytes with
++      the content of the respective extension-release file are returned, one such structure for each
++      extension named in the input arguments.</para>
+ 
+       <para><function>GetImageState()</function> retrieves the image state as one of the following
+       strings:
+@@ -340,6 +334,7 @@ node /org/freedesktop/portable1 {
+                                 in  t flags,
+                                 out s image,
+                                 out ay os_release,
++                                out a{say} extensions,
+                                 out a{say} units);
+       GetState(out s state);
+       Attach(in  as matches,
+diff --git a/src/portable/portable.h b/src/portable/portable.h
+index ce55f050a2..a1abf60dc7 100644
+--- a/src/portable/portable.h
++++ b/src/portable/portable.h
+@@ -20,14 +20,13 @@ typedef struct PortableMetadata {
+ #define PORTABLE_METADATA_IS_UNIT(m) (!IN_SET((m)->name[0], 0, '/'))
+ 
+ typedef enum PortableFlags {
+-        PORTABLE_RUNTIME                    = 1 << 0,
+-        PORTABLE_INSPECT_EXTENSION_RELEASES = 1 << 1, /* Public API via DBUS, do not change */
+-        PORTABLE_PREFER_COPY                = 1 << 2,
+-        PORTABLE_PREFER_SYMLINK             = 1 << 3,
+-        PORTABLE_REATTACH                   = 1 << 4,
+-        _PORTABLE_MASK_PUBLIC               = PORTABLE_RUNTIME | PORTABLE_INSPECT_EXTENSION_RELEASES,
++        PORTABLE_RUNTIME        = 1 << 0, /* Public API via DBUS, do not change */
++        PORTABLE_PREFER_COPY    = 1 << 1,
++        PORTABLE_PREFER_SYMLINK = 1 << 2,
++        PORTABLE_REATTACH       = 1 << 3,
++        _PORTABLE_MASK_PUBLIC   = PORTABLE_RUNTIME,
+         _PORTABLE_TYPE_MAX,
+-        _PORTABLE_TYPE_INVALID              = -EINVAL,
++        _PORTABLE_TYPE_INVALID  = -EINVAL,
+ } PortableFlags;
+ 
+ /* This enum is anonymous, since we usually store it in an 'int', as we overload it with negative errno
+diff --git a/src/portable/portablectl.c b/src/portable/portablectl.c
+index 827d7a7b4a..21048baeb5 100644
+--- a/src/portable/portablectl.c
++++ b/src/portable/portablectl.c
+@@ -259,7 +259,7 @@ static int maybe_reload(sd_bus **bus) {
+ static int get_image_metadata(sd_bus *bus, const char *image, char **matches, sd_bus_message **reply) {
+         _cleanup_(sd_bus_message_unrefp) sd_bus_message *m = NULL;
+         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+-        PortableFlags flags = PORTABLE_INSPECT_EXTENSION_RELEASES;
++        uint64_t flags = 0;
+         const char *method;
+         int r;
+ 
+@@ -361,71 +361,78 @@ static int inspect_image(int argc, char *argv[], void *userdata) {
+                        strna(pretty_os));
+         }
+ 
+-        r = sd_bus_message_enter_container(reply, 'a', "{say}");
+-        if (r < 0)
+-                return bus_log_parse_error(r);
+-
+-        /* If we specified any extensions, we'll first get back exactly the
+-         * paths (and extension-release content) for each one of the arguments. */
+-        for (size_t i = 0; i < strv_length(arg_extension_images); ++i) {
+-                const char *name;
++        if (!strv_isempty(arg_extension_images)) {
++                /* If we specified any extensions, we'll first get back exactly the paths (and
++                 * extension-release content) for each one of the arguments. */
+ 
+-                r = sd_bus_message_enter_container(reply, 'e', "say");
++                r = sd_bus_message_enter_container(reply, 'a', "{say}");
+                 if (r < 0)
+                         return bus_log_parse_error(r);
+-                if (r == 0)
+-                        break;
+ 
+-                r = sd_bus_message_read(reply, "s", &name);
+-                if (r < 0)
+-                        return bus_log_parse_error(r);
++                for (size_t i = 0; i < strv_length(arg_extension_images); ++i) {
++                        const char *name;
+ 
+-                r = sd_bus_message_read_array(reply, 'y', &data, &sz);
+-                if (r < 0)
+-                        return bus_log_parse_error(r);
++                        r = sd_bus_message_enter_container(reply, 'e', "say");
++                        if (r < 0)
++                                return bus_log_parse_error(r);
++                        if (r == 0)
++                                break;
+ 
+-                if (arg_cat) {
+-                        if (nl)
+-                                fputc('\n', stdout);
++                        r = sd_bus_message_read(reply, "s", &name);
++                        if (r < 0)
++                                return bus_log_parse_error(r);
+ 
+-                        printf("%s-- Extension Release: %s --%s\n", ansi_highlight(), name, ansi_normal());
+-                        fwrite(data, sz, 1, stdout);
+-                        fflush(stdout);
+-                        nl = true;
+-                } else {
+-                        _cleanup_free_ char *pretty_portable = NULL, *pretty_os = NULL, *sysext_level = NULL,
+-                                *id = NULL, *version_id = NULL, *sysext_scope = NULL, *portable_prefixes = NULL;
+-                        _cleanup_fclose_ FILE *f = NULL;
+-
+-                        f = fmemopen_unlocked((void*) data, sz, "re");
+-                        if (!f)
+-                                return log_error_errno(errno, "Failed to open extension-release buffer: %m");
+-
+-                        r = parse_env_file(f, name,
+-                                           "ID", &id,
+-                                           "VERSION_ID", &version_id,
+-                                           "SYSEXT_SCOPE", &sysext_scope,
+-                                           "SYSEXT_LEVEL", &sysext_level,
+-                                           "PORTABLE_PRETTY_NAME", &pretty_portable,
+-                                           "PORTABLE_PREFIXES", &portable_prefixes,
+-                                           "PRETTY_NAME", &pretty_os);
++                        r = sd_bus_message_read_array(reply, 'y', &data, &sz);
++                        if (r < 0)
++                                return bus_log_parse_error(r);
++
++                        if (arg_cat) {
++                                if (nl)
++                                        fputc('\n', stdout);
++
++                                printf("%s-- Extension Release: %s --%s\n", ansi_highlight(), name, ansi_normal());
++                                fwrite(data, sz, 1, stdout);
++                                fflush(stdout);
++                                nl = true;
++                        } else {
++                                _cleanup_free_ char *pretty_portable = NULL, *pretty_os = NULL, *sysext_level = NULL,
++                                        *id = NULL, *version_id = NULL, *sysext_scope = NULL, *portable_prefixes = NULL;
++                                _cleanup_fclose_ FILE *f = NULL;
++
++                                f = fmemopen_unlocked((void*) data, sz, "re");
++                                if (!f)
++                                        return log_error_errno(errno, "Failed to open extension-release buffer: %m");
++
++                                r = parse_env_file(f, name,
++                                                   "ID", &id,
++                                                   "VERSION_ID", &version_id,
++                                                   "SYSEXT_SCOPE", &sysext_scope,
++                                                   "SYSEXT_LEVEL", &sysext_level,
++                                                   "PORTABLE_PRETTY_NAME", &pretty_portable,
++                                                   "PORTABLE_PREFIXES", &portable_prefixes,
++                                                   "PRETTY_NAME", &pretty_os);
++                                if (r < 0)
++                                        return log_error_errno(r, "Failed to parse extension release from '%s': %m", name);
++
++                                printf("Extension:\n\t%s\n"
++                                       "\tExtension Scope:\n\t\t%s\n"
++                                       "\tExtension Compatibility Level:\n\t\t%s\n"
++                                       "\tPortable Service:\n\t\t%s\n"
++                                       "\tPortable Prefixes:\n\t\t%s\n"
++                                       "\tOperating System:\n\t\t%s (%s %s)\n",
++                                       name,
++                                       strna(sysext_scope),
++                                       strna(sysext_level),
++                                       strna(pretty_portable),
++                                       strna(portable_prefixes),
++                                       strna(pretty_os),
++                                       strna(id),
++                                       strna(version_id));
++                        }
++
++                        r = sd_bus_message_exit_container(reply);
+                         if (r < 0)
+-                                return log_error_errno(r, "Failed to parse extension release from '%s': %m", name);
+-
+-                        printf("Extension:\n\t%s\n"
+-                                "\tExtension Scope:\n\t\t%s\n"
+-                                "\tExtension Compatibility Level:\n\t\t%s\n"
+-                                "\tPortable Service:\n\t\t%s\n"
+-                                "\tPortable Prefixes:\n\t\t%s\n"
+-                                "\tOperating System:\n\t\t%s (%s %s)\n",
+-                                name,
+-                                strna(sysext_scope),
+-                                strna(sysext_level),
+-                                strna(pretty_portable),
+-                                strna(portable_prefixes),
+-                                strna(pretty_os),
+-                                strna(id),
+-                                strna(version_id));
++                                return bus_log_parse_error(r);
+                 }
+ 
+                 r = sd_bus_message_exit_container(reply);
+@@ -433,6 +440,10 @@ static int inspect_image(int argc, char *argv[], void *userdata) {
+                         return bus_log_parse_error(r);
+         }
+ 
++        r = sd_bus_message_enter_container(reply, 'a', "{say}");
++        if (r < 0)
++                return bus_log_parse_error(r);
++
+         for (;;) {
+                 const char *name;
+ 
+@@ -763,18 +774,17 @@ static int maybe_stop_disable(sd_bus *bus, char *image, char *argv[]) {
+         if (r < 0)
+                 return bus_log_parse_error(r);
+ 
+-        r = sd_bus_message_enter_container(reply, 'a', "{say}");
+-        if (r < 0)
+-                return bus_log_parse_error(r);
+-
+-        /* If we specified any extensions, we'll first get back exactly the
+-         * paths (and extension-release content) for each one of the arguments. */
+-        for (size_t i = 0; i < strv_length(arg_extension_images); ++i) {
+-                r = sd_bus_message_skip(reply, "{say}");
++        /* If we specified any extensions, we'll first an array of extension-release metadata. */
++        if (!strv_isempty(arg_extension_images)) {
++                r = sd_bus_message_skip(reply, "a{say}");
+                 if (r < 0)
+                         return bus_log_parse_error(r);
+         }
+ 
++        r = sd_bus_message_enter_container(reply, 'a', "{say}");
++        if (r < 0)
++                return bus_log_parse_error(r);
++
+         for (;;) {
+                 const char *name;
+ 
+diff --git a/src/portable/portabled-bus.c b/src/portable/portabled-bus.c
+index 5b992d9df8..db71057bb3 100644
+--- a/src/portable/portabled-bus.c
++++ b/src/portable/portabled-bus.c
+@@ -420,6 +420,7 @@ const sd_bus_vtable manager_vtable[] = {
+                                             "t", flags),
+                                 SD_BUS_RESULT("s", image,
+                                               "ay", os_release,
++                                              "a{say}", extensions,
+                                               "a{say}", units),
+                                 method_get_image_metadata,
+                                 SD_BUS_VTABLE_UNPRIVILEGED),
+diff --git a/src/portable/portabled-image-bus.c b/src/portable/portabled-image-bus.c
+index 964035ec15..d538a4786f 100644
+--- a/src/portable/portabled-image-bus.c
++++ b/src/portable/portabled-image-bus.c
+@@ -108,7 +108,6 @@ int bus_image_common_get_metadata(
+         _cleanup_hashmap_free_ Hashmap *unit_files = NULL;
+         _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
+         _cleanup_free_ PortableMetadata **sorted = NULL;
+-        PortableFlags flags = 0;
+         int r;
+ 
+         assert(name_or_path || image);
+@@ -119,8 +118,10 @@ int bus_image_common_get_metadata(
+                 m = image->userdata;
+         }
+ 
+-        if (sd_bus_message_is_method_call(message, NULL, "GetImageMetadataWithExtensions") ||
+-            sd_bus_message_is_method_call(message, NULL, "GetMetadataWithExtensions")) {
++        bool have_exti = sd_bus_message_is_method_call(message, NULL, "GetImageMetadataWithExtensions") ||
++                         sd_bus_message_is_method_call(message, NULL, "GetMetadataWithExtensions");
++
++        if (have_exti) {
+                 r = sd_bus_message_read_strv(message, &extension_images);
+                 if (r < 0)
+                         return r;
+@@ -130,8 +131,7 @@ int bus_image_common_get_metadata(
+         if (r < 0)
+                 return r;
+ 
+-        if (sd_bus_message_is_method_call(message, NULL, "GetImageMetadataWithExtensions") ||
+-            sd_bus_message_is_method_call(message, NULL, "GetMetadataWithExtensions")) {
++        if (have_exti) {
+                 uint64_t input_flags = 0;
+ 
+                 r = sd_bus_message_read(message, "t", &input_flags);
+@@ -142,7 +142,6 @@ int bus_image_common_get_metadata(
+                         return sd_bus_reply_method_errorf(message, SD_BUS_ERROR_INVALID_ARGS,
+                                                           "Invalid 'flags' parameter '%" PRIu64 "'",
+                                                           input_flags);
+-                flags |= input_flags;
+         }
+ 
+         r = bus_image_acquire(m,
+@@ -185,16 +184,16 @@ int bus_image_common_get_metadata(
+         if (r < 0)
+                 return r;
+ 
+-        r = sd_bus_message_open_container(reply, 'a', "{say}");
+-        if (r < 0)
+-                return r;
+-
+         /* If it was requested, also send back the extension path and the content
+          * of each extension-release file. Behind a flag, as it's an incompatible
+          * change. */
+-        if (FLAGS_SET(flags, PORTABLE_INSPECT_EXTENSION_RELEASES)) {
++        if (have_exti) {
+                 PortableMetadata *extension_release;
+ 
++                r = sd_bus_message_open_container(reply, 'a', "{say}");
++                if (r < 0)
++                        return r;
++
+                 ORDERED_HASHMAP_FOREACH(extension_release, extension_releases) {
+ 
+                         r = sd_bus_message_open_container(reply, 'e', "say");
+@@ -213,8 +212,16 @@ int bus_image_common_get_metadata(
+                         if (r < 0)
+                                 return r;
+                 }
++
++                r = sd_bus_message_close_container(reply);
++                if (r < 0)
++                        return r;
+         }
+ 
++        r = sd_bus_message_open_container(reply, 'a', "{say}");
++        if (r < 0)
++                return r;
++
+         for (size_t i = 0; i < hashmap_size(unit_files); i++) {
+ 
+                 r = sd_bus_message_open_container(reply, 'e', "say");
+@@ -866,6 +873,7 @@ const sd_bus_vtable image_vtable[] = {
+                                             "t", flags),
+                                 SD_BUS_RESULT("s", image,
+                                               "ay", os_release,
++                                              "a{say}", extensions,
+                                               "a{say}", units),
+                                 bus_image_method_get_metadata,
+                                 SD_BUS_VTABLE_UNPRIVILEGED),
+-- 
+2.33.0
+

@@ -1,0 +1,54 @@
+From cf6d1dcc93ad7caedaa139d3c0377f7524fe1013 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Fri, 7 Jan 2022 15:23:55 +0100
+Subject: [PATCH] seccomp: move arch_prctl to @default
+
+It was reported as used by the linker:
+
+> [It is] called in the setup of ld-linux-x86-64.so.2 from _dl_sysdep_start.
+> My local call stack (with LTO):
+>
+> #0 init_cpu_features.constprop.0 (/usr/lib64/ld-linux-x86-64.so.2)
+> #1 _dl_sysdep_start (/usr/lib64/ld-linux-x86-64.so.2)
+> #2 _dl_start (/usr/lib64/ld-linux-x86-64.so.2)
+> #3 _start (/usr/lib64/ld-linux-x86-64.so.2)
+>
+> Looking through the source, I think it's this (links for glibc 2.34):
+> - First dl_platform_init calls _dl_x86_init_cpu_features, a wrapper for init_cpu_features.
+> - Then init_cpu_features calls get_cet_status.
+> - At last, get_cet_status invokes arch_prctl.
+
+Fixes #22033.
+
+(cherry picked from commit 5f02870a74aa3a758115cc9bd6d68f239caf8453)
+(cherry picked from commit d08f6ff204c8525f7533875128468afb8be60ae0)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/cf6d1dcc93ad7caedaa139d3c0377f7524fe1013
+---
+ src/shared/seccomp-util.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shared/seccomp-util.c b/src/shared/seccomp-util.c
+index 2d73354e1a..ccfa4cc56a 100644
+--- a/src/shared/seccomp-util.c
++++ b/src/shared/seccomp-util.c
+@@ -283,6 +283,7 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
+                 .name = "@default",
+                 .help = "System calls that are always permitted",
+                 .value =
++                "arch_prctl\0"      /* Used during platform-specific initialization by ld-linux.so. */
+                 "brk\0"
+                 "cacheflush\0"
+                 "clock_getres\0"
+@@ -712,7 +713,6 @@ const SyscallFilterSet syscall_filter_sets[_SYSCALL_FILTER_SET_MAX] = {
+                 .name = "@process",
+                 .help = "Process control, execution, namespacing operations",
+                 .value =
+-                "arch_prctl\0"
+                 "capget\0"      /* Able to query arbitrary processes */
+                 "clone\0"
+                 "clone3\0"
+-- 
+2.33.0
+

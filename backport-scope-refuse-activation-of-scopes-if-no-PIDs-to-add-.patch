@@ -1,0 +1,55 @@
+From 7ecb1b82d9b55a081d81b2802695fd21293ce029 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 27 Oct 2021 23:17:50 +0200
+Subject: [PATCH] scope: refuse activation of scopes if no PIDs to add are left
+
+If all processes we are supposed to add are gone by the time we are
+ready to do so, let's fail.
+
+THis is heavily based on Cunlong Li's work, who thankfully tracked this
+down.
+
+Replaces: #20577
+(cherry picked from commit 8d3e4ac7cd37200d1431411a4b98925a24b7d9b3)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7ecb1b82d9b55a081d81b2802695fd21293ce029
+---
+ src/core/cgroup.c | 3 ++-
+ src/core/scope.c  | 6 ++++++
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/cgroup.c b/src/core/cgroup.c
+index 1551d57e90..51936b7d1d 100644
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -2196,7 +2196,8 @@ int unit_attach_pids_to_cgroup(Unit *u, Set *pids, const char *suffix_path) {
+                                 ret = r; /* Remember first error */
+ 
+                         continue;
+-                }
++                } else if (ret >= 0)
++                        ret++; /* Count successful additions */
+ 
+                 r = cg_all_unified();
+                 if (r < 0)
+diff --git a/src/core/scope.c b/src/core/scope.c
+index af6311bb5f..fd4367dbed 100644
+--- a/src/core/scope.c
++++ b/src/core/scope.c
+@@ -374,6 +374,12 @@ static int scope_start(Unit *u) {
+                 scope_enter_dead(s, SCOPE_FAILURE_RESOURCES);
+                 return r;
+         }
++        if (r == 0) {
++                log_unit_warning(u, "No PIDs left to attach to the scope's control group, refusing: %m");
++                scope_enter_dead(s, SCOPE_FAILURE_RESOURCES);
++                return -ECHILD;
++        }
++        log_unit_debug(u, "%i %s added to scope's control group.", r, r == 1 ? "process" : "processes");
+ 
+         s->result = SCOPE_SUCCESS;
+ 
+-- 
+2.33.0
+

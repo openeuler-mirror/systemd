@@ -1,0 +1,51 @@
+From aaf7afb05cdbfbec6d06798b698689bdfe1a50ac Mon Sep 17 00:00:00 2001
+From: Evgeny Vereshchagin <evvers@ya.ru>
+Date: Sat, 29 Jan 2022 03:16:40 +0000
+Subject: [PATCH] sd-dhcp-lease: fix a memory leak in
+ dhcp_lease_parse_search_domains
+
+=================================================================
+==81071==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 16 byte(s) in 1 object(s) allocated from:
+    #0 0x51245c in __interceptor_reallocarray (/home/vagrant/systemd/build/fuzz-dhcp-client+0x51245c)
+    #1 0x7f01440c67e6 in strv_push /home/vagrant/systemd/build/../src/basic/strv.c:435:13
+    #2 0x7f01440ca9e1 in strv_consume /home/vagrant/systemd/build/../src/basic/strv.c:506:13
+    #3 0x7f01440ca9e1 in strv_extend /home/vagrant/systemd/build/../src/basic/strv.c:558:16
+    #4 0x5806e3 in dhcp_lease_parse_search_domains /home/vagrant/systemd/build/../src/libsystemd-network/sd-dhcp-lease.c:900:21
+    #5 0x57c1be in dhcp_lease_parse_options /home/vagrant/systemd/build/../src/libsystemd-network/sd-dhcp-lease.c:727:21
+    #6 0x572450 in parse_options /home/vagrant/systemd/build/../src/libsystemd-network/dhcp-option.c:348:33
+    #7 0x571c6a in dhcp_option_parse /home/vagrant/systemd/build/../src/libsystemd-network/dhcp-option.c:376:13
+    #8 0x559a01 in client_handle_offer /home/vagrant/systemd/build/../src/libsystemd-network/sd-dhcp-client.c:1543:13
+    #9 0x5592bd in LLVMFuzzerTestOneInput /home/vagrant/systemd/build/../src/libsystemd-network/fuzz-dhcp-client.c:74:16
+    #10 0x44a379 in fuzzer::Fuzzer::ExecuteCallback(unsigned char const*, unsigned long) (/home/vagrant/systemd/build/fuzz-dhcp-client+0x44a379)
+    #11 0x42ae1f in fuzzer::RunOneTest(fuzzer::Fuzzer*, char const*, unsigned long) (/home/vagrant/systemd/build/fuzz-dhcp-client+0x42ae1f)
+    #12 0x432ade in fuzzer::FuzzerDriver(int*, char***, int (*)(unsigned char const*, unsigned long)) (/home/vagrant/systemd/build/fuzz-dhcp-client+0x432ade)
+    #13 0x421f86 in main (/home/vagrant/systemd/build/fuzz-dhcp-client+0x421f86)
+    #14 0x7f0142fff55f in __libc_start_call_main (/lib64/libc.so.6+0x2d55f)
+
+(cherry picked from commit 9591c0a8b3496d0e5cbbfe7c75161ba80089c143)
+(cherry picked from commit 7dc0f80588f371a62a56a75bf27eab2c515becf3)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/aaf7afb05cdbfbec6d06798b698689bdfe1a50ac
+---
+ src/libsystemd-network/sd-dhcp-lease.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/libsystemd-network/sd-dhcp-lease.c b/src/libsystemd-network/sd-dhcp-lease.c
+index 75aa0c3d2c..ccfd66caa3 100644
+--- a/src/libsystemd-network/sd-dhcp-lease.c
++++ b/src/libsystemd-network/sd-dhcp-lease.c
+@@ -815,7 +815,7 @@ int dhcp_lease_parse_search_domains(const uint8_t *option, size_t len, char ***d
+                       pos = next_chunk;
+         }
+ 
+-        *domains = TAKE_PTR(names);
++        strv_free_and_replace(*domains, names);
+ 
+         return cnt;
+ }
+-- 
+2.33.0
+

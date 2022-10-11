@@ -1,0 +1,34 @@
+From eee4da4d240bef47a6cc8ab60838d6c443ab8ab8 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 6 Apr 2022 01:08:35 +0900
+Subject: [PATCH] hwdb: fix parsing options
+
+Fixes #22976.
+
+(cherry picked from commit 5674b74c4f99e433fd8e7242e9f16f6ddfece94c)
+(cherry picked from commit df6253cbda3e5d1b3c694de223cb7899f3aecc74)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd-stable/commit/eee4da4d240bef47a6cc8ab60838d6c443ab8ab8
+---
+ src/hwdb/hwdb.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/hwdb/hwdb.c b/src/hwdb/hwdb.c
+index 50b4cb304a..a3a050530b 100644
+--- a/src/hwdb/hwdb.c
++++ b/src/hwdb/hwdb.c
+@@ -73,8 +73,8 @@ static int parse_argv(int argc, char *argv[]) {
+         assert(argc >= 0);
+         assert(argv);
+ 
+-        while ((c = getopt_long(argc, argv, "ust:r:h", options, NULL)) >= 0)
+-                switch(c) {
++        while ((c = getopt_long(argc, argv, "sr:h", options, NULL)) >= 0)
++                switch (c) {
+ 
+                 case 'h':
+                         return help();
+-- 
+2.33.0
+

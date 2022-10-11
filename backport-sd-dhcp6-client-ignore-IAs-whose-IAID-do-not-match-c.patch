@@ -1,0 +1,318 @@
+From 5193b40cebe30e6297ba8d1e8cf888ab25cea2ae Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 22 Sep 2021 10:35:56 +0300
+Subject: [PATCH] sd-dhcp6-client: ignore IAs whose IAID do not match client's
+ IAID
+
+But do not refuse whole message.
+
+(cherry picked from commit 469fd57f181e2a8d93f01662418ca998e1239ea5)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/5193b40cebe30e6297ba8d1e8cf888ab25cea2ae
+---
+ src/libsystemd-network/dhcp6-internal.h    |  2 +-
+ src/libsystemd-network/dhcp6-option.c      | 36 ++++++++++++++++++--
+ src/libsystemd-network/sd-dhcp6-client.c   | 29 +++-------------
+ src/libsystemd-network/test-dhcp6-client.c | 39 ++++++++++++++--------
+ 4 files changed, 64 insertions(+), 42 deletions(-)
+
+diff --git a/src/libsystemd-network/dhcp6-internal.h b/src/libsystemd-network/dhcp6-internal.h
+index f0f814957f..35cafc96ec 100644
+--- a/src/libsystemd-network/dhcp6-internal.h
++++ b/src/libsystemd-network/dhcp6-internal.h
+@@ -104,7 +104,7 @@ int dhcp6_option_append_vendor_option(uint8_t **buf, size_t *buflen, OrderedHash
+ int dhcp6_option_parse(uint8_t **buf, size_t *buflen, uint16_t *optcode,
+                        size_t *optlen, uint8_t **optvalue);
+ int dhcp6_option_parse_status(DHCP6Option *option, size_t len);
+-int dhcp6_option_parse_ia(sd_dhcp6_client *client, DHCP6Option *iaoption, DHCP6IA *ia, uint16_t *ret_status_code);
++int dhcp6_option_parse_ia(sd_dhcp6_client *client, DHCP6Option *iaoption, be32_t iaid, DHCP6IA *ia, uint16_t *ret_status_code);
+ int dhcp6_option_parse_ip6addrs(uint8_t *optval, uint16_t optlen,
+                                 struct in6_addr **addrs, size_t count);
+ int dhcp6_option_parse_domainname_list(const uint8_t *optval, uint16_t optlen,
+diff --git a/src/libsystemd-network/dhcp6-option.c b/src/libsystemd-network/dhcp6-option.c
+index 97ef03a2d2..34d7e997dd 100644
+--- a/src/libsystemd-network/dhcp6-option.c
++++ b/src/libsystemd-network/dhcp6-option.c
+@@ -509,7 +509,13 @@ static int dhcp6_option_parse_pdprefix(sd_dhcp6_client *client, DHCP6Option *opt
+         return 0;
+ }
+ 
+-int dhcp6_option_parse_ia(sd_dhcp6_client *client, DHCP6Option *iaoption, DHCP6IA *ia, uint16_t *ret_status_code) {
++int dhcp6_option_parse_ia(
++                sd_dhcp6_client *client,
++                DHCP6Option *iaoption,
++                be32_t iaid,
++                DHCP6IA *ia,
++                uint16_t *ret_status_code) {
++
+         uint32_t lt_t1, lt_t2, lt_valid = 0, lt_min = UINT32_MAX;
+         uint16_t iatype, optlen;
+         size_t iaaddr_offset;
+@@ -529,6 +535,14 @@ int dhcp6_option_parse_ia(sd_dhcp6_client *client, DHCP6Option *iaoption, DHCP6I
+                 if (len < DHCP6_OPTION_IA_NA_LEN)
+                         return -ENOBUFS;
+ 
++                /* According to RFC8415, IAs which do not match the client's IAID should be ignored,
++                 * but not necessary to ignore or refuse the whole message. */
++                if (((const struct ia_na*) iaoption->data)->id != iaid)
++                        /* ENOANO indicates the option should be ignored. */
++                        return log_dhcp6_client_errno(client, SYNTHETIC_ERRNO(ENOANO),
++                                                      "Received an IA_NA option with a different IAID "
++                                                      "from the one chosen by the client, ignoring.");
++
+                 iaaddr_offset = DHCP6_OPTION_IA_NA_LEN;
+                 memcpy(&ia->ia_na, iaoption->data, sizeof(ia->ia_na));
+ 
+@@ -547,6 +561,14 @@ int dhcp6_option_parse_ia(sd_dhcp6_client *client, DHCP6Option *iaoption, DHCP6I
+                 if (len < sizeof(ia->ia_pd))
+                         return -ENOBUFS;
+ 
++                /* According to RFC8415, IAs which do not match the client's IAID should be ignored,
++                 * but not necessary to ignore or refuse the whole message. */
++                if (((const struct ia_pd*) iaoption->data)->id != iaid)
++                        /* ENOANO indicates the option should be ignored. */
++                        return log_dhcp6_client_errno(client, SYNTHETIC_ERRNO(ENOANO),
++                                                      "Received an IA_PD option with a different IAID "
++                                                      "from the one chosen by the client, ignoring.");
++
+                 iaaddr_offset = sizeof(ia->ia_pd);
+                 memcpy(&ia->ia_pd, iaoption->data, sizeof(ia->ia_pd));
+ 
+@@ -564,13 +586,21 @@ int dhcp6_option_parse_ia(sd_dhcp6_client *client, DHCP6Option *iaoption, DHCP6I
+                 if (len < DHCP6_OPTION_IA_TA_LEN)
+                         return -ENOBUFS;
+ 
++                /* According to RFC8415, IAs which do not match the client's IAID should be ignored,
++                 * but not necessary to ignore or refuse the whole message. */
++                if (((const struct ia_ta*) iaoption->data)->id != iaid)
++                        /* ENOANO indicates the option should be ignored. */
++                        return log_dhcp6_client_errno(client, SYNTHETIC_ERRNO(ENOANO),
++                                                      "Received an IA_TA option with a different IAID "
++                                                      "from the one chosen by the client, ignoring.");
++
+                 iaaddr_offset = DHCP6_OPTION_IA_TA_LEN;
+-                memcpy(&ia->ia_ta.id, iaoption->data, sizeof(ia->ia_ta));
++                memcpy(&ia->ia_ta, iaoption->data, sizeof(ia->ia_ta));
+ 
+                 break;
+ 
+         default:
+-                return -ENOMSG;
++                return -EINVAL;
+         }
+ 
+         ia->type = iatype;
+diff --git a/src/libsystemd-network/sd-dhcp6-client.c b/src/libsystemd-network/sd-dhcp6-client.c
+index f99c12620b..efbf7d7df3 100644
+--- a/src/libsystemd-network/sd-dhcp6-client.c
++++ b/src/libsystemd-network/sd-dhcp6-client.c
+@@ -1119,7 +1119,6 @@ static int client_parse_message(
+         while (pos < len) {
+                 DHCP6Option *option = (DHCP6Option *) &message->options[pos];
+                 uint16_t optcode, optlen;
+-                be32_t iaid_lease;
+                 int  status;
+                 uint8_t *optval;
+ 
+@@ -1198,8 +1197,8 @@ static int client_parse_message(
+                                 break;
+                         }
+ 
+-                        r = dhcp6_option_parse_ia(client, option, &lease->ia, &ia_na_status);
+-                        if (r < 0 && r != -ENOMSG)
++                        r = dhcp6_option_parse_ia(client, option, client->ia_pd.ia_na.id, &lease->ia, &ia_na_status);
++                        if (r < 0 && r != -ENOANO)
+                                 return r;
+ 
+                         if (ia_na_status == DHCP6_STATUS_NO_ADDRS_AVAIL) {
+@@ -1207,16 +1206,6 @@ static int client_parse_message(
+                                 continue;
+                         }
+ 
+-                        r = dhcp6_lease_get_iaid(lease, &iaid_lease);
+-                        if (r < 0)
+-                                return r;
+-
+-                        if (client->ia_na.ia_na.id != iaid_lease) {
+-                                log_dhcp6_client(client, "%s has wrong IAID for IA NA",
+-                                                 dhcp6_message_type_to_string(message->type));
+-                                return -EINVAL;
+-                        }
+-
+                         if (lease->ia.addresses) {
+                                 lt_t1 = MIN(lt_t1, be32toh(lease->ia.ia_na.lifetime_t1));
+                                 lt_t2 = MIN(lt_t2, be32toh(lease->ia.ia_na.lifetime_t2));
+@@ -1231,8 +1220,8 @@ static int client_parse_message(
+                                 break;
+                         }
+ 
+-                        r = dhcp6_option_parse_ia(client, option, &lease->pd, &ia_pd_status);
+-                        if (r < 0 && r != -ENOMSG)
++                        r = dhcp6_option_parse_ia(client, option, client->ia_pd.ia_pd.id, &lease->pd, &ia_pd_status);
++                        if (r < 0 && r != -ENOANO)
+                                 return r;
+ 
+                         if (ia_pd_status == DHCP6_STATUS_NO_PREFIX_AVAIL) {
+@@ -1240,16 +1229,6 @@ static int client_parse_message(
+                                 continue;
+                         }
+ 
+-                        r = dhcp6_lease_get_pd_iaid(lease, &iaid_lease);
+-                        if (r < 0)
+-                                return r;
+-
+-                        if (client->ia_pd.ia_pd.id != iaid_lease) {
+-                                log_dhcp6_client(client, "%s has wrong IAID for IA PD",
+-                                                 dhcp6_message_type_to_string(message->type));
+-                                return -EINVAL;
+-                        }
+-
+                         if (lease->pd.addresses) {
+                                 lt_t1 = MIN(lt_t1, be32toh(lease->pd.ia_pd.lifetime_t1));
+                                 lt_t2 = MIN(lt_t2, be32toh(lease->pd.ia_pd.lifetime_t2));
+diff --git a/src/libsystemd-network/test-dhcp6-client.c b/src/libsystemd-network/test-dhcp6-client.c
+index a72c13684d..5e3b191595 100644
+--- a/src/libsystemd-network/test-dhcp6-client.c
++++ b/src/libsystemd-network/test-dhcp6-client.c
+@@ -287,25 +287,31 @@ static int test_option_status(sd_event *e) {
+         };
+         DHCP6Option *option;
+         DHCP6IA ia, pd;
++        be32_t iaid;
+         int r = 0;
+ 
+         log_debug("/* %s */", __func__);
+ 
++        memcpy(&iaid, option1 + 4, sizeof(iaid));
++
+         zero(ia);
+         option = (DHCP6Option *)option1;
+         assert_se(sizeof(option1) == sizeof(DHCP6Option) + be16toh(option->len));
+ 
+-        r = dhcp6_option_parse_ia(NULL, option, &ia, NULL);
++        r = dhcp6_option_parse_ia(NULL, option, 0, &ia, NULL);
++        assert_se(r == -ENOANO);
++
++        r = dhcp6_option_parse_ia(NULL, option, iaid, &ia, NULL);
+         assert_se(r == 0);
+         assert_se(ia.addresses == NULL);
+ 
+         option->len = htobe16(17);
+-        r = dhcp6_option_parse_ia(NULL, option, &ia, NULL);
++        r = dhcp6_option_parse_ia(NULL, option, iaid, &ia, NULL);
+         assert_se(r == -ENOBUFS);
+         assert_se(ia.addresses == NULL);
+ 
+         option->len = htobe16(sizeof(DHCP6Option));
+-        r = dhcp6_option_parse_ia(NULL, option, &ia, NULL);
++        r = dhcp6_option_parse_ia(NULL, option, iaid, &ia, NULL);
+         assert_se(r == -ENOBUFS);
+         assert_se(ia.addresses == NULL);
+ 
+@@ -313,7 +319,7 @@ static int test_option_status(sd_event *e) {
+         option = (DHCP6Option *)option2;
+         assert_se(sizeof(option2) == sizeof(DHCP6Option) + be16toh(option->len));
+ 
+-        r = dhcp6_option_parse_ia(NULL, option, &ia, NULL);
++        r = dhcp6_option_parse_ia(NULL, option, iaid, &ia, NULL);
+         assert_se(r >= 0);
+         assert_se(ia.addresses == NULL);
+ 
+@@ -321,7 +327,7 @@ static int test_option_status(sd_event *e) {
+         option = (DHCP6Option *)option3;
+         assert_se(sizeof(option3) == sizeof(DHCP6Option) + be16toh(option->len));
+ 
+-        r = dhcp6_option_parse_ia(NULL, option, &ia, NULL);
++        r = dhcp6_option_parse_ia(NULL, option, iaid, &ia, NULL);
+         assert_se(r >= 0);
+         assert_se(ia.addresses != NULL);
+         dhcp6_lease_free_ia(&ia);
+@@ -330,7 +336,7 @@ static int test_option_status(sd_event *e) {
+         option = (DHCP6Option *)option4;
+         assert_se(sizeof(option4) == sizeof(DHCP6Option) + be16toh(option->len));
+ 
+-        r = dhcp6_option_parse_ia(NULL, option, &pd, NULL);
++        r = dhcp6_option_parse_ia(NULL, option, iaid, &pd, NULL);
+         assert_se(r >= 0);
+         assert_se(pd.addresses != NULL);
+         assert_se(memcmp(&pd.ia_pd.id, &option4[4], 4) == 0);
+@@ -342,7 +348,7 @@ static int test_option_status(sd_event *e) {
+         option = (DHCP6Option *)option5;
+         assert_se(sizeof(option5) == sizeof(DHCP6Option) + be16toh(option->len));
+ 
+-        r = dhcp6_option_parse_ia(NULL, option, &pd, NULL);
++        r = dhcp6_option_parse_ia(NULL, option, iaid, &pd, NULL);
+         assert_se(r >= 0);
+         assert_se(pd.addresses != NULL);
+         dhcp6_lease_free_ia(&pd);
+@@ -447,13 +453,14 @@ static int test_advertise_option(sd_event *e) {
+                         opt_clientid = true;
+                         break;
+ 
+-                case SD_DHCP6_OPTION_IA_NA:
++                case SD_DHCP6_OPTION_IA_NA: {
++                        be32_t iaid = htobe32(0x0ecfa37d);
++
+                         assert_se(optlen == 94);
+                         assert_se(optval == &msg_advertise[26]);
+                         assert_se(!memcmp(optval, &msg_advertise[26], optlen));
+ 
+-                        val = htobe32(0x0ecfa37d);
+-                        assert_se(!memcmp(optval, &val, sizeof(val)));
++                        assert_se(!memcmp(optval, &iaid, sizeof(val)));
+ 
+                         val = htobe32(80);
+                         assert_se(!memcmp(optval + 4, &val, sizeof(val)));
+@@ -461,10 +468,10 @@ static int test_advertise_option(sd_event *e) {
+                         val = htobe32(120);
+                         assert_se(!memcmp(optval + 8, &val, sizeof(val)));
+ 
+-                        assert_se(dhcp6_option_parse_ia(NULL, option, &lease->ia, NULL) >= 0);
++                        assert_se(dhcp6_option_parse_ia(NULL, option, iaid, &lease->ia, NULL) >= 0);
+ 
+                         break;
+-
++                }
+                 case SD_DHCP6_OPTION_SERVERID:
+                         assert_se(optlen == 14);
+                         assert_se(optval == &msg_advertise[179]);
+@@ -598,6 +605,8 @@ static void test_client_solicit_cb(sd_dhcp6_client *client, int event,
+ static int test_client_send_reply(DHCP6Message *request) {
+         DHCP6Message reply;
+ 
++        log_debug("/* %s */", __func__);
++
+         reply.transaction_id = request->transaction_id;
+         reply.type = DHCP6_REPLY;
+ 
+@@ -658,7 +667,7 @@ static int test_client_verify_request(DHCP6Message *request, size_t len) {
+                         assert_se(!memcmp(optval + 8, &val, sizeof(val)));
+ 
+                         /* Then, this should refuse all addresses. */
+-                        assert_se(dhcp6_option_parse_ia(NULL, option, &lease->ia, NULL) >= 0);
++                        assert_se(dhcp6_option_parse_ia(NULL, option, test_iaid, &lease->ia, NULL) >= 0);
+ 
+                         break;
+ 
+@@ -704,6 +713,8 @@ static int test_client_verify_request(DHCP6Message *request, size_t len) {
+ static int test_client_send_advertise(DHCP6Message *solicit) {
+         DHCP6Message advertise;
+ 
++        log_debug("/* %s */", __func__);
++
+         advertise.transaction_id = solicit->transaction_id;
+         advertise.type = DHCP6_ADVERTISE;
+ 
+@@ -899,6 +910,8 @@ int dhcp6_network_send_udp_socket(int s, struct in6_addr *server_address,
+                 IN6ADDR_ALL_DHCP6_RELAY_AGENTS_AND_SERVERS_INIT;
+         DHCP6Message *message;
+ 
++        log_debug("/* %s */", __func__);
++
+         assert_se(s == test_dhcp_fd[0]);
+         assert_se(server_address);
+         assert_se(packet);
+-- 
+2.33.0
+

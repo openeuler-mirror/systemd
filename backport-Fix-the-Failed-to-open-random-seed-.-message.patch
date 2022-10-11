@@ -1,0 +1,33 @@
+From c1b4ee2e0fd28a0c802a3694107613e1689d1c96 Mon Sep 17 00:00:00 2001
+From: longpanda <59477474+ventoy@users.noreply.github.com>
+Date: Thu, 5 Aug 2021 09:31:44 +0800
+Subject: [PATCH] Fix the "Failed to open random seed ..." message.
+
+When boot ArchLinux from Ventoy, it always print `Failed to open random seed file: write protected.`
+As Ventoy emulate the ISO file as a read-only CDROM, I didn't test with a real physical CDROM drive, but maybe it also has such problem.
+As we use `EFI_FILE_MODE_WRITE`  to open the `loader\random-seed` file, so I think it's better to check the result with both  `EFI_WRITE_PROTECTED` and `EFI_NOT_FOUND`.
+
+(cherry picked from commit 2846007ecfb1fc84005b942167d394294c707d7b)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/c1b4ee2e0fd28a0c802a3694107613e1689d1c96
+---
+ src/boot/efi/random-seed.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/boot/efi/random-seed.c b/src/boot/efi/random-seed.c
+index ff364695f3..3e179851b0 100644
+--- a/src/boot/efi/random-seed.c
++++ b/src/boot/efi/random-seed.c
+@@ -245,7 +245,7 @@ EFI_STATUS process_random_seed(EFI_FILE *root_dir, RandomSeedMode mode) {
+ 
+         err = uefi_call_wrapper(root_dir->Open, 5, root_dir, &handle, (CHAR16*) L"\\loader\\random-seed", EFI_FILE_MODE_READ|EFI_FILE_MODE_WRITE, 0ULL);
+         if (EFI_ERROR(err)) {
+-                if (err != EFI_NOT_FOUND)
++                if (err != EFI_NOT_FOUND && err != EFI_WRITE_PROTECTED)
+                         Print(L"Failed to open random seed file: %r\n", err);
+                 return err;
+         }
+-- 
+2.33.0
+

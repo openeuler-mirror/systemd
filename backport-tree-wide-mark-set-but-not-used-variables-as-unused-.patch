@@ -1,0 +1,546 @@
+From e3516e4fdce54f62819bbb18a9fcdd843544d354 Mon Sep 17 00:00:00 2001
+From: Frantisek Sumsal <frantisek@sumsal.cz>
+Date: Wed, 15 Sep 2021 10:56:21 +0200
+Subject: [PATCH] tree-wide: mark set-but-not-used variables as unused to make
+ LLVM happy
+
+LLVM 13 introduced `-Wunused-but-set-variable` diagnostic flag, which
+trips over some intentionally set-but-not-used variables or variables
+attached to cleanup handlers with side effects (`_cleanup_umask_`,
+`_cleanup_(notify_on_cleanup)`, `_cleanup_(restore_sigsetp)`, etc.):
+
+```
+../src/basic/process-util.c:1257:46: error: variable 'saved_ssp' set but not used [-Werror,-Wunused-but-set-variable]
+        _cleanup_(restore_sigsetp) sigset_t *saved_ssp = NULL;
+                                                     ^
+                                                     1 error generated.
+```
+
+(cherry picked from commit d7ac09520be8f0d3d94df3dd4fd8a6e7404c0174)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e3516e4fdce54f62819bbb18a9fcdd843544d354
+---
+ src/basic/process-util.c                            | 2 +-
+ src/basic/unit-file.c                               | 3 ++-
+ src/core/manager.c                                  | 4 ++--
+ src/cryptsetup/cryptsetup.c                         | 2 +-
+ src/home/homed.c                                    | 2 +-
+ src/initctl/initctl.c                               | 2 +-
+ src/journal-remote/journal-remote-main.c            | 2 +-
+ src/journal-remote/journal-remote.c                 | 2 +-
+ src/journal-remote/journal-upload.c                 | 2 +-
+ src/journal/journald-server.c                       | 2 +-
+ src/libsystemd-network/sd-dhcp-server.c             | 6 ++++--
+ src/libsystemd/sd-device/sd-device.c                | 9 ++++++---
+ src/libsystemd/sd-journal/test-catalog.c            | 2 +-
+ src/login/logind-core.c                             | 2 +-
+ src/login/logind-session.c                          | 2 +-
+ src/login/logind.c                                  | 2 +-
+ src/network/networkd-dhcp-common.c                  | 6 ++++--
+ src/network/networkd.c                              | 2 +-
+ src/network/wait-online/wait-online.c               | 2 +-
+ src/nss-systemd/userdb-glue.c                       | 4 ++--
+ src/oom/oomd-manager.c                              | 2 +-
+ src/oom/oomd.c                                      | 2 +-
+ src/resolve/resolved-dns-cache.c                    | 2 +-
+ src/resolve/resolved-dns-query.c                    | 2 +-
+ src/resolve/resolved.c                              | 2 +-
+ src/shared/barrier.c                                | 2 +-
+ src/shared/utmp-wtmp.c                              | 8 ++++----
+ src/timesync/timesyncd.c                            | 2 +-
+ src/tty-ask-password-agent/tty-ask-password-agent.c | 3 ++-
+ src/udev/udevd.c                                    | 3 ++-
+ src/userdb/userdbd.c                                | 2 +-
+ 31 files changed, 50 insertions(+), 40 deletions(-)
+
+diff --git a/src/basic/process-util.c b/src/basic/process-util.c
+index 461bbfe9a5..b76ca6f7c5 100644
+--- a/src/basic/process-util.c
++++ b/src/basic/process-util.c
+@@ -1278,7 +1278,7 @@ int safe_fork_full(
+ 
+         pid_t original_pid, pid;
+         sigset_t saved_ss, ss;
+-        _cleanup_(restore_sigsetp) sigset_t *saved_ssp = NULL;
++        _unused_ _cleanup_(restore_sigsetp) sigset_t *saved_ssp = NULL;
+         bool block_signals = false, block_all = false;
+         int prio, r;
+ 
+diff --git a/src/basic/unit-file.c b/src/basic/unit-file.c
+index 0d58b1c4fe..d1e997ec9f 100644
+--- a/src/basic/unit-file.c
++++ b/src/basic/unit-file.c
+@@ -286,7 +286,8 @@ int unit_file_build_name_map(
+ 
+                 FOREACH_DIRENT_ALL(de, d, log_warning_errno(errno, "Failed to read \"%s\", ignoring: %m", *dir)) {
+                         char *filename;
+-                        _cleanup_free_ char *_filename_free = NULL, *simplified = NULL;
++                        _unused_ _cleanup_free_ char *_filename_free = NULL;
++                        _cleanup_free_ char *simplified = NULL;
+                         const char *suffix, *dst = NULL;
+                         bool valid_unit_name;
+ 
+diff --git a/src/core/manager.c b/src/core/manager.c
+index 34891a8754..abc63a71af 100644
+--- a/src/core/manager.c
++++ b/src/core/manager.c
+@@ -1731,7 +1731,7 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
+ 
+         {
+                 /* This block is (optionally) done with the reloading counter bumped */
+-                _cleanup_(manager_reloading_stopp) Manager *reloading = NULL;
++                _unused_ _cleanup_(manager_reloading_stopp) Manager *reloading = NULL;
+ 
+                 /* If we will deserialize make sure that during enumeration this is already known, so we increase the
+                  * counter here already */
+@@ -3770,7 +3770,7 @@ int manager_deserialize(Manager *m, FILE *f, FDSet *fds) {
+ }
+ 
+ int manager_reload(Manager *m) {
+-        _cleanup_(manager_reloading_stopp) Manager *reloading = NULL;
++        _unused_ _cleanup_(manager_reloading_stopp) Manager *reloading = NULL;
+         _cleanup_fdset_free_ FDSet *fds = NULL;
+         _cleanup_fclose_ FILE *f = NULL;
+         int r;
+diff --git a/src/cryptsetup/cryptsetup.c b/src/cryptsetup/cryptsetup.c
+index 0fa41b8360..440f17d017 100644
+--- a/src/cryptsetup/cryptsetup.c
++++ b/src/cryptsetup/cryptsetup.c
+@@ -1482,7 +1482,7 @@ static int run(int argc, char *argv[]) {
+         verb = argv[1];
+ 
+         if (streq(verb, "attach")) {
+-                _cleanup_(remove_and_erasep) const char *destroy_key_file = NULL;
++                _unused_ _cleanup_(remove_and_erasep) const char *destroy_key_file = NULL;
+                 _cleanup_(erase_and_freep) void *key_data = NULL;
+                 const char *volume, *source, *key_file, *options;
+                 crypt_status_info status;
+diff --git a/src/home/homed.c b/src/home/homed.c
+index 807d25e273..579c289a68 100644
+--- a/src/home/homed.c
++++ b/src/home/homed.c
+@@ -14,7 +14,7 @@
+ 
+ static int run(int argc, char *argv[]) {
+         _cleanup_(manager_freep) Manager *m = NULL;
+-        _cleanup_(notify_on_cleanup) const char *notify_stop = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_stop = NULL;
+         int r;
+ 
+         log_setup();
+diff --git a/src/initctl/initctl.c b/src/initctl/initctl.c
+index c48fef16ef..a48a8570c4 100644
+--- a/src/initctl/initctl.c
++++ b/src/initctl/initctl.c
+@@ -311,7 +311,7 @@ static int process_event(Server *s, struct epoll_event *ev) {
+ 
+ static int run(int argc, char *argv[]) {
+         _cleanup_(server_done) Server server = { .epoll_fd = -1 };
+-        _cleanup_(notify_on_cleanup) const char *notify_stop = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_stop = NULL;
+         int r, n;
+ 
+         if (argc > 1)
+diff --git a/src/journal-remote/journal-remote-main.c b/src/journal-remote/journal-remote-main.c
+index 9ff31763da..b46b4fc08e 100644
+--- a/src/journal-remote/journal-remote-main.c
++++ b/src/journal-remote/journal-remote-main.c
+@@ -1099,7 +1099,7 @@ static int load_certificates(char **key, char **cert, char **trust) {
+ 
+ static int run(int argc, char **argv) {
+         _cleanup_(journal_remote_server_destroy) RemoteServer s = {};
+-        _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
+         _cleanup_(erase_and_freep) char *key = NULL;
+         _cleanup_free_ char *cert = NULL, *trust = NULL;
+         int r;
+diff --git a/src/journal-remote/journal-remote.c b/src/journal-remote/journal-remote.c
+index 6e5aebdc48..f530ba3c7e 100644
+--- a/src/journal-remote/journal-remote.c
++++ b/src/journal-remote/journal-remote.c
+@@ -272,7 +272,7 @@ int journal_remote_add_source(RemoteServer *s, int fd, char* name, bool own_name
+ 
+ int journal_remote_add_raw_socket(RemoteServer *s, int fd) {
+         int r;
+-        _cleanup_close_ int fd_ = fd;
++        _unused_ _cleanup_close_ int fd_ = fd;
+         char name[STRLEN("raw-socket-") + DECIMAL_STR_MAX(int) + 1];
+ 
+         assert(fd >= 0);
+diff --git a/src/journal-remote/journal-upload.c b/src/journal-remote/journal-upload.c
+index 2a38d206ea..37660b925a 100644
+--- a/src/journal-remote/journal-upload.c
++++ b/src/journal-remote/journal-upload.c
+@@ -820,7 +820,7 @@ static int open_journal(sd_journal **j) {
+ 
+ static int run(int argc, char **argv) {
+         _cleanup_(destroy_uploader) Uploader u = {};
+-        _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
+         bool use_journal;
+         int r;
+ 
+diff --git a/src/journal/journald-server.c b/src/journal/journald-server.c
+index 2d1d9e66d7..a212079758 100644
+--- a/src/journal/journald-server.c
++++ b/src/journal/journald-server.c
+@@ -910,7 +910,7 @@ static void dispatch_message_real(
+                 pid_t object_pid) {
+ 
+         char source_time[sizeof("_SOURCE_REALTIME_TIMESTAMP=") + DECIMAL_STR_MAX(usec_t)];
+-        _cleanup_free_ char *cmdline1 = NULL, *cmdline2 = NULL;
++        _unused_ _cleanup_free_ char *cmdline1 = NULL, *cmdline2 = NULL;
+         uid_t journal_uid;
+         ClientContext *o;
+ 
+diff --git a/src/libsystemd-network/sd-dhcp-server.c b/src/libsystemd-network/sd-dhcp-server.c
+index 0b3904c02a..070f4ec1c2 100644
+--- a/src/libsystemd-network/sd-dhcp-server.c
++++ b/src/libsystemd-network/sd-dhcp-server.c
+@@ -1004,7 +1004,8 @@ int dhcp_server_handle_message(sd_dhcp_server *server, DHCPMessage *message, siz
+                 /* verify that the requested address is from the pool, and either
+                    owned by the current client or free */
+                 if (pool_offset >= 0 && static_lease) {
+-                        _cleanup_(dhcp_lease_freep) DHCPLease *lease = NULL, *old_lease = NULL;
++                        _unused_ _cleanup_(dhcp_lease_freep) DHCPLease *old_lease = NULL;
++                        _cleanup_(dhcp_lease_freep) DHCPLease *lease = NULL;
+                         usec_t time_now, expiration;
+ 
+                         r = sd_event_now(server->event, clock_boottime_or_monotonic(), &time_now);
+@@ -1482,7 +1483,8 @@ int sd_dhcp_server_set_static_lease(
+                 uint8_t *client_id,
+                 size_t client_id_size) {
+ 
+-        _cleanup_(dhcp_lease_freep) DHCPLease *lease = NULL, *old = NULL;
++        _unused_ _cleanup_(dhcp_lease_freep) DHCPLease *old = NULL;
++        _cleanup_(dhcp_lease_freep) DHCPLease *lease = NULL;
+         DHCPClientId c;
+         int r;
+ 
+diff --git a/src/libsystemd/sd-device/sd-device.c b/src/libsystemd/sd-device/sd-device.c
+index 45261588a8..3f2cce5bba 100644
+--- a/src/libsystemd/sd-device/sd-device.c
++++ b/src/libsystemd/sd-device/sd-device.c
+@@ -94,7 +94,8 @@ int device_add_property_aux(sd_device *device, const char *key, const char *valu
+                 properties = &device->properties;
+ 
+         if (value) {
+-                _cleanup_free_ char *new_key = NULL, *new_value = NULL, *old_key = NULL, *old_value = NULL;
++                _unused_ _cleanup_free_ char *old_value = NULL;
++                _cleanup_free_ char *new_key = NULL, *new_value = NULL, *old_key = NULL;
+                 int r;
+ 
+                 r = ordered_hashmap_ensure_allocated(properties, &string_hash_ops_free_free);
+@@ -119,7 +120,8 @@ int device_add_property_aux(sd_device *device, const char *key, const char *valu
+                 TAKE_PTR(new_key);
+                 TAKE_PTR(new_value);
+         } else {
+-                _cleanup_free_ char *old_key = NULL, *old_value = NULL;
++                _unused_ _cleanup_free_ char *old_value = NULL;
++                _cleanup_free_ char *old_key = NULL;
+ 
+                 old_value = ordered_hashmap_remove2(*properties, key, (void**) &old_key);
+         }
+@@ -1920,7 +1922,8 @@ _public_ int sd_device_get_trigger_uuid(sd_device *device, sd_id128_t *ret) {
+ }
+ 
+ static int device_cache_sysattr_value(sd_device *device, const char *key, char *value) {
+-        _cleanup_free_ char *new_key = NULL, *old_value = NULL;
++        _unused_ _cleanup_free_ char *old_value = NULL;
++        _cleanup_free_ char *new_key = NULL;
+         int r;
+ 
+         assert(device);
+diff --git a/src/libsystemd/sd-journal/test-catalog.c b/src/libsystemd/sd-journal/test-catalog.c
+index 982fec0d8d..316c3b1634 100644
+--- a/src/libsystemd/sd-journal/test-catalog.c
++++ b/src/libsystemd/sd-journal/test-catalog.c
+@@ -53,7 +53,7 @@ static void test_catalog_import_invalid(void) {
+ }
+ 
+ static void test_catalog_import_badid(void) {
+-        _cleanup_ordered_hashmap_free_free_free_ OrderedHashmap *h = NULL;
++        _unused_ _cleanup_ordered_hashmap_free_free_free_ OrderedHashmap *h = NULL;
+         const char *input =
+ "-- 0027229ca0644181a76c4e92458afaff dededededededededededededededede\n" \
+ "Subject: message\n" \
+diff --git a/src/login/logind-core.c b/src/login/logind-core.c
+index e08929e52a..a9792fd5e4 100644
+--- a/src/login/logind-core.c
++++ b/src/login/logind-core.c
+@@ -689,7 +689,7 @@ bool manager_all_buttons_ignored(Manager *m) {
+ int manager_read_utmp(Manager *m) {
+ #if ENABLE_UTMP
+         int r;
+-        _cleanup_(utxent_cleanup) bool utmpx = false;
++        _unused_ _cleanup_(utxent_cleanup) bool utmpx = false;
+ 
+         assert(m);
+ 
+diff --git a/src/login/logind-session.c b/src/login/logind-session.c
+index 3f09750ec9..cde2b5e8bb 100644
+--- a/src/login/logind-session.c
++++ b/src/login/logind-session.c
+@@ -1323,7 +1323,7 @@ bool session_is_controller(Session *s, const char *sender) {
+ }
+ 
+ static void session_release_controller(Session *s, bool notify) {
+-        _cleanup_free_ char *name = NULL;
++        _unused_ _cleanup_free_ char *name = NULL;
+         SessionDevice *sd;
+ 
+         if (!s->controller)
+diff --git a/src/login/logind.c b/src/login/logind.c
+index ec52a57acb..b642da6eaa 100644
+--- a/src/login/logind.c
++++ b/src/login/logind.c
+@@ -1155,7 +1155,7 @@ static int manager_run(Manager *m) {
+ 
+ static int run(int argc, char *argv[]) {
+         _cleanup_(manager_unrefp) Manager *m = NULL;
+-        _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
+         int r;
+ 
+         log_set_facility(LOG_AUTH);
+diff --git a/src/network/networkd-dhcp-common.c b/src/network/networkd-dhcp-common.c
+index 249d780887..02cef0fbfc 100644
+--- a/src/network/networkd-dhcp-common.c
++++ b/src/network/networkd-dhcp-common.c
+@@ -631,8 +631,10 @@ int config_parse_dhcp_send_option(
+                 void *data,
+                 void *userdata) {
+ 
+-        _cleanup_(sd_dhcp_option_unrefp) sd_dhcp_option *opt4 = NULL, *old4 = NULL;
+-        _cleanup_(sd_dhcp6_option_unrefp) sd_dhcp6_option *opt6 = NULL, *old6 = NULL;
++        _cleanup_(sd_dhcp_option_unrefp) sd_dhcp_option *opt4 = NULL;
++        _cleanup_(sd_dhcp6_option_unrefp) sd_dhcp6_option *opt6 = NULL;
++        _unused_ _cleanup_(sd_dhcp_option_unrefp) sd_dhcp_option *old4 = NULL;
++        _unused_ _cleanup_(sd_dhcp6_option_unrefp) sd_dhcp6_option *old6 = NULL;
+         uint32_t uint32_data, enterprise_identifier = 0;
+         _cleanup_free_ char *word = NULL, *q = NULL;
+         OrderedHashmap **options = data;
+diff --git a/src/network/networkd.c b/src/network/networkd.c
+index 48f6061b1f..ff3380c82c 100644
+--- a/src/network/networkd.c
++++ b/src/network/networkd.c
+@@ -19,7 +19,7 @@
+ 
+ static int run(int argc, char *argv[]) {
+         _cleanup_(manager_freep) Manager *m = NULL;
+-        _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
+         int r;
+ 
+         log_setup();
+diff --git a/src/network/wait-online/wait-online.c b/src/network/wait-online/wait-online.c
+index 1b24b6f1a6..3ce29ac679 100644
+--- a/src/network/wait-online/wait-online.c
++++ b/src/network/wait-online/wait-online.c
+@@ -195,7 +195,7 @@ static int parse_argv(int argc, char *argv[]) {
+ 
+ static int run(int argc, char *argv[]) {
+         _cleanup_(manager_freep) Manager *m = NULL;
+-        _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
+         int r;
+ 
+         log_setup();
+diff --git a/src/nss-systemd/userdb-glue.c b/src/nss-systemd/userdb-glue.c
+index c865ff0d82..002e6925f9 100644
+--- a/src/nss-systemd/userdb-glue.c
++++ b/src/nss-systemd/userdb-glue.c
+@@ -303,7 +303,7 @@ enum nss_status userdb_getgrnam(
+         }
+ 
+         if (!g) {
+-                _cleanup_(_nss_systemd_unblockp) bool blocked = false;
++                _unused_ _cleanup_(_nss_systemd_unblockp) bool blocked = false;
+ 
+                 if (strv_isempty(members))
+                         return NSS_STATUS_NOTFOUND;
+@@ -365,7 +365,7 @@ enum nss_status userdb_getgrgid(
+         }
+ 
+         if (!g) {
+-                _cleanup_(_nss_systemd_unblockp) bool blocked = false;
++                _unused_ _cleanup_(_nss_systemd_unblockp) bool blocked = false;
+ 
+                 /* So, quite possibly we have to extend an existing group record with additional members. But
+                  * to do this we need to know the group name first. The group didn't exist via non-NSS
+diff --git a/src/oom/oomd-manager.c b/src/oom/oomd-manager.c
+index 727206d0b3..891b0acacb 100644
+--- a/src/oom/oomd-manager.c
++++ b/src/oom/oomd-manager.c
+@@ -387,7 +387,7 @@ static void clear_candidate_hashmapp(Manager **m) {
+ static int monitor_memory_pressure_contexts_handler(sd_event_source *s, uint64_t usec, void *userdata) {
+         /* Don't want to use stale candidate data. Setting this will clear the candidate hashmap on return unless we
+          * update the candidate data (in which case clear_candidates will be NULL). */
+-        _cleanup_(clear_candidate_hashmapp) Manager *clear_candidates = userdata;
++        _unused_ _cleanup_(clear_candidate_hashmapp) Manager *clear_candidates = userdata;
+         _cleanup_set_free_ Set *targets = NULL;
+         bool in_post_action_delay = false;
+         Manager *m = userdata;
+diff --git a/src/oom/oomd.c b/src/oom/oomd.c
+index deb7b094d5..e13a1b35e5 100644
+--- a/src/oom/oomd.c
++++ b/src/oom/oomd.c
+@@ -116,7 +116,7 @@ static int parse_argv(int argc, char *argv[]) {
+ }
+ 
+ static int run(int argc, char *argv[]) {
+-        _cleanup_(notify_on_cleanup) const char *notify_msg = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_msg = NULL;
+         _cleanup_(manager_freep) Manager *m = NULL;
+         _cleanup_free_ char *swap = NULL;
+         unsigned long long s = 0;
+diff --git a/src/resolve/resolved-dns-cache.c b/src/resolve/resolved-dns-cache.c
+index f73ead872d..c2fca1fabe 100644
+--- a/src/resolve/resolved-dns-cache.c
++++ b/src/resolve/resolved-dns-cache.c
+@@ -274,7 +274,7 @@ static int dns_cache_link_item(DnsCache *c, DnsCacheItem *i) {
+ 
+         first = hashmap_get(c->by_key, i->key);
+         if (first) {
+-                _cleanup_(dns_resource_key_unrefp) DnsResourceKey *k = NULL;
++                _unused_ _cleanup_(dns_resource_key_unrefp) DnsResourceKey *k = NULL;
+ 
+                 /* Keep a reference to the original key, while we manipulate the list. */
+                 k = dns_resource_key_ref(first->key);
+diff --git a/src/resolve/resolved-dns-query.c b/src/resolve/resolved-dns-query.c
+index 6d372395fe..192bfd3bf5 100644
+--- a/src/resolve/resolved-dns-query.c
++++ b/src/resolve/resolved-dns-query.c
+@@ -165,7 +165,7 @@ static int dns_query_candidate_add_transaction(
+ }
+ 
+ static int dns_query_candidate_go(DnsQueryCandidate *c) {
+-        _cleanup_(dns_query_candidate_unrefp) DnsQueryCandidate *keep_c = NULL;
++        _unused_ _cleanup_(dns_query_candidate_unrefp) DnsQueryCandidate *keep_c = NULL;
+         DnsTransaction *t;
+         int r;
+         unsigned n = 0;
+diff --git a/src/resolve/resolved.c b/src/resolve/resolved.c
+index aabaa266e9..85ab917c4f 100644
+--- a/src/resolve/resolved.c
++++ b/src/resolve/resolved.c
+@@ -23,7 +23,7 @@
+ 
+ static int run(int argc, char *argv[]) {
+         _cleanup_(manager_freep) Manager *m = NULL;
+-        _cleanup_(notify_on_cleanup) const char *notify_stop = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_stop = NULL;
+         int r;
+ 
+         log_setup();
+diff --git a/src/shared/barrier.c b/src/shared/barrier.c
+index 2864c1b8f9..87061f55d7 100644
+--- a/src/shared/barrier.c
++++ b/src/shared/barrier.c
+@@ -90,7 +90,7 @@
+  * Returns: 0 on success, negative error code on failure.
+  */
+ int barrier_create(Barrier *b) {
+-        _cleanup_(barrier_destroyp) Barrier *staging = b;
++        _unused_ _cleanup_(barrier_destroyp) Barrier *staging = b;
+         int r;
+ 
+         assert(b);
+diff --git a/src/shared/utmp-wtmp.c b/src/shared/utmp-wtmp.c
+index 784aad2943..d529498fad 100644
+--- a/src/shared/utmp-wtmp.c
++++ b/src/shared/utmp-wtmp.c
+@@ -25,7 +25,7 @@
+ #include "utmp-wtmp.h"
+ 
+ int utmp_get_runlevel(int *runlevel, int *previous) {
+-        _cleanup_(utxent_cleanup) bool utmpx = false;
++        _unused_ _cleanup_(utxent_cleanup) bool utmpx = false;
+         struct utmpx *found, lookup = { .ut_type = RUN_LVL };
+         const char *e;
+ 
+@@ -87,7 +87,7 @@ static void init_entry(struct utmpx *store, usec_t t) {
+ }
+ 
+ static int write_entry_utmp(const struct utmpx *store) {
+-        _cleanup_(utxent_cleanup) bool utmpx = false;
++        _unused_ _cleanup_(utxent_cleanup) bool utmpx = false;
+ 
+         assert(store);
+ 
+@@ -215,7 +215,7 @@ int utmp_put_init_process(const char *id, pid_t pid, pid_t sid, const char *line
+ }
+ 
+ int utmp_put_dead_process(const char *id, pid_t pid, int code, int status) {
+-        _cleanup_(utxent_cleanup) bool utmpx = false;
++        _unused_ _cleanup_(utxent_cleanup) bool utmpx = false;
+         struct utmpx lookup = {
+                 .ut_type = INIT_PROCESS /* looks for DEAD_PROCESS, LOGIN_PROCESS, USER_PROCESS, too */
+         }, store, store_wtmp, *found;
+@@ -340,7 +340,7 @@ int utmp_wall(
+         bool (*match_tty)(const char *tty, void *userdata),
+         void *userdata) {
+ 
+-        _cleanup_(utxent_cleanup) bool utmpx = false;
++        _unused_ _cleanup_(utxent_cleanup) bool utmpx = false;
+         _cleanup_free_ char *text = NULL, *hn = NULL, *un = NULL, *stdin_tty = NULL;
+         char date[FORMAT_TIMESTAMP_MAX];
+         struct utmpx *u;
+diff --git a/src/timesync/timesyncd.c b/src/timesync/timesyncd.c
+index e6a2b06687..8d43e55583 100644
+--- a/src/timesync/timesyncd.c
++++ b/src/timesync/timesyncd.c
+@@ -90,7 +90,7 @@ settime:
+ 
+ static int run(int argc, char *argv[]) {
+         _cleanup_(manager_freep) Manager *m = NULL;
+-        _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_message = NULL;
+         const char *user = "systemd-timesync";
+         uid_t uid, uid_current;
+         gid_t gid;
+diff --git a/src/tty-ask-password-agent/tty-ask-password-agent.c b/src/tty-ask-password-agent/tty-ask-password-agent.c
+index 59b144972b..25d69180c5 100644
+--- a/src/tty-ask-password-agent/tty-ask-password-agent.c
++++ b/src/tty-ask-password-agent/tty-ask-password-agent.c
+@@ -338,7 +338,8 @@ static int process_and_watch_password_files(bool watch) {
+                 _FD_MAX
+         };
+ 
+-        _cleanup_close_ int notify = -1, signal_fd = -1, tty_block_fd = -1;
++        _unused_ _cleanup_close_ int tty_block_fd = -1;
++        _cleanup_close_ int notify = -1, signal_fd = -1;
+         struct pollfd pollfd[_FD_MAX];
+         sigset_t mask;
+         int r;
+diff --git a/src/udev/udevd.c b/src/udev/udevd.c
+index 13ac7c83b5..8808c5cf95 100644
+--- a/src/udev/udevd.c
++++ b/src/udev/udevd.c
+@@ -1092,7 +1092,8 @@ static int on_ctrl_msg(struct udev_ctrl *uctrl, enum udev_ctrl_msg_type type, co
+                 manager_reload(manager);
+                 break;
+         case UDEV_CTRL_SET_ENV: {
+-                _cleanup_free_ char *key = NULL, *val = NULL, *old_key = NULL, *old_val = NULL;
++                _unused_ _cleanup_free_ char *old_val = NULL;
++                _cleanup_free_ char *key = NULL, *val = NULL, *old_key = NULL;
+                 const char *eq;
+ 
+                 eq = strchr(value->buf, '=');
+diff --git a/src/userdb/userdbd.c b/src/userdb/userdbd.c
+index d469411eb8..0c321bf411 100644
+--- a/src/userdb/userdbd.c
++++ b/src/userdb/userdbd.c
+@@ -24,7 +24,7 @@
+ 
+ static int run(int argc, char *argv[]) {
+         _cleanup_(manager_freep) Manager *m = NULL;
+-        _cleanup_(notify_on_cleanup) const char *notify_stop = NULL;
++        _unused_ _cleanup_(notify_on_cleanup) const char *notify_stop = NULL;
+         int r;
+ 
+         log_setup();
+-- 
+2.33.0
+

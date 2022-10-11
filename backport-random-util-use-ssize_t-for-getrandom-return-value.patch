@@ -1,0 +1,81 @@
+From a7ba75de06efb5a1d962c4b250f66e49e1d3ac6a Mon Sep 17 00:00:00 2001
+From: Mike Gilbert <floppym@gentoo.org>
+Date: Fri, 24 Dec 2021 19:20:36 -0500
+Subject: [PATCH] random-util: use ssize_t for getrandom return value
+
+This matches the prototype provided by glibc.
+
+(cherry picked from commit 289b41aae7356b7a6c72ff4a3476193a084ff33f)
+(cherry picked from commit 4d889024ef5ba1edc5d967a010a2551e0826e5d7)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/a7ba75de06efb5a1d962c4b250f66e49e1d3ac6a
+---
+ src/basic/missing_syscall.h |  3 ++-
+ src/basic/random-util.c     | 16 ++++++++--------
+ 2 files changed, 10 insertions(+), 9 deletions(-)
+
+diff --git a/src/basic/missing_syscall.h b/src/basic/missing_syscall.h
+index 9e3a165857..279c5911bd 100644
+--- a/src/basic/missing_syscall.h
++++ b/src/basic/missing_syscall.h
+@@ -57,7 +57,8 @@ static inline int missing_memfd_create(const char *name, unsigned int flags) {
+ /* ======================================================================= */
+ 
+ #if !HAVE_GETRANDOM
+-static inline int missing_getrandom(void *buffer, size_t count, unsigned flags) {
++/* glibc says getrandom() returns ssize_t */
++static inline ssize_t missing_getrandom(void *buffer, size_t count, unsigned flags) {
+ #  ifdef __NR_getrandom
+         return syscall(__NR_getrandom, buffer, count, flags);
+ #  else
+diff --git a/src/basic/random-util.c b/src/basic/random-util.c
+index c2be962355..e117330857 100644
+--- a/src/basic/random-util.c
++++ b/src/basic/random-util.c
+@@ -161,7 +161,6 @@ int genuine_random_bytes(void *p, size_t n, RandomFlags flags) {
+         static int have_syscall = -1;
+         _cleanup_close_ int fd = -1;
+         bool got_some = false;
+-        int r;
+ 
+         /* Gathers some high-quality randomness from the kernel (or potentially mid-quality randomness from
+          * the CPU if the RANDOM_ALLOW_RDRAND flag is set). This call won't block, unless the RANDOM_BLOCK
+@@ -220,18 +219,19 @@ int genuine_random_bytes(void *p, size_t n, RandomFlags flags) {
+         if (have_syscall != 0 && !HAS_FEATURE_MEMORY_SANITIZER) {
+ 
+                 for (;;) {
+-                        r = getrandom(p, n,
++                        ssize_t l;
++                        l = getrandom(p, n,
+                                       (FLAGS_SET(flags, RANDOM_BLOCK) ? 0 : GRND_NONBLOCK) |
+                                       (FLAGS_SET(flags, RANDOM_ALLOW_INSECURE) ? GRND_INSECURE : 0));
+-                        if (r > 0) {
++                        if (l > 0) {
+                                 have_syscall = true;
+ 
+-                                if ((size_t) r == n)
++                                if ((size_t) l == n)
+                                         return 0; /* Yay, success! */
+ 
+-                                assert((size_t) r < n);
+-                                p = (uint8_t*) p + r;
+-                                n -= r;
++                                assert((size_t) l < n);
++                                p = (uint8_t*) p + l;
++                                n -= l;
+ 
+                                 if (FLAGS_SET(flags, RANDOM_EXTEND_WITH_PSEUDO)) {
+                                         /* Fill in the remaining bytes using pseudo-random values */
+@@ -248,7 +248,7 @@ int genuine_random_bytes(void *p, size_t n, RandomFlags flags) {
+                                 /* Fill in the rest with /dev/urandom */
+                                 break;
+ 
+-                        } else if (r == 0) {
++                        } else if (l == 0) {
+                                 have_syscall = true;
+                                 return -EIO;
+ 
+-- 
+2.33.0
+

@@ -1,15 +1,19 @@
-From 1509274359979079e3e61899ce12fc8b0f0958d9 Mon Sep 17 00:00:00 2001
+From b5162039b2309b78a9c1feb6cc1355988e02b6c3 Mon Sep 17 00:00:00 2001
 From: xujing <17826839720@163.com>
 Date: Wed, 8 Sep 2021 14:26:20 +0800
 Subject: [PATCH] core: fix free undefined pointer when strdup failed in the
  first loop
 
+(cherry picked from commit 1509274359979079e3e61899ce12fc8b0f0958d9)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/b5162039b2309b78a9c1feb6cc1355988e02b6c3
 ---
  src/core/load-fragment.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/src/core/load-fragment.c b/src/core/load-fragment.c
-index 92815b1dbaea..1c8159a23550 100644
+index 8fb3c378ee..399a759ad0 100644
 --- a/src/core/load-fragment.c
 +++ b/src/core/load-fragment.c
 @@ -800,7 +800,7 @@ int config_parse_exec(
@@ -30,4 +34,6 @@ index 92815b1dbaea..1c8159a23550 100644
                                          return log_oom();
  
                                  w = strdup(";");
+-- 
+2.33.0
 

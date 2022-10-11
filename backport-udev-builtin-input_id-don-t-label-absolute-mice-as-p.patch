@@ -1,0 +1,69 @@
+From c6cdd3489f2abfd0a868ad5d8d42b166d7eec33f Mon Sep 17 00:00:00 2001
+From: Peter Hutterer <peter.hutterer@who-t.net>
+Date: Wed, 23 Feb 2022 09:12:43 +1000
+Subject: [PATCH] udev-builtin-input_id: don't label absolute mice as pointing
+ sticks
+
+The Getac UX10 tablet exposes a "CUST0000:00 0EEF:C002 Mouse" device
+with BTN_LEFT/RIGHT and ABS_X/Y on the i2c bus. This causes the builtin
+to incorrectly label it as pointing stick (all i2c mice are
+tagged as ID_INPUT_POINTING_STICK, see 3d7ac1c655ec4).
+
+Fix this by adding a separate variable for absolute pointing
+devices like the VMmouse USB mouse or this Getac tablet - this way we
+skip the pointing stick check.
+
+See https://gitlab.freedesktop.org/libinput/libinput/-/issues/743
+for recordings.
+
+(cherry picked from commit 8ac9ec4d5c210825759d515422d3e66c20615fc1)
+(cherry picked from commit ea5701eb64ff40f915567ae4088ffb7efc0f4155)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/c6cdd3489f2abfd0a868ad5d8d42b166d7eec33f
+---
+ src/udev/udev-builtin-input_id.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/udev/udev-builtin-input_id.c b/src/udev/udev-builtin-input_id.c
+index dda53b6da0..f62dffbc58 100644
+--- a/src/udev/udev-builtin-input_id.c
++++ b/src/udev/udev-builtin-input_id.c
+@@ -168,6 +168,7 @@ static bool test_pointers(sd_device *dev,
+         bool finger_but_no_pen = false;
+         bool has_mouse_button = false;
+         bool is_mouse = false;
++        bool is_abs_mouse = false;
+         bool is_touchpad = false;
+         bool is_touchscreen = false;
+         bool is_tablet = false;
+@@ -232,7 +233,7 @@ static bool test_pointers(sd_device *dev,
+                 else if (has_mouse_button)
+                         /* This path is taken by VMware's USB mouse, which has
+                          * absolute axes, but no touch/pressure button. */
+-                        is_mouse = true;
++                        is_abs_mouse = true;
+                 else if (has_touch || is_direct)
+                         is_touchscreen = true;
+                 else if (has_joystick_axes_or_buttons)
+@@ -264,7 +265,7 @@ static bool test_pointers(sd_device *dev,
+ 
+         if (is_pointing_stick)
+                 udev_builtin_add_property(dev, test, "ID_INPUT_POINTINGSTICK", "1");
+-        if (is_mouse)
++        if (is_mouse || is_abs_mouse)
+                 udev_builtin_add_property(dev, test, "ID_INPUT_MOUSE", "1");
+         if (is_touchpad)
+                 udev_builtin_add_property(dev, test, "ID_INPUT_TOUCHPAD", "1");
+@@ -277,7 +278,7 @@ static bool test_pointers(sd_device *dev,
+         if (is_tablet_pad)
+                 udev_builtin_add_property(dev, test, "ID_INPUT_TABLET_PAD", "1");
+ 
+-        return is_tablet || is_mouse || is_touchpad || is_touchscreen || is_joystick || is_pointing_stick;
++        return is_tablet || is_mouse || is_abs_mouse || is_touchpad || is_touchscreen || is_joystick || is_pointing_stick;
+ }
+ 
+ /* key like devices */
+-- 
+2.33.0
+

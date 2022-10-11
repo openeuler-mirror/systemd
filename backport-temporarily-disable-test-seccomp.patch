@@ -4,14 +4,14 @@ Date: Tue, 22 Feb 2022 20:33:40 +0800
 Subject: [PATCH] temporarily disable test-seccomp
 
 ---
- src/test/test-seccomp.c | 22 +---------------------
- 1 file changed, 1 insertion(+), 21 deletions(-)
+ src/test/test-seccomp.c | 23 +---------------------
+ 1 file changed, 1 insertion(+), 22 deletions(-)
 
 diff --git a/src/test/test-seccomp.c b/src/test/test-seccomp.c
 index 023c4b6..8d23ab5 100644
 --- a/src/test/test-seccomp.c
 +++ b/src/test/test-seccomp.c
-@@ -1154,25 +1154,5 @@ static void test_restrict_suid_sgid(void) {
+@@ -1154,26 +1154,5 @@ static void test_restrict_suid_sgid(void) {
  }
  
  int main(int argc, char *argv[]) {
@@ -32,6 +32,7 @@ index 023c4b6..8d23ab5 100644
 -        test_memory_deny_write_execute_shmat();
 -        test_restrict_archs();
 -        test_load_syscall_filter_set_raw();
+-        test_native_syscalls_filtered();
 -        test_lock_personality();
 -        test_restrict_suid_sgid();
 -
