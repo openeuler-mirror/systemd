@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        57
+Release:        58
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -181,6 +181,11 @@ Patch0133:      backport-udev-re-assign-ID_NET_DRIVER-ID_NET_LINK_FILE-ID_NET.pa
 Patch0134:      backport-udev-allow-to-match-OriginalName-with-renamed-interf.patch
 Patch0135:      backport-udev-do-not-update-return-value-on-failure.patch
 Patch0136:      backport-test-add-test-for-device-renaming-issue-16967.patch
+Patch0137:      backport-Use-correct-poll.h-include.patch
+Patch0138:      backport-core-do-not-serialize-mounts-and-automounts-for-swit.patch
+Patch0139:      backport-journal-add-some-careful-overflow-checking.patch
+Patch0140:      backport-network-fix-an-infinite-loop.patch
+Patch0141:      backport-sd-device-use-right-type-for-usec_initialized.patch
 
 
 #openEuler
@@ -1589,6 +1594,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Oct 18 2022 yangmingtai <yangmingtai@huawei.com> - 243-58
+- DESC:sync community patches
+
 * Wed Sep  7 2022 yangmingtai <yangmingtai@huawei.com> - 243-57
 - delete rpath
 
