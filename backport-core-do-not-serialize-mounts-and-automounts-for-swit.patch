@@ -1,0 +1,136 @@
+From 0dc4f1b0910d7b96ea9743493db7fd2d841164da Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Thu, 3 Jun 2021 19:40:01 +0200
+Subject: [PATCH] core: do not serialize mounts and automounts for switch-root
+
+When e.g. tmp.mount is present in the initrd, and we serialize it, switch root,
+and deserialize, the new systemd is confused because it thinks /tmp is mounted.
+In general, it doesn't make sense to serialize anything that refers to paths in
+the old root file system.
+
+This fixes two errors for me:
+
+1. tmp.mount was not mounted properly before local-fs.target. It would be
+mounted as some point (I guess when we re-read /proc/self/mountinfo for some
+other reason). In effect systemd-tmpfiles-setup.service would see one fs, and
+some other units started later a different one. In particular gdm.service would
+fail because the pre-created /tmp/.X11-unix with proper permissions would not
+exist at time it was started.
+
+2. # systemd[1]: proc-sys-fs-binfmt_misc.automount: Got hangup/error on autofs pipe from kernel. Likely our automount point has been unmounted by someone or something else?
+   # systemd[1]: proc-sys-fs-binfmt_misc.automount: Failed with result 'unmounted'.
+   # systemd[1]: Mounting proc-sys-fs-binfmt_misc.mount...
+   # systemd[1]: Mounted proc-sys-fs-binfmt_misc.mount.
+   # systemd[1]: Starting systemd-binfmt.service...
+   # systemd[1]: Finished systemd-binfmt.service.
+   # systemd[1]: proc-sys-fs-binfmt_misc.automount: Path /proc/sys/fs/binfmt_misc is already a mount point, refusing start.
+   # systemd[1]: Failed to set up automount proc-sys-fs-binfmt_misc.automount.
+   # systemd[1]: proc-sys-fs-binfmt_misc.automount: Path /proc/sys/fs/binfmt_misc is already a mount point, refusing start.
+   # systemd[1]: Failed to set up automount proc-sys-fs-binfmt_misc.automount.
+   # systemd[1]: proc-sys-fs-binfmt_misc.automount: Path /proc/sys/fs/binfmt_misc is already a mount point, refusing start.
+   # systemd[1]: Failed to set up automount proc-sys-fs-binfmt_misc.automount.
+   # systemd[1]: Stopping systemd-binfmt.service...
+   # systemd[1]: systemd-binfmt.service: Deactivated successfully.
+   # systemd[1]: Stopped systemd-binfmt.service.
+
+I couldn't understand the error here, but in retrospect the first line is entirely
+correct: "someone or something else" was the old systemd unmounting the old root.
+
+(cherry picked from commit 755021d43448011ef169f20ec3a08d4e92c824af)
+
+Reference: https://github.com/systemd/systemd-stable/commit/0dc4f1b0910d7b96ea9743493db7fd2d841164da
+Conflict: adapt context
+---
+ src/core/manager.c |  6 +-----
+ src/core/mount.c   |  1 +
+ src/core/unit.c    | 16 ++++++++++++++--
+ src/core/unit.h    |  3 +++
+ 4 files changed, 19 insertions(+), 7 deletions(-)
+
+diff --git a/src/core/manager.c b/src/core/manager.c
+index cfeaca6..722e4e6 100644
+--- a/src/core/manager.c
++++ b/src/core/manager.c
+@@ -3255,11 +3255,7 @@ int manager_serialize(
+                 if (u->id != t)
+                         continue;
+ 
+-                /* Start marker */
+-                fputs(u->id, f);
+-                fputc('\n', f);
+-
+-                r = unit_serialize(u, f, fds, !switching_root);
++                r = unit_serialize(u, f, fds, switching_root);
+                 if (r < 0)
+                         return r;
+         }
+diff --git a/src/core/mount.c b/src/core/mount.c
+index 1b64011..3a6c220 100644
+--- a/src/core/mount.c
++++ b/src/core/mount.c
+@@ -1981,6 +1981,7 @@ const UnitVTable mount_vtable = {
+                 "Mount\0"
+                 "Install\0",
+         .private_section = "Mount",
++        .exclude_from_switch_root_serialization = true,
+ 
+         .init = mount_init,
+         .load = mount_load,
+diff --git a/src/core/unit.c b/src/core/unit.c
+index c8cf9ee..fa8489c 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -3376,7 +3376,7 @@ static const char *const io_accounting_metric_field_last[_CGROUP_IO_ACCOUNTING_M
+         [CGROUP_IO_WRITE_OPERATIONS] = "io-accounting-write-operations-last",
+ };
+ 
+-int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool serialize_jobs) {
++int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool switching_root) {
+         CGroupIPAccountingMetric m;
+         int r;
+ 
+@@ -3384,6 +3384,18 @@ int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool serialize_jobs) {
+         assert(f);
+         assert(fds);
+ 
++        if (switching_root && UNIT_VTABLE(u)->exclude_from_switch_root_serialization) {
++                /* In the new root, paths for mounts and automounts will be different, so it doesn't make
++                 * much sense to serialize things. API file systems will be moved to the new root, but we
++                 * don't have mount units for those. */
++                log_unit_debug(u, "not serializing before switch-root");
++                return 0;
++        }
++
++        /* Start marker */
++        fputs(u->id, f);
++        fputc('\n', f);
++
+         if (unit_can_serialize(u)) {
+                 r = UNIT_VTABLE(u)->serialize(u, f, fds);
+                 if (r < 0)
+@@ -3455,7 +3467,7 @@ int unit_serialize(Unit *u, FILE *f, FDSet *fds, bool serialize_jobs) {
+                         (void) serialize_item_format(f, ip_accounting_metric_field[m], "%" PRIu64, v);
+         }
+ 
+-        if (serialize_jobs) {
++        if (!switching_root) {
+                 if (u->job) {
+                         fputs("job\n", f);
+                         job_serialize(u->job, f);
+diff --git a/src/core/unit.h b/src/core/unit.h
+index bb5e782..cb70325 100644
+--- a/src/core/unit.h
++++ b/src/core/unit.h
+@@ -602,6 +602,9 @@ typedef struct UnitVTable {
+         /* True if units of this type shall be startable only once and then never again */
+         bool once_only:1;
+ 
++        /* Do not serialize this unit when preparing for root switch */
++        bool exclude_from_switch_root_serialization;
++
+         /* True if queued jobs of this type should be GC'ed if no other job needs them anymore */
+         bool gc_jobs:1;
+ } UnitVTable;
+-- 
+2.27.0
+
