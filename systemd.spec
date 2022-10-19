@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        56
+Release:        57
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -168,6 +168,11 @@ Patch0118:      backport-udev-allow-to-match-OriginalName-with-renamed-interf.pa
 Patch0119:      backport-udev-do-not-update-return-value-on-failure.patch
 Patch0120:      backport-test-add-test-for-device-renaming-issue-16967.patch
 Patch0121:      backport-Prevent-excessive-proc-1-mountinfo-reparsing.patch
+Patch0122:      backport-Use-correct-poll.h-include.patch
+Patch0123:      backport-core-do-not-serialize-mounts-and-automounts-for-swit.patch
+Patch0124:      backport-journal-add-some-careful-overflow-checking.patch
+Patch0125:      backport-network-fix-an-infinite-loop.patch
+Patch0126:      backport-sd-device-use-right-type-for-usec_initialized.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1673,6 +1678,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Oct 18 2022 yangmingtai <yangmingtai@huawei.com> - 243-57
+- DESC:sync community patches
+
 * Tue Sep 6 2022 Han Jinpeng <hanjinpeng@kylinos.cn> - 243-56
 - fix create pod container fail and systemd timeout (rhbz #1819868)
 
