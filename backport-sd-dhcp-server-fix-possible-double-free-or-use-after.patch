@@ -1,0 +1,29 @@
+From bb320989bf7580f46a4867c361be1ee02eccc678 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 11 Aug 2021 16:20:35 +0900
+Subject: [PATCH] sd-dhcp-server: fix possible double-free or use-after-free
+
+(cherry picked from commit 3dc8fb0eb8dd4b7dd802aa69cfe5b2c8f760f561)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/bb320989bf7580f46a4867c361be1ee02eccc678
+---
+ src/libsystemd-network/sd-dhcp-server.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/libsystemd-network/sd-dhcp-server.c b/src/libsystemd-network/sd-dhcp-server.c
+index e2ea79f584..9ae884b0fc 100644
+--- a/src/libsystemd-network/sd-dhcp-server.c
++++ b/src/libsystemd-network/sd-dhcp-server.c
+@@ -1107,7 +1107,7 @@ int dhcp_server_handle_message(sd_dhcp_server *server, DHCPMessage *message, siz
+ 
+                 if (server->bound_leases[pool_offset] == existing_lease) {
+                         server->bound_leases[pool_offset] = NULL;
+-                        hashmap_remove(server->leases_by_client_id, existing_lease);
++                        hashmap_remove(server->leases_by_client_id, &existing_lease->client_id);
+                         dhcp_lease_free(existing_lease);
+ 
+                         if (server->callback)
+-- 
+2.33.0
+

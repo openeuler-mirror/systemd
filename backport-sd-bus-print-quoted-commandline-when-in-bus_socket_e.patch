@@ -1,0 +1,69 @@
+From a221143c6de4917bb6653f5aa134ce8be3c90f6c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Wed, 7 Jul 2021 16:36:49 +0200
+Subject: [PATCH] sd-bus: print quoted commandline when in bus_socket_exec()
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The arguments are where the interesting part is:
+src/libsystemd/sd-bus/bus-socket.c:965: sd-bus: starting bus with systemd-run...
+↓
+src/libsystemd/sd-bus/bus-socket.c:972: sd-bus: starting bus with systemd-run -M.host -PGq --wait -pUser=1000 -pPAMName=login systemd-stdio-bridge "-punix:path=\${XDG_RUNTIME_DIR}/bus"
+
+(cherry picked from commit 87fa2e21dd7a30d25ccda2df6b8446a82637b059)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/a221143c6de4917bb6653f5aa134ce8be3c90f6c
+---
+ src/libsystemd/sd-bus/bus-socket.c | 20 ++++++++++++++------
+ 1 file changed, 14 insertions(+), 6 deletions(-)
+
+diff --git a/src/libsystemd/sd-bus/bus-socket.c b/src/libsystemd/sd-bus/bus-socket.c
+index 09eb49c37f..42c5f175d3 100644
+--- a/src/libsystemd/sd-bus/bus-socket.c
++++ b/src/libsystemd/sd-bus/bus-socket.c
+@@ -12,6 +12,7 @@
+ #include "bus-internal.h"
+ #include "bus-message.h"
+ #include "bus-socket.h"
++#include "escape.h"
+ #include "fd-util.h"
+ #include "format-util.h"
+ #include "fs-util.h"
+@@ -962,8 +963,17 @@ int bus_socket_exec(sd_bus *b) {
+         assert(b->exec_path);
+         assert(b->busexec_pid == 0);
+ 
+-        log_debug("sd-bus: starting bus%s%s with %s...",
+-                  b->description ? " " : "", strempty(b->description), b->exec_path);
++        if (DEBUG_LOGGING) {
++                _cleanup_free_ char *line = NULL;
++
++                if (b->exec_argv)
++                        line = quote_command_line(b->exec_argv);
++
++                log_debug("sd-bus: starting bus%s%s with %s%s",
++                          b->description ? " " : "", strempty(b->description),
++                          line ?: b->exec_path,
++                          b->exec_argv && !line ? "…" : "");
++        }
+ 
+         r = socketpair(AF_UNIX, SOCK_STREAM|SOCK_NONBLOCK|SOCK_CLOEXEC, 0, s);
+         if (r < 0)
+@@ -984,10 +994,8 @@ int bus_socket_exec(sd_bus *b) {
+ 
+                 if (b->exec_argv)
+                         execvp(b->exec_path, b->exec_argv);
+-                else {
+-                        const char *argv[] = { b->exec_path, NULL };
+-                        execvp(b->exec_path, (char**) argv);
+-                }
++                else
++                        execvp(b->exec_path, STRV_MAKE(b->exec_path));
+ 
+                 _exit(EXIT_FAILURE);
+         }
+-- 
+2.33.0
+

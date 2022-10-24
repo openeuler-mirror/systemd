@@ -1,0 +1,131 @@
+From 3ba07929636e1a55c71767e40e23bf639b7a8db5 Mon Sep 17 00:00:00 2001
+From: Emily Gonyer <emilyyrose@gmail.com>
+Date: Fri, 12 Nov 2021 10:09:56 -0500
+Subject: [PATCH] Change gendered terms to be gender-neutral (#21325)
+
+Some typos are also fixed.
+
+(cherry picked from commit be7148ebed5d73c4a76bc6089ebe2e82d8fa33e0)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/3ba07929636e1a55c71767e40e23bf639b7a8db5
+---
+ docs/CODING_STYLE.md                   | 2 +-
+ docs/PREDICTABLE_INTERFACE_NAMES.md    | 2 +-
+ man/sd_bus_add_object.xml              | 2 +-
+ src/core/manager.h                     | 2 +-
+ src/hostname/hostnamectl.c             | 2 +-
+ src/libsystemd/sd-bus/bus-socket.c     | 4 ++--
+ src/libsystemd/sd-bus/sd-bus.c         | 2 +-
+ src/udev/dmi_memory_id/dmi_memory_id.c | 2 +-
+ 8 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/docs/CODING_STYLE.md b/docs/CODING_STYLE.md
+index 54150e1ee7..05fbb2ac9e 100644
+--- a/docs/CODING_STYLE.md
++++ b/docs/CODING_STYLE.md
+@@ -287,7 +287,7 @@ layout: default
+   with a more brutal `assert()`. We are more forgiving to public users than for
+   ourselves! Note that `assert()` and `assert_return()` really only should be
+   used for detecting programming errors, not for runtime errors. `assert()` and
+-  `assert_return()` by usage of `_likely_()` inform the compiler that he should
++  `assert_return()` by usage of `_likely_()` inform the compiler that it should
+   not expect these checks to fail, and they inform fellow programmers about the
+   expected validity and range of parameters.
+ 
+diff --git a/docs/PREDICTABLE_INTERFACE_NAMES.md b/docs/PREDICTABLE_INTERFACE_NAMES.md
+index 07529e7a70..890bd3935c 100644
+--- a/docs/PREDICTABLE_INTERFACE_NAMES.md
++++ b/docs/PREDICTABLE_INTERFACE_NAMES.md
+@@ -53,7 +53,7 @@ With this new scheme you now get:
+ * The same on all distributions that adopted systemd/udev
+ * It's easy to opt out of the scheme (see below)
+ 
+-Does this have any drawbacks? Yes, it does. Previously it was practically guaranteed that hosts equipped with a single ethernet card only had a single `eth0` interface. With this new scheme in place, an administrator now has to check first what the local interface name is before he can invoke commands on it where previously he had a good chance that `eth0` was the right name.
++Does this have any drawbacks? Yes, it does. Previously it was practically guaranteed that hosts equipped with a single ethernet card only had a single `eth0` interface. With this new scheme in place, an administrator now has to check first what the local interface name is before they can invoke commands on it, where previously they had a good chance that `eth0` was the right name.
+ 
+ 
+ ## I don't like this, how do I disable this?
+diff --git a/man/sd_bus_add_object.xml b/man/sd_bus_add_object.xml
+index 31a3344bbd..54683e4f11 100644
+--- a/man/sd_bus_add_object.xml
++++ b/man/sd_bus_add_object.xml
+@@ -508,7 +508,7 @@
+         <varlistentry>
+           <term><constant>SD_BUS_VTABLE_METHOD_NO_REPLY</constant></term>
+ 
+-          <listitem><para>Mark his vtable entry as a method that will not return a reply using the
++          <listitem><para>Mark this vtable entry as a method that will not return a reply using the
+           <constant>org.freedesktop.DBus.Method.NoReply</constant> annotation in introspection data.
+           </para></listitem>
+         </varlistentry>
+diff --git a/src/core/manager.h b/src/core/manager.h
+index b3e7c68e6d..14a80b396e 100644
+--- a/src/core/manager.h
++++ b/src/core/manager.h
+@@ -195,7 +195,7 @@ struct Manager {
+ 
+         sd_event *event;
+ 
+-        /* This maps PIDs we care about to units that are interested in. We allow multiple units to he interested in
++        /* This maps PIDs we care about to units that are interested in. We allow multiple units to be interested in
+          * the same PID and multiple PIDs to be relevant to the same unit. Since in most cases only a single unit will
+          * be interested in the same PID we use a somewhat special encoding here: the first unit interested in a PID is
+          * stored directly in the hashmap, keyed by the PID unmodified. If there are other units interested too they'll
+diff --git a/src/hostname/hostnamectl.c b/src/hostname/hostnamectl.c
+index 283038c7cb..2eca5feaca 100644
+--- a/src/hostname/hostnamectl.c
++++ b/src/hostname/hostnamectl.c
+@@ -442,7 +442,7 @@ static int set_hostname(int argc, char **argv, void *userdata) {
+                  * dot if there is one. If it was not valid, then it will be made fully valid by truncating, dropping
+                  * multiple dots, and dropping weird chars. Note that we clean the name up only if we also are
+                  * supposed to set the pretty name. If the pretty name is not being set we assume the user knows what
+-                 * he does and pass the name as-is. */
++                 * they are doing and pass the name as-is. */
+                 h = strdup(hostname);
+                 if (!h)
+                         return log_oom();
+diff --git a/src/libsystemd/sd-bus/bus-socket.c b/src/libsystemd/sd-bus/bus-socket.c
+index 378774fe8b..09eb49c37f 100644
+--- a/src/libsystemd/sd-bus/bus-socket.c
++++ b/src/libsystemd/sd-bus/bus-socket.c
+@@ -300,8 +300,8 @@ static int verify_external_token(sd_bus *b, const char *p, size_t l) {
+         uid_t u;
+         int r;
+ 
+-        /* We don't do any real authentication here. Instead, we if
+-         * the owner of this bus wanted authentication he should have
++        /* We don't do any real authentication here. Instead, if 
++         * the owner of this bus wanted authentication they should have
+          * checked SO_PEERCRED before even creating the bus object. */
+ 
+         if (!b->anonymous_auth && !b->ucred_valid)
+diff --git a/src/libsystemd/sd-bus/sd-bus.c b/src/libsystemd/sd-bus/sd-bus.c
+index 79c24fe703..ab8d4e4a60 100644
+--- a/src/libsystemd/sd-bus/sd-bus.c
++++ b/src/libsystemd/sd-bus/sd-bus.c
+@@ -3274,7 +3274,7 @@ static int bus_poll(sd_bus *bus, bool need_more, uint64_t timeout_usec) {
+                         return e;
+ 
+                 if (need_more)
+-                        /* The caller really needs some more data, he doesn't
++                        /* The caller really needs some more data, they don't
+                          * care about what's already read, or any timeouts
+                          * except its own. */
+                         e |= POLLIN;
+diff --git a/src/udev/dmi_memory_id/dmi_memory_id.c b/src/udev/dmi_memory_id/dmi_memory_id.c
+index 64eba0d314..00e46f8b9e 100644
+--- a/src/udev/dmi_memory_id/dmi_memory_id.c
++++ b/src/udev/dmi_memory_id/dmi_memory_id.c
+@@ -539,7 +539,7 @@ static void dmi_table_decode(const uint8_t *buf, size_t len, uint16_t num) {
+ 
+                 /* If a short entry is found (less than 4 bytes), not only it
+                  * is invalid, but we cannot reliably locate the next entry.
+-                 * Better stop at this point, and let the user know his/her
++                 * Better stop at this point, and let the user know their
+                  * table is broken. */
+                 if (h.length < 4)
+                         break;
+-- 
+2.33.0
+

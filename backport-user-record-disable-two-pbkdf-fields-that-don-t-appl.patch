@@ -1,0 +1,46 @@
+From 5ee578fd13809e08fbda1a9bca2256ffd24e9857 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 5 Oct 2021 18:24:05 +0200
+Subject: [PATCH] user-record: disable two pbkdf fields that don't apply for
+ pkbdf2
+
+Fixes: #20830
+(cherry picked from commit 8b4f88d13681c6dec839de06c668d32374d44724)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/5ee578fd13809e08fbda1a9bca2256ffd24e9857
+---
+ src/shared/user-record.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/src/shared/user-record.c b/src/shared/user-record.c
+index 17460ceaf6..5fb3d4bbf2 100644
+--- a/src/shared/user-record.c
++++ b/src/shared/user-record.c
+@@ -1913,9 +1913,9 @@ uint64_t user_record_luks_pbkdf_memory_cost(UserRecord *h) {
+         assert(h);
+ 
+         /* Returns a value with kb granularity, since that's what libcryptsetup expects */
+-
+         if (h->luks_pbkdf_memory_cost == UINT64_MAX)
+-                return 64*1024*1024; /* We default to 64M, since this should work on smaller systems too */
++                return streq(user_record_luks_pbkdf_type(h), "pbkdf2") ? 0 : /* doesn't apply for simple pbkdf2 */
++                        64*1024*1024; /* We default to 64M, since this should work on smaller systems too */
+ 
+         return MIN(DIV_ROUND_UP(h->luks_pbkdf_memory_cost, 1024), UINT32_MAX) * 1024;
+ }
+@@ -1923,8 +1923,9 @@ uint64_t user_record_luks_pbkdf_memory_cost(UserRecord *h) {
+ uint64_t user_record_luks_pbkdf_parallel_threads(UserRecord *h) {
+         assert(h);
+ 
+-        if (h->luks_pbkdf_memory_cost == UINT64_MAX)
+-                return 1; /* We default to 1, since this should work on smaller systems too */
++        if (h->luks_pbkdf_parallel_threads == UINT64_MAX)
++                return streq(user_record_luks_pbkdf_type(h), "pbkdf2") ? 0 : /* doesn't apply for simple pbkdf2 */
++                        1; /* We default to 1, since this should work on smaller systems too */
+ 
+         return MIN(h->luks_pbkdf_parallel_threads, UINT32_MAX);
+ }
+-- 
+2.33.0
+

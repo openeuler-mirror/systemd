@@ -1,0 +1,34 @@
+From d36785b19b10ec04ae7b87cdb402de4126e17bca Mon Sep 17 00:00:00 2001
+From: Andreas Rammhold <andreas@rammhold.de>
+Date: Mon, 26 Jul 2021 16:57:43 +0200
+Subject: [PATCH] core: respect install_sysconfdir_samples in meson file
+
+The refactoring done in e11a25cadbe caused the configuration files to be
+installed into the pkgsysconfdir regardless of the state of the
+install_sysconfdir_samples boolean that indicates whether or not the
+sample files should be installed.
+
+(cherry picked from commit cfd760b6a77808d0b9451ed618a23b6259fe525f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/d36785b19b10ec04ae7b87cdb402de4126e17bca
+---
+ src/core/meson.build | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/core/meson.build b/src/core/meson.build
+index f0d2c6f642..c66538eab1 100644
+--- a/src/core/meson.build
++++ b/src/core/meson.build
+@@ -193,7 +193,7 @@ foreach item : in_files
+                 output: file,
+                 command : [meson_render_jinja2, config_h, '@INPUT@'],
+                 capture : true,
+-                install : dir != 'no',
++                install : (dir == pkgsysconfdir and install_sysconfdir_samples) or (dir != pkgsysconfdir and dir != 'no'),
+                 install_dir : dir)
+ endforeach
+ 
+-- 
+2.33.0
+

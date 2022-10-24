@@ -1,0 +1,42 @@
+From 4d8fd88b9641fce81272f60f556543f713175403 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 19 Aug 2021 18:12:56 +0200
+Subject: [PATCH] import: turn off weird protocols in curl
+
+Let's lock things down a bit and now allow curl's weirder protocols to
+be used with our use. i.e. stick to http:// + https:// + file:// and
+turn everything else off. (Gopher!)
+
+This is cde that interfaces with the network after all, and we better
+shouldn't support protocols needlessly that are much less tested.
+
+(Given that HTTP redirects (and other redirects) exist, this should give
+us a security benefit, since we will then be sure that noone can forward
+us to a weird protocol, which we never tested, and other people test
+neither)
+
+(cherry picked from commit 55b90ee00b78a449c8f187a5e8141f8ccb100bf4)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/4d8fd88b9641fce81272f60f556543f713175403
+---
+ src/import/curl-util.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/import/curl-util.c b/src/import/curl-util.c
+index ed2ac0a654..d6a16b4f57 100644
+--- a/src/import/curl-util.c
++++ b/src/import/curl-util.c
+@@ -256,6 +256,9 @@ int curl_glue_make(CURL **ret, const char *url, void *userdata) {
+         if (curl_easy_setopt(c, CURLOPT_LOW_SPEED_LIMIT, 30L) != CURLE_OK)
+                 return -EIO;
+ 
++        if (curl_easy_setopt(c, CURLOPT_PROTOCOLS, CURLPROTO_HTTP|CURLPROTO_HTTPS|CURLPROTO_FILE) != CURLE_OK)
++                return -EIO;
++
+         *ret = TAKE_PTR(c);
+         return 0;
+ }
+-- 
+2.33.0
+

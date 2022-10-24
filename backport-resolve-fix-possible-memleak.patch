@@ -1,0 +1,41 @@
+From 11f8123bbf36801ec436dc77d42a8e253eed1fb7 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sat, 5 Feb 2022 22:03:19 +0900
+Subject: [PATCH] resolve: fix possible memleak
+
+Fortunately, unlike the issue fixed in the previous commit, the memleak
+should be superficial and not become apparent, as the queries handled
+here are managed by the stub stream, and will be freed when the stream
+is closed.
+
+Just for safety, and slightly reducing the runtime memory usage by the
+stub stream.
+
+(cherry picked from commit fe8c5ce615ee2123f17b1f0b3728c439e19e4b5b)
+(cherry picked from commit 4dbc210124b4303ecadb6cdb28a4a4c821e1150b)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/11f8123bbf36801ec436dc77d42a8e253eed1fb7
+---
+ src/resolve/resolved-dns-stub.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/resolve/resolved-dns-stub.c b/src/resolve/resolved-dns-stub.c
+index 49da916576..8040db70f9 100644
+--- a/src/resolve/resolved-dns-stub.c
++++ b/src/resolve/resolved-dns-stub.c
+@@ -755,8 +755,10 @@ static void dns_stub_query_complete(DnsQuery *q) {
+                                  * packet doesn't answer our question. In that case let's restart the query,
+                                  * now with the redirected question. We'll */
+                                 r = dns_query_go(q);
+-                                if (r < 0)
++                                if (r < 0) {
+                                         log_debug_errno(r, "Failed to restart query: %m");
++                                        dns_query_free(q);
++                                }
+ 
+                                 return;
+                         }
+-- 
+2.33.0
+

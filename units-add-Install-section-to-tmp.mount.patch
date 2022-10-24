@@ -15,7 +15,7 @@ index cf68378..66d9a32 100644
 @@ -23,3 +23,7 @@ What=tmpfs
  Where=/tmp
  Type=tmpfs
- Options=mode=1777,strictatime,nosuid,nodev,size=50%,nr_inodes=400k
+ Options=mode=1777,strictatime,nosuid,nodev,size=50%%,nr_inodes=1m
 +
 +# Make 'systemctl enable tmp.mount' work:
 +[Install]

@@ -1,10 +1,15 @@
-From 6f96bdc58746b1698bf8b3430a6c638f8949daec Mon Sep 17 00:00:00 2001
+From dac54d1aa759255144d9937361289bde57d64118 Mon Sep 17 00:00:00 2001
 From: Yu Watanabe <watanabe.yu+github@gmail.com>
 Date: Fri, 20 Aug 2021 08:40:11 +0900
 Subject: [PATCH] timesync: fix wrong type for receiving timestamp in
  nanoseconds
 
 Fixes #20482.
+
+(cherry picked from commit 6f96bdc58746b1698bf8b3430a6c638f8949daec)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/dac54d1aa759255144d9937361289bde57d64118
 ---
  src/test/test-sizeof.c           | 2 ++
  src/timesync/timesyncd-manager.c | 2 +-
@@ -23,10 +28,10 @@ index 3c9dc180fa..e36bee4e8f 100644
          return 0;
  }
 diff --git a/src/timesync/timesyncd-manager.c b/src/timesync/timesyncd-manager.c
-index 1c284f31e3..3a89d9b1fa 100644
+index cb5d42b1d3..9d874cfc8a 100644
 --- a/src/timesync/timesyncd-manager.c
 +++ b/src/timesync/timesyncd-manager.c
-@@ -416,7 +416,7 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
+@@ -412,7 +412,7 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
                  .iov_base = &ntpmsg,
                  .iov_len = sizeof(ntpmsg),
          };
@@ -36,5 +41,5 @@ index 1c284f31e3..3a89d9b1fa 100644
          struct msghdr msghdr = {
                  .msg_iov = &iov,
 -- 
-2.27.0
+2.33.0
 

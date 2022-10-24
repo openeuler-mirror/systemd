@@ -1,0 +1,170 @@
+From de0d375e38df25b9fe333d64f9880751aea46e6b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Wed, 12 Jan 2022 10:42:22 +0100
+Subject: [PATCH] policy files: adjust landing page link
+
+(cherry picked from commit d6e2c1ab7158d52425d3cb72459c5624db12368c)
+(cherry picked from commit 944d8d9050b96e690054224e796254dfc18e6681)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/de0d375e38df25b9fe333d64f9880751aea46e6b
+---
+ src/core/org.freedesktop.systemd1.policy.in   | 2 +-
+ src/home/org.freedesktop.home1.policy         | 2 +-
+ src/hostname/org.freedesktop.hostname1.policy | 2 +-
+ src/import/org.freedesktop.import1.policy     | 2 +-
+ src/locale/org.freedesktop.locale1.policy     | 2 +-
+ src/login/org.freedesktop.login1.policy       | 2 +-
+ src/machine/org.freedesktop.machine1.policy   | 2 +-
+ src/network/org.freedesktop.network1.policy   | 2 +-
+ src/portable/org.freedesktop.portable1.policy | 2 +-
+ src/resolve/org.freedesktop.resolve1.policy   | 2 +-
+ src/timedate/org.freedesktop.timedate1.policy | 2 +-
+ 11 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/src/core/org.freedesktop.systemd1.policy.in b/src/core/org.freedesktop.systemd1.policy.in
+index 74721c516f..f34b2d5bf0 100644
+--- a/src/core/org.freedesktop.systemd1.policy.in
++++ b/src/core/org.freedesktop.systemd1.policy.in
+@@ -16,7 +16,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.systemd1.reply-password">
+                 <description gettext-domain="systemd">Send passphrase back to system</description>
+diff --git a/src/home/org.freedesktop.home1.policy b/src/home/org.freedesktop.home1.policy
+index 10ad7c283a..71253e04e9 100644
+--- a/src/home/org.freedesktop.home1.policy
++++ b/src/home/org.freedesktop.home1.policy
+@@ -7,7 +7,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.home1.create-home">
+                 <description gettext-domain="systemd">Create a home area</description>
+diff --git a/src/hostname/org.freedesktop.hostname1.policy b/src/hostname/org.freedesktop.hostname1.policy
+index 7d28c395cf..dacea0ff0a 100644
+--- a/src/hostname/org.freedesktop.hostname1.policy
++++ b/src/hostname/org.freedesktop.hostname1.policy
+@@ -14,7 +14,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.hostname1.set-hostname">
+                 <description gettext-domain="systemd">Set hostname</description>
+diff --git a/src/import/org.freedesktop.import1.policy b/src/import/org.freedesktop.import1.policy
+index 9736816e33..e88a6e8ae6 100644
+--- a/src/import/org.freedesktop.import1.policy
++++ b/src/import/org.freedesktop.import1.policy
+@@ -16,7 +16,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.import1.import">
+                 <description gettext-domain="systemd">Import a VM or container image</description>
+diff --git a/src/locale/org.freedesktop.locale1.policy b/src/locale/org.freedesktop.locale1.policy
+index f12ca0970a..ed98c4aa09 100644
+--- a/src/locale/org.freedesktop.locale1.policy
++++ b/src/locale/org.freedesktop.locale1.policy
+@@ -16,7 +16,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.locale1.set-locale">
+                 <description gettext-domain="systemd">Set system locale</description>
+diff --git a/src/login/org.freedesktop.login1.policy b/src/login/org.freedesktop.login1.policy
+index 80ebb39f30..df906b0e73 100644
+--- a/src/login/org.freedesktop.login1.policy
++++ b/src/login/org.freedesktop.login1.policy
+@@ -16,7 +16,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.login1.inhibit-block-shutdown">
+                 <description gettext-domain="systemd">Allow applications to inhibit system shutdown</description>
+diff --git a/src/machine/org.freedesktop.machine1.policy b/src/machine/org.freedesktop.machine1.policy
+index ddf5ec05c6..5e43cb6e24 100644
+--- a/src/machine/org.freedesktop.machine1.policy
++++ b/src/machine/org.freedesktop.machine1.policy
+@@ -16,7 +16,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.machine1.login">
+                 <description gettext-domain="systemd">Log into a local container</description>
+diff --git a/src/network/org.freedesktop.network1.policy b/src/network/org.freedesktop.network1.policy
+index 9e27f728bc..c39f20655d 100644
+--- a/src/network/org.freedesktop.network1.policy
++++ b/src/network/org.freedesktop.network1.policy
+@@ -16,7 +16,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.network1.set-ntp-servers">
+                 <description gettext-domain="systemd">Set NTP servers</description>
+diff --git a/src/portable/org.freedesktop.portable1.policy b/src/portable/org.freedesktop.portable1.policy
+index 17e22b0155..09f9028dc5 100644
+--- a/src/portable/org.freedesktop.portable1.policy
++++ b/src/portable/org.freedesktop.portable1.policy
+@@ -7,7 +7,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.portable1.inspect-images">
+                 <description gettext-domain="systemd">Inspect a portable service image</description>
+diff --git a/src/resolve/org.freedesktop.resolve1.policy b/src/resolve/org.freedesktop.resolve1.policy
+index 08615ec6a4..2408bb9e38 100644
+--- a/src/resolve/org.freedesktop.resolve1.policy
++++ b/src/resolve/org.freedesktop.resolve1.policy
+@@ -16,7 +16,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.resolve1.register-service">
+                 <description gettext-domain="systemd">Register a DNS-SD service</description>
+diff --git a/src/timedate/org.freedesktop.timedate1.policy b/src/timedate/org.freedesktop.timedate1.policy
+index c4e71b0753..4a770c08e6 100644
+--- a/src/timedate/org.freedesktop.timedate1.policy
++++ b/src/timedate/org.freedesktop.timedate1.policy
+@@ -16,7 +16,7 @@
+ <policyconfig>
+ 
+         <vendor>The systemd Project</vendor>
+-        <vendor_url>http://www.freedesktop.org/wiki/Software/systemd</vendor_url>
++        <vendor_url>https://systemd.io</vendor_url>
+ 
+         <action id="org.freedesktop.timedate1.set-time">
+                 <description gettext-domain="systemd">Set system time</description>
+-- 
+2.33.0
+

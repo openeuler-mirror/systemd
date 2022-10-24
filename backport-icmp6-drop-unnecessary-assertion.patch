@@ -1,0 +1,30 @@
+From aff2bf0465f677ba60e1cc701ae73968991e4a3f Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 20 Aug 2021 08:44:27 +0900
+Subject: [PATCH] icmp6: drop unnecessary assertion
+
+Follow-up for 3691bcf3c5eebdcca5b4f1c51c745441c57a6cd1.
+
+(cherry picked from commit 6da22a2fa592cc908d26c732b537d8b4fc004280)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/aff2bf0465f677ba60e1cc701ae73968991e4a3f
+---
+ src/libsystemd-network/icmp6-util.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/libsystemd-network/icmp6-util.c b/src/libsystemd-network/icmp6-util.c
+index 67c6b55d84..0b8c3e4cc3 100644
+--- a/src/libsystemd-network/icmp6-util.c
++++ b/src/libsystemd-network/icmp6-util.c
+@@ -186,7 +186,6 @@ int icmp6_receive(int fd, void *buffer, size_t size, struct in6_addr *ret_dst,
+ 
+         /* namelen == 0 only happens when running the test-suite over a socketpair */
+ 
+-        assert(!(msg.msg_flags & MSG_CTRUNC));
+         assert(!(msg.msg_flags & MSG_TRUNC));
+ 
+         CMSG_FOREACH(cmsg, &msg) {
+-- 
+2.33.0
+

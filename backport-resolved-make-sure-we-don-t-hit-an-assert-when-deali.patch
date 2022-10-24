@@ -1,0 +1,33 @@
+From 018c8e8f67b699c5e5aadb73a3ddf3b8009a741a Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 22 Nov 2021 16:14:07 +0100
+Subject: [PATCH] resolved: make sure we don't hit an assert when dealing with
+ incomplete DNSSD service definitions
+
+Fixes: #21142
+(cherry picked from commit 8cf9898a964693b8a3c40b502af0377ede746f4d)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/018c8e8f67b699c5e5aadb73a3ddf3b8009a741a
+---
+ src/resolve/resolved-dns-zone.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/resolve/resolved-dns-zone.c b/src/resolve/resolved-dns-zone.c
+index b86b325144..6b3f5f707d 100644
+--- a/src/resolve/resolved-dns-zone.c
++++ b/src/resolve/resolved-dns-zone.c
+@@ -94,7 +94,9 @@ void dns_zone_remove_rr(DnsZone *z, DnsResourceRecord *rr) {
+         DnsZoneItem *i;
+ 
+         assert(z);
+-        assert(rr);
++
++        if (!rr)
++                return;
+ 
+         i = dns_zone_get(z, rr);
+         if (i)
+-- 
+2.33.0
+

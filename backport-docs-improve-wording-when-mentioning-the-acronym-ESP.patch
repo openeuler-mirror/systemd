@@ -1,0 +1,97 @@
+From 6822cfa5f066fcbf79ded85419d59a97decc67b9 Mon Sep 17 00:00:00 2001
+From: nl6720 <nl6720@gmail.com>
+Date: Fri, 9 Jul 2021 12:56:54 +0300
+Subject: [PATCH] docs: improve wording when mentioning the acronym "ESP"
+
+"ESP" is "EFI system partition", so "ESP partition" is redundant.
+
+(cherry picked from commit 250db1bf02b9fd73f2e0604acddbc20937c67d19)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/6822cfa5f066fcbf79ded85419d59a97decc67b9
+---
+ docs/BOOT_LOADER_INTERFACE.md           | 8 ++++----
+ docs/BOOT_LOADER_SPECIFICATION.md       | 4 ++--
+ man/systemd-boot.xml                    | 4 ++--
+ src/boot/bootctl.c                      | 2 +-
+ src/systemctl/systemctl-start-special.c | 2 +-
+ 5 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/docs/BOOT_LOADER_INTERFACE.md b/docs/BOOT_LOADER_INTERFACE.md
+index be3b6e401d..e9155117b9 100644
+--- a/docs/BOOT_LOADER_INTERFACE.md
++++ b/docs/BOOT_LOADER_INTERFACE.md
+@@ -76,10 +76,10 @@ variables. All EFI variables use the vendor UUID
+   * `1 << 6` → The boot loader supports passing a random seed to the OS.
+ 
+ * The EFI variable `LoaderRandomSeed` contains a binary random seed if set. It
+-  is set by the boot loader to pass an entropy seed read from the ESP partition
+-  to the OS. The system manager then credits this seed to the kernel's entropy
+-  pool. It is the responsibility of the boot loader to ensure the quality and
+-  integrity of the random seed.
++  is set by the boot loader to pass an entropy seed read from the ESP to the OS.
++  The system manager then credits this seed to the kernel's entropy pool. It is
++  the responsibility of the boot loader to ensure the quality and integrity of
++  the random seed.
+ 
+ * The EFI variable `LoaderSystemToken` contains binary random data,
+   persistently set by the OS installer. Boot loaders that support passing
+diff --git a/docs/BOOT_LOADER_SPECIFICATION.md b/docs/BOOT_LOADER_SPECIFICATION.md
+index b87246ede1..7b5b19700a 100644
+--- a/docs/BOOT_LOADER_SPECIFICATION.md
++++ b/docs/BOOT_LOADER_SPECIFICATION.md
+@@ -61,8 +61,8 @@ Everything described below is located on a placeholder file system `$BOOT`. The
+ * On disks with GPT (GUID Partition Table)
+   * If the OS is installed on a disk with GPT, and an Extended Boot Loader Partition or XBOOTLDR partition for short, i.e. a partition with GPT type GUID of `bc13c2ff-59e6-4262-a352-b275fd6f7172`, already exists, it should be used as `$BOOT`.
+   * Otherwise, if the OS is installed on a disk with GPT, and an EFI System Partition or ESP for short, i.e. a partition with GPT type UID of `c12a7328-f81f-11d2-ba4b-00a0c93ec93b`) already exists and is large enough (let's say 250MB) and otherwise qualifies, it should be used as `$BOOT`.
+-  * Otherwise, if the OS is installed on a disk with GPT, and if the ESP partition already exists but is too small, a new suitably sized (let's say 500MB) XBOOTLDR partition shall be created and used as `$BOOT`.
+-  * Otherwise, if the OS is installed on a disk with GPT, and no ESP partition exists yet, a new suitably sized (let's say 500MB) ESP should be created and used as `$BOOT`.
++  * Otherwise, if the OS is installed on a disk with GPT, and if the ESP already exists but is too small, a new suitably sized (let's say 500MB) XBOOTLDR partition shall be created and used as `$BOOT`.
++  * Otherwise, if the OS is installed on a disk with GPT, and no ESP exists yet, a new suitably sized (let's say 500MB) ESP should be created and used as `$BOOT`.
+ 
+ This placeholder file system shall be determined during _installation time_, and an fstab entry may be created. It should be mounted to either `/boot/` or `/efi/`. Additional locations like `/boot/efi/`, with `/boot/` being a separate file system, might be supported by implementations. This is not recommended because the mounting of `$BOOT` is then dependent on and requires the mounting of the intermediate file system.
+ 
+diff --git a/man/systemd-boot.xml b/man/systemd-boot.xml
+index 139f79fa6b..2135d9eb36 100644
+--- a/man/systemd-boot.xml
++++ b/man/systemd-boot.xml
+@@ -73,8 +73,8 @@
+       <citerefentry><refentrytitle>systemctl</refentrytitle><manvolnum>1</manvolnum></citerefentry> for
+       details.</para></listitem>
+ 
+-      <listitem><para>An EFI variable set by the boot loader informs the OS about the ESP partition used
+-      during boot. This is then used to automatically mount the correct ESP partition to
++      <listitem><para>An EFI variable set by the boot loader informs the OS about the EFI System Partition used
++      during boot. This is then used to automatically mount the correct EFI System Partition to
+       <filename>/efi/</filename> or <filename>/boot/</filename> during OS runtime. See
+       <citerefentry><refentrytitle>systemd-gpt-auto-generator</refentrytitle><manvolnum>8</manvolnum></citerefentry>
+       for details.</para></listitem>
+diff --git a/src/boot/bootctl.c b/src/boot/bootctl.c
+index df8b0542c9..fa8c600321 100644
+--- a/src/boot/bootctl.c
++++ b/src/boot/bootctl.c
+@@ -1337,7 +1337,7 @@ static int verb_status(int argc, char *argv[], void *userdata) {
+                 sd_id128_t bootloader_esp_uuid;
+                 bool have_bootloader_esp_uuid = efi_loader_get_device_part_uuid(&bootloader_esp_uuid) >= 0;
+ 
+-                print_yes_no_line(false, have_bootloader_esp_uuid, "Boot loader sets ESP partition information");
++                print_yes_no_line(false, have_bootloader_esp_uuid, "Boot loader sets ESP information");
+                 if (have_bootloader_esp_uuid && !sd_id128_equal(esp_uuid, bootloader_esp_uuid))
+                         printf("WARNING: The boot loader reports a different ESP UUID than detected!\n");
+ 
+diff --git a/src/systemctl/systemctl-start-special.c b/src/systemctl/systemctl-start-special.c
+index 3edb65be61..56068d25f5 100644
+--- a/src/systemctl/systemctl-start-special.c
++++ b/src/systemctl/systemctl-start-special.c
+@@ -36,7 +36,7 @@ static int load_kexec_kernel(void) {
+                 return log_error_errno(r,
+                                        "No kexec kernel loaded and autodetection failed.\n%s",
+                                        is_efi_boot()
+-                                       ? "Cannot automatically load kernel: ESP partition mount point not found."
++                                       ? "Cannot automatically load kernel: ESP mount point not found."
+                                        : "Automatic loading works only on systems booted with EFI.");
+         if (r < 0)
+                 return r;
+-- 
+2.33.0
+

@@ -1,0 +1,33 @@
+From c766dc2f77ed15e41de70e5e5f03dc4650fa55de Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 30 Nov 2021 17:58:40 +0900
+Subject: [PATCH] sd-dhcp6-client: fix error handling
+
+(cherry picked from commit 97e80ee4a86d4097fda78a01d8b64ad2085008f3)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/c766dc2f77ed15e41de70e5e5f03dc4650fa55de
+---
+ src/libsystemd-network/sd-dhcp6-client.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/libsystemd-network/sd-dhcp6-client.c b/src/libsystemd-network/sd-dhcp6-client.c
+index a31dd16c01..1acca301b4 100644
+--- a/src/libsystemd-network/sd-dhcp6-client.c
++++ b/src/libsystemd-network/sd-dhcp6-client.c
+@@ -1424,10 +1424,10 @@ static int client_receive_message(
+         len = recv(fd, message, buflen, 0);
+         if (len < 0) {
+                 /* see comment above for why we shouldn't error out on ENETDOWN. */
+-                if (IN_SET(errno, EAGAIN, EINTR, ENETDOWN))
++                if (IN_SET(len, -EAGAIN, -EINTR, -ENETDOWN))
+                         return 0;
+ 
+-                return log_dhcp6_client_errno(client, errno, "Could not receive message from UDP socket: %m");
++                return log_dhcp6_client_errno(client, len, "Could not receive message from UDP socket: %m");
+ 
+         }
+         if ((size_t) len < sizeof(DHCP6Message)) {
+-- 
+2.33.0
+

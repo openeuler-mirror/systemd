@@ -1,0 +1,44 @@
+From c9e0daf821b3e1e6504ca4c4e3a8b73513e28fa7 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 16 Sep 2021 12:20:09 +0200
+Subject: [PATCH] fileio: fix truncated read handling in read_virtual_file()
+
+We mishandled the case where the size we read from the file actually
+matched the maximum size fully. In that case we cannot really make a
+determination whether the file was fully read or only partially. In that
+case let's do another loop, so that we operate with a buffer, and
+we can detect the EOF (which will be signalled to us via a short read).
+
+(cherry picked from commit 00bd9a4a82ed57bc0c7f158da4564fc1eab808b4)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/c9e0daf821b3e1e6504ca4c4e3a8b73513e28fa7
+---
+ src/basic/fileio.c | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/src/basic/fileio.c b/src/basic/fileio.c
+index 1046e5b9b4..6c8ebe63e0 100644
+--- a/src/basic/fileio.c
++++ b/src/basic/fileio.c
+@@ -470,9 +470,14 @@ int read_virtual_file(const char *filename, size_t max_size, char **ret_contents
+                 if (n <= size)
+                         break;
+ 
+-                /* If a maximum size is specified and we already read as much, no need to try again */
+-                if (max_size != SIZE_MAX && n >= max_size) {
+-                        n = max_size;
++                /* If a maximum size is specified and we already read more we know the file is larger, and
++                 * can handle this as truncation case. Note that if the size of what we read equals the
++                 * maximum size then this doesn't mean truncation, the file might or might not end on that
++                 * byte. We need to rerun the loop in that case, with a larger buffer size, so that we read
++                 * at least one more byte to be able to distinguish EOF from truncation. */
++                if (max_size != SIZE_MAX && n > max_size) {
++                        n = size; /* Make sure we never use more than what we sized the buffer for (so that
++                                   * we have one free byte in it for the trailing NUL we add below).*/
+                         truncated = true;
+                         break;
+                 }
+-- 
+2.33.0
+

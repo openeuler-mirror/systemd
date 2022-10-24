@@ -1,0 +1,42 @@
+From 9ac4b463b6d8da420c2b12af4408d0d583280a6d Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 1 Feb 2022 12:37:51 +0100
+Subject: [PATCH] pid1: pass PAM_DATA_SILENT to pam_end() in child
+
+Fixes: #22318
+(cherry picked from commit 7feb2b5737ad110eb3985e8e9d8189f18d1c5147)
+(cherry picked from commit 9c560d201527ee064ae11784d6538ae544926181)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9ac4b463b6d8da420c2b12af4408d0d583280a6d
+---
+ src/core/execute.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/execute.c b/src/core/execute.c
+index 2f2de4d9cf..04c0513453 100644
+--- a/src/core/execute.c
++++ b/src/core/execute.c
+@@ -1323,7 +1323,9 @@ static int setup_pam(
+                 ret = 0;
+ 
+         child_finish:
+-                pam_end(handle, pam_code | flags);
++                /* NB: pam_end() when called in child processes should set PAM_DATA_SILENT to let the module
++                 * know about this. See pam_end(3) */
++                (void) pam_end(handle, pam_code | flags | PAM_DATA_SILENT);
+                 _exit(ret);
+         }
+ 
+@@ -1358,7 +1360,7 @@ fail:
+                 if (close_session)
+                         pam_code = pam_close_session(handle, flags);
+ 
+-                pam_end(handle, pam_code | flags);
++                (void) pam_end(handle, pam_code | flags);
+         }
+ 
+         strv_free(e);
+-- 
+2.33.0
+

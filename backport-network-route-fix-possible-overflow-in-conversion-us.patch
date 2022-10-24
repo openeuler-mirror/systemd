@@ -1,0 +1,30 @@
+From 7a9b38919302e98cebc2c6233fd09d0c07ae41dc Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 15 Oct 2021 10:06:25 +0900
+Subject: [PATCH] network: route: fix possible overflow in conversion usec_t ->
+ uint32_t
+
+(cherry picked from commit ff43dddab7260c9220eaea2a545514772c0e581f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7a9b38919302e98cebc2c6233fd09d0c07ae41dc
+---
+ src/network/networkd-route.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/network/networkd-route.c b/src/network/networkd-route.c
+index 791fd64c39..eeba31c45d 100644
+--- a/src/network/networkd-route.c
++++ b/src/network/networkd-route.c
+@@ -1537,7 +1537,7 @@ static int route_configure(
+ 
+         if (route->lifetime != USEC_INFINITY && kernel_route_expiration_supported()) {
+                 r = sd_netlink_message_append_u32(req, RTA_EXPIRES,
+-                        DIV_ROUND_UP(usec_sub_unsigned(route->lifetime, now(clock_boottime_or_monotonic())), USEC_PER_SEC));
++                        MIN(DIV_ROUND_UP(usec_sub_unsigned(route->lifetime, now(clock_boottime_or_monotonic())), USEC_PER_SEC), UINT32_MAX));
+                 if (r < 0)
+                         return log_link_error_errno(link, r, "Could not append RTA_EXPIRES attribute: %m");
+         }
+-- 
+2.33.0
+

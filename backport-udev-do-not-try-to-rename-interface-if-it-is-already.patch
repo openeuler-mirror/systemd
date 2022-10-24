@@ -1,0 +1,49 @@
+From 214ea3a26e9cc5dda8530a45a71b052e75a250a4 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 24 Oct 2021 20:43:34 +0900
+Subject: [PATCH] udev: do not try to rename interface if it is already up
+
+See dev_change_name() in kernel's net/core/dev.c.
+
+Fixes #21105.
+
+(cherry picked from commit 6681eb021a0b56ef0dc849e3b358a515ece16482)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/214ea3a26e9cc5dda8530a45a71b052e75a250a4
+---
+ src/udev/udev-event.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/src/udev/udev-event.c b/src/udev/udev-event.c
+index b28089be71..9854270b27 100644
+--- a/src/udev/udev-event.c
++++ b/src/udev/udev-event.c
+@@ -828,6 +828,7 @@ int udev_event_spawn(UdevEvent *event,
+ static int rename_netif(UdevEvent *event) {
+         sd_device *dev = event->dev;
+         const char *oldname;
++        unsigned flags;
+         int ifindex, r;
+ 
+         if (!event->name)
+@@ -855,6 +856,16 @@ static int rename_netif(UdevEvent *event) {
+                 return 0;
+         }
+ 
++        r = rtnl_get_link_info(&event->rtnl, ifindex, NULL, &flags);
++        if (r < 0)
++                return log_device_warning_errno(dev, r, "Failed to get link flags: %m");
++
++        if (FLAGS_SET(flags, IFF_UP)) {
++                log_device_info(dev, "Network interface '%s' is already up, refusing to rename to '%s'.",
++                                oldname, event->name);
++                return 0;
++        }
++
+         /* Set ID_RENAMING boolean property here, and drop it in the corresponding move uevent later. */
+         r = device_add_property(dev, "ID_RENAMING", "1");
+         if (r < 0)
+-- 
+2.33.0
+

@@ -1,0 +1,35 @@
+From 5ac75f556c2ff3c28a815414dab92b58c3726dbd Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 8 Nov 2021 23:08:13 +0100
+Subject: [PATCH] logind: downgrade message about /run/utmp missing to
+ LOG_DEBUG
+
+This isn't really anything to really complain about, let's debug log
+about this, and continue quietly as if utmp was empty.
+
+(cherry picked from commit 9830d716147c4e35026457027af95f303e690ae9)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/5ac75f556c2ff3c28a815414dab92b58c3726dbd
+---
+ src/login/logind-core.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/login/logind-core.c b/src/login/logind-core.c
+index 22031f485a..e08929e52a 100644
+--- a/src/login/logind-core.c
++++ b/src/login/logind-core.c
+@@ -707,7 +707,9 @@ int manager_read_utmp(Manager *m) {
+                 errno = 0;
+                 u = getutxent();
+                 if (!u) {
+-                        if (errno != 0)
++                        if (errno == ENOENT)
++                                log_debug_errno(errno, _PATH_UTMPX " does not exist, ignoring.");
++                        else if (errno != 0)
+                                 log_warning_errno(errno, "Failed to read " _PATH_UTMPX ", ignoring: %m");
+                         return 0;
+                 }
+-- 
+2.33.0
+

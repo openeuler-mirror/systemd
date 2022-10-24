@@ -1,0 +1,126 @@
+From 1d1b529d7781c7ac28fd6130eeda76bf2d70fe79 Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Wed, 18 Aug 2021 16:08:14 +0100
+Subject: [PATCH] dissect-image: add extension-specific validation flag
+
+Allows callers to specify which image type they are looking for
+
+(cherry picked from commit 9ccb531a5f99a7f399f352e79079188957f5a170)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/1d1b529d7781c7ac28fd6130eeda76bf2d70fe79
+---
+ src/portable/portable.c    |  9 ++++++++-
+ src/shared/dissect-image.c | 26 +++++++++++++++++++-------
+ src/shared/dissect-image.h | 23 ++++++++++++-----------
+ 3 files changed, 39 insertions(+), 19 deletions(-)
+
+diff --git a/src/portable/portable.c b/src/portable/portable.c
+index 4cf5fb4f0a..5ecbeec2de 100644
+--- a/src/portable/portable.c
++++ b/src/portable/portable.c
+@@ -424,9 +424,16 @@ static int portable_extract_by_path(
+                 if (r < 0)
+                         return r;
+                 if (r == 0) {
++                        DissectImageFlags flags = DISSECT_IMAGE_READ_ONLY;
++
+                         seq[0] = safe_close(seq[0]);
+ 
+-                        r = dissected_image_mount(m, tmpdir, UID_INVALID, UID_INVALID, DISSECT_IMAGE_READ_ONLY);
++                        if (!extract_os_release)
++                                flags |= DISSECT_IMAGE_VALIDATE_OS_EXT;
++                        else
++                                flags |= DISSECT_IMAGE_VALIDATE_OS;
++
++                        r = dissected_image_mount(m, tmpdir, UID_INVALID, UID_INVALID, flags);
+                         if (r < 0) {
+                                 log_debug_errno(r, "Failed to mount dissected image: %m");
+                                 goto child_finish;
+diff --git a/src/shared/dissect-image.c b/src/shared/dissect-image.c
+index 9b30c86a53..3a24f5041f 100644
+--- a/src/shared/dissect-image.c
++++ b/src/shared/dissect-image.c
+@@ -1725,17 +1725,28 @@ int dissected_image_mount(
+                 if (r < 0)
+                         return r;
+ 
+-                if (flags & DISSECT_IMAGE_VALIDATE_OS) {
+-                        r = path_is_os_tree(where);
+-                        if (r < 0)
+-                                return r;
+-                        if (r == 0) {
++                if ((flags & (DISSECT_IMAGE_VALIDATE_OS|DISSECT_IMAGE_VALIDATE_OS_EXT)) != 0) {
++                        /* If either one of the validation flags are set, ensure that the image qualifies
++                         * as one or the other (or both). */
++                        bool ok = false;
++
++                        if (FLAGS_SET(flags, DISSECT_IMAGE_VALIDATE_OS)) {
++                                r = path_is_os_tree(where);
++                                if (r < 0)
++                                        return r;
++                                if (r > 0)
++                                        ok = true;
++                        }
++                        if (!ok && FLAGS_SET(flags, DISSECT_IMAGE_VALIDATE_OS_EXT)) {
+                                 r = path_is_extension_tree(where, m->image_name);
+                                 if (r < 0)
+                                         return r;
+-                                if (r == 0)
+-                                        return -EMEDIUMTYPE;
++                                if (r > 0)
++                                        ok = true;
+                         }
++
++                        if (!ok)
++                                return -ENOMEDIUM;
+                 }
+         }
+ 
+@@ -2617,6 +2628,7 @@ int dissected_image_acquire_metadata(DissectedImage *m) {
+                                 DISSECT_IMAGE_READ_ONLY|
+                                 DISSECT_IMAGE_MOUNT_ROOT_ONLY|
+                                 DISSECT_IMAGE_VALIDATE_OS|
++                                DISSECT_IMAGE_VALIDATE_OS_EXT|
+                                 DISSECT_IMAGE_USR_NO_ROOT);
+                 if (r < 0) {
+                         /* Let parent know the error */
+diff --git a/src/shared/dissect-image.h b/src/shared/dissect-image.h
+index 1ce14e915e..9db2719afb 100644
+--- a/src/shared/dissect-image.h
++++ b/src/shared/dissect-image.h
+@@ -100,19 +100,20 @@ typedef enum DissectImageFlags {
+         DISSECT_IMAGE_MOUNT_ROOT_ONLY     = 1 << 6,  /* Mount only the root and /usr partitions */
+         DISSECT_IMAGE_MOUNT_NON_ROOT_ONLY = 1 << 7,  /* Mount only the non-root and non-/usr partitions */
+         DISSECT_IMAGE_VALIDATE_OS         = 1 << 8,  /* Refuse mounting images that aren't identifiable as OS images */
+-        DISSECT_IMAGE_NO_UDEV             = 1 << 9,  /* Don't wait for udev initializing things */
+-        DISSECT_IMAGE_RELAX_VAR_CHECK     = 1 << 10, /* Don't insist that the UUID of /var is hashed from /etc/machine-id */
+-        DISSECT_IMAGE_FSCK                = 1 << 11, /* File system check the partition before mounting (no effect when combined with DISSECT_IMAGE_READ_ONLY) */
+-        DISSECT_IMAGE_NO_PARTITION_TABLE  = 1 << 12, /* Only recognize single file system images */
+-        DISSECT_IMAGE_VERITY_SHARE        = 1 << 13, /* When activating a verity device, reuse existing one if already open */
+-        DISSECT_IMAGE_MKDIR               = 1 << 14, /* Make top-level directory to mount right before mounting, if missing */
+-        DISSECT_IMAGE_USR_NO_ROOT         = 1 << 15, /* If no root fs is in the image, but /usr is, then allow this (so that we can mount the rootfs as tmpfs or so */
+-        DISSECT_IMAGE_REQUIRE_ROOT        = 1 << 16, /* Don't accept disks without root partition (or at least /usr partition if DISSECT_IMAGE_USR_NO_ROOT is set) */
+-        DISSECT_IMAGE_MOUNT_READ_ONLY     = 1 << 17, /* Make mounts read-only */
++        DISSECT_IMAGE_VALIDATE_OS_EXT     = 1 << 9,  /* Refuse mounting images that aren't identifiable as OS extension images */
++        DISSECT_IMAGE_NO_UDEV             = 1 << 10, /* Don't wait for udev initializing things */
++        DISSECT_IMAGE_RELAX_VAR_CHECK     = 1 << 11, /* Don't insist that the UUID of /var is hashed from /etc/machine-id */
++        DISSECT_IMAGE_FSCK                = 1 << 12, /* File system check the partition before mounting (no effect when combined with DISSECT_IMAGE_READ_ONLY) */
++        DISSECT_IMAGE_NO_PARTITION_TABLE  = 1 << 13, /* Only recognize single file system images */
++        DISSECT_IMAGE_VERITY_SHARE        = 1 << 14, /* When activating a verity device, reuse existing one if already open */
++        DISSECT_IMAGE_MKDIR               = 1 << 15, /* Make top-level directory to mount right before mounting, if missing */
++        DISSECT_IMAGE_USR_NO_ROOT         = 1 << 16, /* If no root fs is in the image, but /usr is, then allow this (so that we can mount the rootfs as tmpfs or so */
++        DISSECT_IMAGE_REQUIRE_ROOT        = 1 << 17, /* Don't accept disks without root partition (or at least /usr partition if DISSECT_IMAGE_USR_NO_ROOT is set) */
++        DISSECT_IMAGE_MOUNT_READ_ONLY     = 1 << 18, /* Make mounts read-only */
+         DISSECT_IMAGE_READ_ONLY           = DISSECT_IMAGE_DEVICE_READ_ONLY |
+                                             DISSECT_IMAGE_MOUNT_READ_ONLY,
+-        DISSECT_IMAGE_GROWFS              = 1 << 18, /* Grow file systems in partitions marked for that to the size of the partitions after mount */
+-        DISSECT_IMAGE_MOUNT_IDMAPPED      = 1 << 19, /* Mount mounts with kernel 5.12-style userns ID mapping, if file system type doesn't support uid=/gid= */
++        DISSECT_IMAGE_GROWFS              = 1 << 19, /* Grow file systems in partitions marked for that to the size of the partitions after mount */
++        DISSECT_IMAGE_MOUNT_IDMAPPED      = 1 << 20, /* Mount mounts with kernel 5.12-style userns ID mapping, if file system type doesn't support uid=/gid= */
+ } DissectImageFlags;
+ 
+ struct DissectedImage {
+-- 
+2.33.0
+

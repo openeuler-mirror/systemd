@@ -1,0 +1,39 @@
+From 486412ad3bba4f1306597302cf66cc4858126243 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Mon, 12 Jul 2021 12:32:39 +0200
+Subject: [PATCH] systemctl: show error when help for unknown unit is requested
+
+Fixes #20189. We would only log at debug level and return failure, which looks
+like a noop for the user.
+
+('help' accepts multiple arguments and will show multiple concatenated man
+pages in that case. Actually, it will also show multiple concatenated man pages
+if the Documentation= setting lists multiple pages. I don't think it's very
+terribly useful, but, meh, I don't think we can do much better. If a user
+requests a help for a two services, one known and one unknown, there'll now be
+a line in the output. It's not very user friendly, but not exactly wrong too.)
+
+(cherry picked from commit 75312ada5324d8adae3f3a0ed97f0acfc8b8bde5)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/486412ad3bba4f1306597302cf66cc4858126243
+---
+ src/systemctl/systemctl-show.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/systemctl/systemctl-show.c b/src/systemctl/systemctl-show.c
+index 470ff617d6..1f524626bf 100644
+--- a/src/systemctl/systemctl-show.c
++++ b/src/systemctl/systemctl-show.c
+@@ -1915,7 +1915,7 @@ static int show_one(
+                 return log_error_errno(r, "Failed to get properties: %s", bus_error_message(&error, r));
+ 
+         if (unit && streq_ptr(info.load_state, "not-found") && streq_ptr(info.active_state, "inactive")) {
+-                log_full(show_mode == SYSTEMCTL_SHOW_STATUS ? LOG_ERR : LOG_DEBUG,
++                log_full(show_mode == SYSTEMCTL_SHOW_PROPERTIES ? LOG_DEBUG : LOG_ERR,
+                          "Unit %s could not be found.", unit);
+ 
+                 if (show_mode == SYSTEMCTL_SHOW_STATUS)
+-- 
+2.33.0
+

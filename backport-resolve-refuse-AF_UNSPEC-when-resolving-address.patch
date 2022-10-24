@@ -1,0 +1,32 @@
+From 63590abb5dd48fbcc8c0dfc5dfc1ee088382d5f7 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 11 Feb 2022 09:49:13 +0900
+Subject: [PATCH] resolve: refuse AF_UNSPEC when resolving address
+
+Fixes #22480.
+
+(cherry picked from commit 0234f0c0531682e7f28a4ef51852c102c6e97267)
+(cherry picked from commit 084c88983eaecbf23e113db5a7ee11f94b60472b)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/63590abb5dd48fbcc8c0dfc5dfc1ee088382d5f7
+---
+ src/resolve/resolved-varlink.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/resolve/resolved-varlink.c b/src/resolve/resolved-varlink.c
+index 6f4ab425ef..9a61b19e61 100644
+--- a/src/resolve/resolved-varlink.c
++++ b/src/resolve/resolved-varlink.c
+@@ -484,7 +484,7 @@ static int vl_method_resolve_address(Varlink *link, JsonVariant *parameters, Var
+         if (p.ifindex < 0)
+                 return varlink_error_invalid_parameter(link, JSON_VARIANT_STRING_CONST("ifindex"));
+ 
+-        if (!IN_SET(p.family, AF_UNSPEC, AF_INET, AF_INET6))
++        if (!IN_SET(p.family, AF_INET, AF_INET6))
+                 return varlink_error_invalid_parameter(link, JSON_VARIANT_STRING_CONST("family"));
+ 
+         if (FAMILY_ADDRESS_SIZE(p.family) != p.address_size)
+-- 
+2.33.0
+

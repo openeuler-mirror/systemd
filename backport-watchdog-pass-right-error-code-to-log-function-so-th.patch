@@ -1,0 +1,32 @@
+From 11d5f109b04cd61c8bf437065b5e178c485a49b4 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 15 Sep 2021 15:43:42 +0200
+Subject: [PATCH] watchdog: pass right error code to log function so that %m
+ works
+
+(cherry picked from commit a4588af942af976c55f72869340c24d5017db278)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/11d5f109b04cd61c8bf437065b5e178c485a49b4
+---
+ src/shared/watchdog.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/shared/watchdog.c b/src/shared/watchdog.c
+index d33acafe64..8586a88e54 100644
+--- a/src/shared/watchdog.c
++++ b/src/shared/watchdog.c
+@@ -47,8 +47,8 @@ static int update_timeout(void) {
+                 flags = WDIOS_ENABLECARD;
+                 if (ioctl(watchdog_fd, WDIOC_SETOPTIONS, &flags) < 0) {
+                         /* ENOTTY means the watchdog is always enabled so we're fine */
+-                        log_full(ERRNO_IS_NOT_SUPPORTED(errno) ? LOG_DEBUG : LOG_WARNING,
+-                                 "Failed to enable hardware watchdog: %m");
++                        log_full_errno(ERRNO_IS_NOT_SUPPORTED(errno) ? LOG_DEBUG : LOG_WARNING, errno,
++                                       "Failed to enable hardware watchdog, ignoring: %m");
+                         if (!ERRNO_IS_NOT_SUPPORTED(errno))
+                                 return -errno;
+                 }
+-- 
+2.33.0
+

@@ -1,0 +1,29 @@
+From 64b025686f36ae4385811be6f81d5f7d94da3437 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 18 Aug 2021 22:41:08 +0200
+Subject: [PATCH] discover-image: pass the right fd to fd_getcrtime()
+
+(cherry picked from commit 12a7f04a2b9135a4751dba71e2f688525d7c93e7)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/64b025686f36ae4385811be6f81d5f7d94da3437
+---
+ src/shared/discover-image.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shared/discover-image.c b/src/shared/discover-image.c
+index 521264ec29..5f8bf43776 100644
+--- a/src/shared/discover-image.c
++++ b/src/shared/discover-image.c
+@@ -305,7 +305,7 @@ static int image_make(
+                 }
+ 
+                 /* Get directory creation time (not available everywhere, but that's OK */
+-                (void) fd_getcrtime(dfd, &crtime);
++                (void) fd_getcrtime(fd, &crtime);
+ 
+                 /* If the IMMUTABLE bit is set, we consider the directory read-only. Since the ioctl is not
+                  * supported everywhere we ignore failures. */
+-- 
+2.33.0
+

@@ -1,0 +1,56 @@
+From 569ef9413c2ef3275b45458367342112e5d5f991 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 12 Nov 2021 11:11:27 +0100
+Subject: [PATCH] namespace: make whole namespace_setup() work regardless of
+ configured umask
+
+Let's reset the umask during the whole namespace_setup() logic, so that
+all our mkdir() + mknod() are not subjected to whatever umask might
+currently be set.
+
+This mostly moves the umask save/restore logic out of
+mount_private_dev() and into the stack frame of namespace_setup() that
+is further out.
+
+Fixes #19899
+
+(cherry picked from commit cdf42f9bd40ff21a67d58b948efea055d56ad398)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/569ef9413c2ef3275b45458367342112e5d5f991
+---
+ src/core/namespace.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/namespace.c b/src/core/namespace.c
+index 233ee7be40..b10a53ad2e 100644
+--- a/src/core/namespace.c
++++ b/src/core/namespace.c
+@@ -852,13 +852,10 @@ static int mount_private_dev(MountEntry *m) {
+         char temporary_mount[] = "/tmp/namespace-dev-XXXXXX";
+         const char *d, *dev = NULL, *devpts = NULL, *devshm = NULL, *devhugepages = NULL, *devmqueue = NULL, *devlog = NULL, *devptmx = NULL;
+         bool can_mknod = true;
+-        _cleanup_umask_ mode_t u;
+         int r;
+ 
+         assert(m);
+ 
+-        u = umask(0000);
+-
+         if (!mkdtemp(temporary_mount))
+                 return log_debug_errno(errno, "Failed to create temporary directory '%s': %m", temporary_mount);
+ 
+@@ -1864,6 +1861,10 @@ int setup_namespace(
+ 
+         assert(ns_info);
+ 
++        /* Make sure that all mknod(), mkdir() calls we do are unaffected by the umask, and the access modes
++         * we configure take effect */
++        BLOCK_WITH_UMASK(0000);
++
+         if (!isempty(propagate_dir) && !isempty(incoming_dir))
+                 setup_propagate = true;
+ 
+-- 
+2.33.0
+

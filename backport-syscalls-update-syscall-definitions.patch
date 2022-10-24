@@ -1,0 +1,853 @@
+From f551941e5d7a39312903625d473e1d527358f0e1 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 3 Jan 2022 03:48:10 +0900
+Subject: [PATCH] syscalls: update syscall definitions
+
+(cherry picked from commit 0c718b1a67cd0d3512eafeb4659458694bf3865b)
+(cherry picked from commit 7e338876577cb328632ce3e7753c0130b54dd7a2)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/f551941e5d7a39312903625d473e1d527358f0e1
+---
+ src/basic/syscalls-alpha.txt     | 6 ++++--
+ src/basic/syscalls-arc.txt       | 6 ++++--
+ src/basic/syscalls-arm.txt       | 6 ++++--
+ src/basic/syscalls-arm64.txt     | 6 ++++--
+ src/basic/syscalls-i386.txt      | 6 ++++--
+ src/basic/syscalls-ia64.txt      | 6 ++++--
+ src/basic/syscalls-m68k.txt      | 6 ++++--
+ src/basic/syscalls-mips64.txt    | 6 ++++--
+ src/basic/syscalls-mips64n32.txt | 6 ++++--
+ src/basic/syscalls-mipso32.txt   | 6 ++++--
+ src/basic/syscalls-powerpc.txt   | 6 ++++--
+ src/basic/syscalls-powerpc64.txt | 6 ++++--
+ src/basic/syscalls-riscv32.txt   | 8 +++++---
+ src/basic/syscalls-riscv64.txt   | 6 ++++--
+ src/basic/syscalls-s390.txt      | 6 ++++--
+ src/basic/syscalls-s390x.txt     | 6 ++++--
+ src/basic/syscalls-sparc.txt     | 6 ++++--
+ src/basic/syscalls-x86_64.txt    | 6 ++++--
+ 18 files changed, 73 insertions(+), 37 deletions(-)
+
+diff --git a/src/basic/syscalls-alpha.txt b/src/basic/syscalls-alpha.txt
+index 3bcc357075..5aef86b09e 100644
+--- a/src/basic/syscalls-alpha.txt
++++ b/src/basic/syscalls-alpha.txt
+@@ -106,6 +106,7 @@ ftruncate	130
+ ftruncate64
+ futex	394
+ futex_time64
++futex_waitv	559
+ futimesat	454
+ get_kernel_syms	309
+ get_mempolicy	430
+@@ -203,6 +204,7 @@ madvise	75
+ mbind	429
+ membarrier	517
+ memfd_create	512
++memfd_secret
+ memory_ordering
+ migrate_pages	449
+ mincore	375
+@@ -374,7 +376,6 @@ pciconfig_read	345
+ pciconfig_write	346
+ perf_event_open	493
+ perfctr
+-perfmonctl
+ personality	324
+ pidfd_getfd	548
+ pidfd_open	544
+@@ -394,6 +395,7 @@ preadv	490
+ preadv2	520
+ prlimit64	496
+ process_madvise	550
++process_mrelease	558
+ process_vm_readv	504
+ process_vm_writev	505
+ pselect6	463
+@@ -404,7 +406,7 @@ pwritev	491
+ pwritev2	521
+ query_module	347
+ quotactl	148
+-quotactl_path
++quotactl_fd	553
+ read	3
+ readahead	379
+ readdir
+diff --git a/src/basic/syscalls-arc.txt b/src/basic/syscalls-arc.txt
+index e4204fa0f2..f275f104bf 100644
+--- a/src/basic/syscalls-arc.txt
++++ b/src/basic/syscalls-arc.txt
+@@ -106,6 +106,7 @@ ftruncate
+ ftruncate64	46
+ futex	98
+ futex_time64	422
++futex_waitv	449
+ futimesat
+ get_kernel_syms
+ get_mempolicy	236
+@@ -203,6 +204,7 @@ madvise	233
+ mbind	235
+ membarrier	283
+ memfd_create	279
++memfd_secret
+ memory_ordering
+ migrate_pages	238
+ mincore	232
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	241
+ perfctr
+-perfmonctl
+ personality	92
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	69
+ preadv2	286
+ prlimit64	261
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	270
+ process_vm_writev	271
+ pselect6	72
+@@ -404,7 +406,7 @@ pwritev	70
+ pwritev2	287
+ query_module
+ quotactl	60
+-quotactl_path
++quotactl_fd	443
+ read	63
+ readahead	213
+ readdir
+diff --git a/src/basic/syscalls-arm.txt b/src/basic/syscalls-arm.txt
+index a4847a18b3..9037b28384 100644
+--- a/src/basic/syscalls-arm.txt
++++ b/src/basic/syscalls-arm.txt
+@@ -106,6 +106,7 @@ ftruncate	93
+ ftruncate64	194
+ futex	240
+ futex_time64	422
++futex_waitv	449
+ futimesat	326
+ get_kernel_syms
+ get_mempolicy	320
+@@ -203,6 +204,7 @@ madvise	220
+ mbind	319
+ membarrier	389
+ memfd_create	385
++memfd_secret
+ memory_ordering
+ migrate_pages	400
+ mincore	219
+@@ -374,7 +376,6 @@ pciconfig_read	272
+ pciconfig_write	273
+ perf_event_open	364
+ perfctr
+-perfmonctl
+ personality	136
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	361
+ preadv2	392
+ prlimit64	369
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	376
+ process_vm_writev	377
+ pselect6	335
+@@ -404,7 +406,7 @@ pwritev	362
+ pwritev2	393
+ query_module
+ quotactl	131
+-quotactl_path
++quotactl_fd	443
+ read	3
+ readahead	225
+ readdir
+diff --git a/src/basic/syscalls-arm64.txt b/src/basic/syscalls-arm64.txt
+index ef76ffa96f..e91d7cfca4 100644
+--- a/src/basic/syscalls-arm64.txt
++++ b/src/basic/syscalls-arm64.txt
+@@ -106,6 +106,7 @@ ftruncate	46
+ ftruncate64
+ futex	98
+ futex_time64
++futex_waitv	449
+ futimesat
+ get_kernel_syms
+ get_mempolicy	236
+@@ -203,6 +204,7 @@ madvise	233
+ mbind	235
+ membarrier	283
+ memfd_create	279
++memfd_secret	447
+ memory_ordering
+ migrate_pages	238
+ mincore	232
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	241
+ perfctr
+-perfmonctl
+ personality	92
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	69
+ preadv2	286
+ prlimit64	261
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	270
+ process_vm_writev	271
+ pselect6	72
+@@ -404,7 +406,7 @@ pwritev	70
+ pwritev2	287
+ query_module
+ quotactl	60
+-quotactl_path
++quotactl_fd	443
+ read	63
+ readahead	213
+ readdir
+diff --git a/src/basic/syscalls-i386.txt b/src/basic/syscalls-i386.txt
+index baacb9b7a3..6b57d6f05d 100644
+--- a/src/basic/syscalls-i386.txt
++++ b/src/basic/syscalls-i386.txt
+@@ -106,6 +106,7 @@ ftruncate	93
+ ftruncate64	194
+ futex	240
+ futex_time64	422
++futex_waitv	449
+ futimesat	299
+ get_kernel_syms	130
+ get_mempolicy	275
+@@ -203,6 +204,7 @@ madvise	219
+ mbind	274
+ membarrier	375
+ memfd_create	356
++memfd_secret	447
+ memory_ordering
+ migrate_pages	294
+ mincore	218
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	336
+ perfctr
+-perfmonctl
+ personality	136
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	333
+ preadv2	378
+ prlimit64	340
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	347
+ process_vm_writev	348
+ pselect6	308
+@@ -404,7 +406,7 @@ pwritev	334
+ pwritev2	379
+ query_module	167
+ quotactl	131
+-quotactl_path
++quotactl_fd	443
+ read	3
+ readahead	225
+ readdir	89
+diff --git a/src/basic/syscalls-ia64.txt b/src/basic/syscalls-ia64.txt
+index c37ea6f88f..3d646f6d17 100644
+--- a/src/basic/syscalls-ia64.txt
++++ b/src/basic/syscalls-ia64.txt
+@@ -106,6 +106,7 @@ ftruncate	1098
+ ftruncate64
+ futex	1230
+ futex_time64
++futex_waitv	1473
+ futimesat	1285
+ get_kernel_syms
+ get_mempolicy	1260
+@@ -203,6 +204,7 @@ madvise	1209
+ mbind	1259
+ membarrier	1344
+ memfd_create	1340
++memfd_secret
+ memory_ordering
+ migrate_pages	1280
+ mincore	1208
+@@ -374,7 +376,6 @@ pciconfig_read	1173
+ pciconfig_write	1174
+ perf_event_open	1352
+ perfctr
+-perfmonctl	1175
+ personality	1140
+ pidfd_getfd	1462
+ pidfd_open	1458
+@@ -394,6 +395,7 @@ preadv	1319
+ preadv2	1348
+ prlimit64	1325
+ process_madvise	1464
++process_mrelease	1472
+ process_vm_readv	1332
+ process_vm_writev	1333
+ pselect6	1294
+@@ -404,7 +406,7 @@ pwritev	1320
+ pwritev2	1349
+ query_module
+ quotactl	1137
+-quotactl_path
++quotactl_fd	1467
+ read	1026
+ readahead	1216
+ readdir
+diff --git a/src/basic/syscalls-m68k.txt b/src/basic/syscalls-m68k.txt
+index 7522b82e1f..ef7295db2f 100644
+--- a/src/basic/syscalls-m68k.txt
++++ b/src/basic/syscalls-m68k.txt
+@@ -106,6 +106,7 @@ ftruncate	93
+ ftruncate64	194
+ futex	235
+ futex_time64	422
++futex_waitv	449
+ futimesat	292
+ get_kernel_syms	130
+ get_mempolicy	269
+@@ -203,6 +204,7 @@ madvise	238
+ mbind	268
+ membarrier	374
+ memfd_create	353
++memfd_secret
+ memory_ordering
+ migrate_pages	287
+ mincore	237
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	332
+ perfctr
+-perfmonctl
+ personality	136
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	329
+ preadv2	377
+ prlimit64	339
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	345
+ process_vm_writev	346
+ pselect6	301
+@@ -404,7 +406,7 @@ pwritev	330
+ pwritev2	378
+ query_module	167
+ quotactl	131
+-quotactl_path
++quotactl_fd	443
+ read	3
+ readahead	240
+ readdir	89
+diff --git a/src/basic/syscalls-mips64.txt b/src/basic/syscalls-mips64.txt
+index 6b85975eea..1f7ff567be 100644
+--- a/src/basic/syscalls-mips64.txt
++++ b/src/basic/syscalls-mips64.txt
+@@ -106,6 +106,7 @@ ftruncate	5075
+ ftruncate64
+ futex	5194
+ futex_time64
++futex_waitv	5449
+ futimesat	5251
+ get_kernel_syms	5170
+ get_mempolicy	5228
+@@ -203,6 +204,7 @@ madvise	5027
+ mbind	5227
+ membarrier	5318
+ memfd_create	5314
++memfd_secret
+ memory_ordering
+ migrate_pages	5246
+ mincore	5026
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	5292
+ perfctr
+-perfmonctl
+ personality	5132
+ pidfd_getfd	5438
+ pidfd_open	5434
+@@ -394,6 +395,7 @@ preadv	5289
+ preadv2	5321
+ prlimit64	5297
+ process_madvise	5440
++process_mrelease	5448
+ process_vm_readv	5304
+ process_vm_writev	5305
+ pselect6	5260
+@@ -404,7 +406,7 @@ pwritev	5290
+ pwritev2	5322
+ query_module	5171
+ quotactl	5172
+-quotactl_path
++quotactl_fd	5443
+ read	5000
+ readahead	5179
+ readdir
+diff --git a/src/basic/syscalls-mips64n32.txt b/src/basic/syscalls-mips64n32.txt
+index a4c12cc442..7e1ad9637d 100644
+--- a/src/basic/syscalls-mips64n32.txt
++++ b/src/basic/syscalls-mips64n32.txt
+@@ -106,6 +106,7 @@ ftruncate	6075
+ ftruncate64
+ futex	6194
+ futex_time64	6422
++futex_waitv	6449
+ futimesat	6255
+ get_kernel_syms	6170
+ get_mempolicy	6232
+@@ -203,6 +204,7 @@ madvise	6027
+ mbind	6231
+ membarrier	6322
+ memfd_create	6318
++memfd_secret
+ memory_ordering
+ migrate_pages	6250
+ mincore	6026
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	6296
+ perfctr
+-perfmonctl
+ personality	6132
+ pidfd_getfd	6438
+ pidfd_open	6434
+@@ -394,6 +395,7 @@ preadv	6293
+ preadv2	6325
+ prlimit64	6302
+ process_madvise	6440
++process_mrelease	6448
+ process_vm_readv	6309
+ process_vm_writev	6310
+ pselect6	6264
+@@ -404,7 +406,7 @@ pwritev	6294
+ pwritev2	6326
+ query_module	6171
+ quotactl	6172
+-quotactl_path
++quotactl_fd	6443
+ read	6000
+ readahead	6179
+ readdir
+diff --git a/src/basic/syscalls-mipso32.txt b/src/basic/syscalls-mipso32.txt
+index fcebabab11..c0c262fd1a 100644
+--- a/src/basic/syscalls-mipso32.txt
++++ b/src/basic/syscalls-mipso32.txt
+@@ -106,6 +106,7 @@ ftruncate	4093
+ ftruncate64	4212
+ futex	4238
+ futex_time64	4422
++futex_waitv	4449
+ futimesat	4292
+ get_kernel_syms	4130
+ get_mempolicy	4269
+@@ -203,6 +204,7 @@ madvise	4218
+ mbind	4268
+ membarrier	4358
+ memfd_create	4354
++memfd_secret
+ memory_ordering
+ migrate_pages	4287
+ mincore	4217
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	4333
+ perfctr
+-perfmonctl
+ personality	4136
+ pidfd_getfd	4438
+ pidfd_open	4434
+@@ -394,6 +395,7 @@ preadv	4330
+ preadv2	4361
+ prlimit64	4338
+ process_madvise	4440
++process_mrelease	4448
+ process_vm_readv	4345
+ process_vm_writev	4346
+ pselect6	4301
+@@ -404,7 +406,7 @@ pwritev	4331
+ pwritev2	4362
+ query_module	4187
+ quotactl	4131
+-quotactl_path
++quotactl_fd	4443
+ read	4003
+ readahead	4223
+ readdir	4089
+diff --git a/src/basic/syscalls-powerpc.txt b/src/basic/syscalls-powerpc.txt
+index 3185562726..2f085161e1 100644
+--- a/src/basic/syscalls-powerpc.txt
++++ b/src/basic/syscalls-powerpc.txt
+@@ -106,6 +106,7 @@ ftruncate	93
+ ftruncate64	194
+ futex	221
+ futex_time64	422
++futex_waitv	449
+ futimesat	290
+ get_kernel_syms	130
+ get_mempolicy	260
+@@ -203,6 +204,7 @@ madvise	205
+ mbind	259
+ membarrier	365
+ memfd_create	360
++memfd_secret
+ memory_ordering
+ migrate_pages	258
+ mincore	206
+@@ -374,7 +376,6 @@ pciconfig_read	198
+ pciconfig_write	199
+ perf_event_open	319
+ perfctr
+-perfmonctl
+ personality	136
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	320
+ preadv2	380
+ prlimit64	325
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	351
+ process_vm_writev	352
+ pselect6	280
+@@ -404,7 +406,7 @@ pwritev	321
+ pwritev2	381
+ query_module	166
+ quotactl	131
+-quotactl_path
++quotactl_fd	443
+ read	3
+ readahead	191
+ readdir	89
+diff --git a/src/basic/syscalls-powerpc64.txt b/src/basic/syscalls-powerpc64.txt
+index e940737781..85e53422ee 100644
+--- a/src/basic/syscalls-powerpc64.txt
++++ b/src/basic/syscalls-powerpc64.txt
+@@ -106,6 +106,7 @@ ftruncate	93
+ ftruncate64
+ futex	221
+ futex_time64
++futex_waitv	449
+ futimesat	290
+ get_kernel_syms	130
+ get_mempolicy	260
+@@ -203,6 +204,7 @@ madvise	205
+ mbind	259
+ membarrier	365
+ memfd_create	360
++memfd_secret
+ memory_ordering
+ migrate_pages	258
+ mincore	206
+@@ -374,7 +376,6 @@ pciconfig_read	198
+ pciconfig_write	199
+ perf_event_open	319
+ perfctr
+-perfmonctl
+ personality	136
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	320
+ preadv2	380
+ prlimit64	325
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	351
+ process_vm_writev	352
+ pselect6	280
+@@ -404,7 +406,7 @@ pwritev	321
+ pwritev2	381
+ query_module	166
+ quotactl	131
+-quotactl_path
++quotactl_fd	443
+ read	3
+ readahead	191
+ readdir	89
+diff --git a/src/basic/syscalls-riscv32.txt b/src/basic/syscalls-riscv32.txt
+index 8fe0d5ea88..013e38189b 100644
+--- a/src/basic/syscalls-riscv32.txt
++++ b/src/basic/syscalls-riscv32.txt
+@@ -40,7 +40,7 @@ clock_settime
+ clock_settime64	404
+ clone	220
+ clone2
+-clone3
++clone3	435
+ close	57
+ close_range	436
+ connect	203
+@@ -106,6 +106,7 @@ ftruncate
+ ftruncate64	46
+ futex
+ futex_time64	422
++futex_waitv	449
+ futimesat
+ get_kernel_syms
+ get_mempolicy	236
+@@ -203,6 +204,7 @@ madvise	233
+ mbind	235
+ membarrier	283
+ memfd_create	279
++memfd_secret
+ memory_ordering
+ migrate_pages	238
+ mincore	232
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	241
+ perfctr
+-perfmonctl
+ personality	92
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	69
+ preadv2	286
+ prlimit64	261
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	270
+ process_vm_writev	271
+ pselect6
+@@ -404,7 +406,7 @@ pwritev	70
+ pwritev2	287
+ query_module
+ quotactl	60
+-quotactl_path
++quotactl_fd	443
+ read	63
+ readahead	213
+ readdir
+diff --git a/src/basic/syscalls-riscv64.txt b/src/basic/syscalls-riscv64.txt
+index e021ea79b4..104a2d9dfa 100644
+--- a/src/basic/syscalls-riscv64.txt
++++ b/src/basic/syscalls-riscv64.txt
+@@ -106,6 +106,7 @@ ftruncate	46
+ ftruncate64
+ futex	98
+ futex_time64
++futex_waitv	449
+ futimesat
+ get_kernel_syms
+ get_mempolicy	236
+@@ -203,6 +204,7 @@ madvise	233
+ mbind	235
+ membarrier	283
+ memfd_create	279
++memfd_secret
+ memory_ordering
+ migrate_pages	238
+ mincore	232
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	241
+ perfctr
+-perfmonctl
+ personality	92
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	69
+ preadv2	286
+ prlimit64	261
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	270
+ process_vm_writev	271
+ pselect6	72
+@@ -404,7 +406,7 @@ pwritev	70
+ pwritev2	287
+ query_module
+ quotactl	60
+-quotactl_path
++quotactl_fd	443
+ read	63
+ readahead	213
+ readdir
+diff --git a/src/basic/syscalls-s390.txt b/src/basic/syscalls-s390.txt
+index 5d3b73e6c0..a25093c7be 100644
+--- a/src/basic/syscalls-s390.txt
++++ b/src/basic/syscalls-s390.txt
+@@ -106,6 +106,7 @@ ftruncate	93
+ ftruncate64	194
+ futex	238
+ futex_time64	422
++futex_waitv	449
+ futimesat	292
+ get_kernel_syms	130
+ get_mempolicy	269
+@@ -203,6 +204,7 @@ madvise	219
+ mbind	268
+ membarrier	356
+ memfd_create	350
++memfd_secret
+ memory_ordering
+ migrate_pages	287
+ mincore	218
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	331
+ perfctr
+-perfmonctl
+ personality	136
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	328
+ preadv2	376
+ prlimit64	334
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	340
+ process_vm_writev	341
+ pselect6	301
+@@ -404,7 +406,7 @@ pwritev	329
+ pwritev2	377
+ query_module	167
+ quotactl	131
+-quotactl_path
++quotactl_fd	443
+ read	3
+ readahead	222
+ readdir	89
+diff --git a/src/basic/syscalls-s390x.txt b/src/basic/syscalls-s390x.txt
+index 62a2ea4fae..b4b798f9df 100644
+--- a/src/basic/syscalls-s390x.txt
++++ b/src/basic/syscalls-s390x.txt
+@@ -106,6 +106,7 @@ ftruncate	93
+ ftruncate64
+ futex	238
+ futex_time64
++futex_waitv	449
+ futimesat	292
+ get_kernel_syms	130
+ get_mempolicy	269
+@@ -203,6 +204,7 @@ madvise	219
+ mbind	268
+ membarrier	356
+ memfd_create	350
++memfd_secret
+ memory_ordering
+ migrate_pages	287
+ mincore	218
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	331
+ perfctr
+-perfmonctl
+ personality	136
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	328
+ preadv2	376
+ prlimit64	334
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	340
+ process_vm_writev	341
+ pselect6	301
+@@ -404,7 +406,7 @@ pwritev	329
+ pwritev2	377
+ query_module	167
+ quotactl	131
+-quotactl_path
++quotactl_fd	443
+ read	3
+ readahead	222
+ readdir	89
+diff --git a/src/basic/syscalls-sparc.txt b/src/basic/syscalls-sparc.txt
+index fe41bf97e8..a382e75c24 100644
+--- a/src/basic/syscalls-sparc.txt
++++ b/src/basic/syscalls-sparc.txt
+@@ -106,6 +106,7 @@ ftruncate	130
+ ftruncate64	84
+ futex	142
+ futex_time64	422
++futex_waitv	449
+ futimesat	288
+ get_kernel_syms	223
+ get_mempolicy	304
+@@ -203,6 +204,7 @@ madvise	75
+ mbind	303
+ membarrier	351
+ memfd_create	348
++memfd_secret
+ memory_ordering
+ migrate_pages	302
+ mincore	78
+@@ -374,7 +376,6 @@ pciconfig_read	148
+ pciconfig_write	149
+ perf_event_open	327
+ perfctr	18
+-perfmonctl
+ personality	191
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	324
+ preadv2	358
+ prlimit64	331
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	338
+ process_vm_writev	339
+ pselect6	297
+@@ -404,7 +406,7 @@ pwritev	325
+ pwritev2	359
+ query_module	184
+ quotactl	165
+-quotactl_path
++quotactl_fd	443
+ read	3
+ readahead	205
+ readdir	204
+diff --git a/src/basic/syscalls-x86_64.txt b/src/basic/syscalls-x86_64.txt
+index d2ac17ab46..5bc9c58a2a 100644
+--- a/src/basic/syscalls-x86_64.txt
++++ b/src/basic/syscalls-x86_64.txt
+@@ -106,6 +106,7 @@ ftruncate	77
+ ftruncate64
+ futex	202
+ futex_time64
++futex_waitv	449
+ futimesat	261
+ get_kernel_syms	177
+ get_mempolicy	239
+@@ -203,6 +204,7 @@ madvise	28
+ mbind	237
+ membarrier	324
+ memfd_create	319
++memfd_secret	447
+ memory_ordering
+ migrate_pages	256
+ mincore	27
+@@ -374,7 +376,6 @@ pciconfig_read
+ pciconfig_write
+ perf_event_open	298
+ perfctr
+-perfmonctl
+ personality	135
+ pidfd_getfd	438
+ pidfd_open	434
+@@ -394,6 +395,7 @@ preadv	295
+ preadv2	327
+ prlimit64	302
+ process_madvise	440
++process_mrelease	448
+ process_vm_readv	310
+ process_vm_writev	311
+ pselect6	270
+@@ -404,7 +406,7 @@ pwritev	296
+ pwritev2	328
+ query_module	178
+ quotactl	179
+-quotactl_path
++quotactl_fd	443
+ read	0
+ readahead	187
+ readdir
+-- 
+2.33.0
+

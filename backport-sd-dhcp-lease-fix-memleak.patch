@@ -1,0 +1,64 @@
+From e2b7a7e3d285180ef04087cd5f821b42cb128c31 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 31 Jan 2022 05:19:09 +0900
+Subject: [PATCH] sd-dhcp-lease: fix memleak
+
+Fixes https://github.com/systemd/systemd/pull/22294#issuecomment-1024840811.
+
+(cherry picked from commit 06cf04dff4dd6c69e527913ad137616c23861270)
+(cherry picked from commit ae95ca27bee2bef5bf53002873a254f1a0fe8b81)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e2b7a7e3d285180ef04087cd5f821b42cb128c31
+---
+ src/libsystemd-network/sd-dhcp-lease.c | 20 ++++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/src/libsystemd-network/sd-dhcp-lease.c b/src/libsystemd-network/sd-dhcp-lease.c
+index ccfd66caa3..421ca6f306 100644
+--- a/src/libsystemd-network/sd-dhcp-lease.c
++++ b/src/libsystemd-network/sd-dhcp-lease.c
+@@ -1024,6 +1024,18 @@ int dhcp_lease_save(sd_dhcp_lease *lease, const char *lease_file) {
+         return 0;
+ }
+ 
++static char **private_options_free(char **options) {
++        if (!options)
++                return NULL;
++
++        for (unsigned i = 0; i < SD_DHCP_OPTION_PRIVATE_LAST - SD_DHCP_OPTION_PRIVATE_BASE + 1; i++)
++                free(options[i]);
++
++        return mfree(options);
++}
++
++DEFINE_TRIVIAL_CLEANUP_FUNC(char**, private_options_free);
++
+ int dhcp_lease_load(sd_dhcp_lease **ret, const char *lease_file) {
+         _cleanup_(sd_dhcp_lease_unrefp) sd_dhcp_lease *lease = NULL;
+         _cleanup_free_ char
+@@ -1046,8 +1058,8 @@ int dhcp_lease_load(sd_dhcp_lease **ret, const char *lease_file) {
+                 *vendor_specific_hex = NULL,
+                 *lifetime = NULL,
+                 *t1 = NULL,
+-                *t2 = NULL,
+-                *options[SD_DHCP_OPTION_PRIVATE_LAST - SD_DHCP_OPTION_PRIVATE_BASE + 1] = {};
++                *t2 = NULL;
++        _cleanup_(private_options_freep) char **options = NULL;
+ 
+         int r, i;
+ 
+@@ -1058,6 +1070,10 @@ int dhcp_lease_load(sd_dhcp_lease **ret, const char *lease_file) {
+         if (r < 0)
+                 return r;
+ 
++        options = new0(char*, SD_DHCP_OPTION_PRIVATE_LAST - SD_DHCP_OPTION_PRIVATE_BASE + 1);
++        if (!options)
++                return -ENOMEM;
++
+         r = parse_env_file(NULL, lease_file,
+                            "ADDRESS", &address,
+                            "ROUTER", &router,
+-- 
+2.33.0
+

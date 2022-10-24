@@ -1,0 +1,53 @@
+From 20c776c5e92201e01d4bfbea4ecbc4df758bcf09 Mon Sep 17 00:00:00 2001
+From: Egor <egor@opensrc.club>
+Date: Sun, 3 Oct 2021 03:42:50 +0300
+Subject: [PATCH] sleep: don't skip resume device with low priority/available
+ space
+
+this fixes hibernation when there's a higher priority swap preceding
+the resume swap in /proc/swaps.
+
+fixes #19486
+
+(cherry picked from commit 936a7cb66a0b423e75ceef87f02537067ad17002)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/20c776c5e92201e01d4bfbea4ecbc4df758bcf09
+---
+ src/shared/sleep-config.c | 20 +++++++++++---------
+ 1 file changed, 11 insertions(+), 9 deletions(-)
+
+diff --git a/src/shared/sleep-config.c b/src/shared/sleep-config.c
+index dbaecb3a0f..8ec3d09a58 100644
+--- a/src/shared/sleep-config.c
++++ b/src/shared/sleep-config.c
+@@ -392,15 +392,17 @@ int find_hibernate_location(HibernateLocation **ret_hibernate_location) {
+                 }
+ 
+                 /* prefer resume device or highest priority swap with most remaining space */
+-                if (hibernate_location && swap->priority < hibernate_location->swap->priority) {
+-                        log_debug("%s: ignoring device with lower priority", swap->device);
+-                        continue;
+-                }
+-                if (hibernate_location &&
+-                    (swap->priority == hibernate_location->swap->priority
+-                     && swap->size - swap->used < hibernate_location->swap->size - hibernate_location->swap->used)) {
+-                        log_debug("%s: ignoring device with lower usable space", swap->device);
+-                        continue;
++                if (sys_resume == 0) {
++                        if (hibernate_location && swap->priority < hibernate_location->swap->priority) {
++                                log_debug("%s: ignoring device with lower priority", swap->device);
++                                continue;
++                        }
++                        if (hibernate_location &&
++                            (swap->priority == hibernate_location->swap->priority
++                             && swap->size - swap->used < hibernate_location->swap->size - hibernate_location->swap->used)) {
++                                log_debug("%s: ignoring device with lower usable space", swap->device);
++                                continue;
++                        }
+                 }
+ 
+                 dev_t swap_device;
+-- 
+2.33.0
+

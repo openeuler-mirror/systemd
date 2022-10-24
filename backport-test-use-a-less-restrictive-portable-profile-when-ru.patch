@@ -1,0 +1,92 @@
+From 9dbdd33ffa824934962ebe61d03a9f727a1c416c Mon Sep 17 00:00:00 2001
+From: Frantisek Sumsal <frantisek@sumsal.cz>
+Date: Thu, 30 Sep 2021 14:14:19 +0200
+Subject: [PATCH] test: use a less restrictive portable profile when running w/
+ sanitizers
+
+Since f833df3 we now actually use the seccomp rules defined in portable
+profiles. However, the default one is too restrictive for sanitizers, as
+it blocks certain syscall required by LSan. Mitigate this by using the
+'trusted' profile when running TEST-29-PORTABLE under sanitizers.
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9dbdd33ffa824934962ebe61d03a9f727a1c416c
+---
+ test/units/testsuite-29.sh | 21 ++++++++++++++-------
+ 1 file changed, 14 insertions(+), 7 deletions(-)
+
+diff --git a/test/units/testsuite-29.sh b/test/units/testsuite-29.sh
+index 3408e6d71a..549fc2663c 100755
+--- a/test/units/testsuite-29.sh
++++ b/test/units/testsuite-29.sh
+@@ -4,9 +4,16 @@
+ set -eux
+ set -o pipefail
+ 
++ARGS=()
++if [[ -v ASAN_OPTIONS || -v UBSAN_OPTIONS ]]; then
++    # If we're running under sanitizers, we need to use a less restrictive
++    # profile, otherwise LSan syscall would get blocked by seccomp
++    ARGS+=(--profile=trusted)
++fi
++
+ export SYSTEMD_LOG_LEVEL=debug
+ 
+-portablectl attach --now --runtime /usr/share/minimal_0.raw app0
++portablectl "${ARGS[@]}" attach --now --runtime /usr/share/minimal_0.raw app0
+ 
+ systemctl is-active app0.service
+ systemctl is-active app0-foo.service
+@@ -16,7 +23,7 @@ systemctl is-active app0-bar.service && exit 1
+ set -e
+ set -o pipefail
+ 
+-portablectl reattach --now --runtime /usr/share/minimal_1.raw app0
++portablectl "${ARGS[@]}" reattach --now --runtime /usr/share/minimal_1.raw app0
+ 
+ systemctl is-active app0.service
+ systemctl is-active app0-bar.service
+@@ -37,7 +44,7 @@ portablectl list | grep -q -F "No images."
+ unsquashfs -dest /tmp/minimal_0 /usr/share/minimal_0.raw
+ unsquashfs -dest /tmp/minimal_1 /usr/share/minimal_1.raw
+ 
+-portablectl attach --copy=symlink --now --runtime /tmp/minimal_0 app0
++portablectl "${ARGS[@]}" attach --copy=symlink --now --runtime /tmp/minimal_0 app0
+ 
+ systemctl is-active app0.service
+ systemctl is-active app0-foo.service
+@@ -47,7 +54,7 @@ systemctl is-active app0-bar.service && exit 1
+ set -e
+ set -o pipefail
+ 
+-portablectl reattach --now --enable --runtime /tmp/minimal_1 app0
++portablectl "${ARGS[@]}" reattach --now --enable --runtime /tmp/minimal_1 app0
+ 
+ systemctl is-active app0.service
+ systemctl is-active app0-bar.service
+@@ -66,11 +73,11 @@ portablectl list | grep -q -F "No images."
+ root="/usr/share/minimal_0.raw"
+ app1="/usr/share/app1.raw"
+ 
+-portablectl attach --now --runtime --extension ${app1} ${root} app1
++portablectl "${ARGS[@]}"  attach --now --runtime --extension ${app1} ${root} app1
+ 
+ systemctl is-active app1.service
+ 
+-portablectl reattach --now --runtime --extension ${app1} ${root} app1
++portablectl "${ARGS[@]}"  reattach --now --runtime --extension ${app1} ${root} app1
+ 
+ systemctl is-active app1.service
+ 
+@@ -83,7 +90,7 @@ mount ${app1} /tmp/app1
+ mount ${root} /tmp/rootdir
+ mount -t overlay overlay -o lowerdir=/tmp/app1:/tmp/rootdir /tmp/overlay
+ 
+-portablectl attach --copy=symlink --now --runtime /tmp/overlay app1
++portablectl "${ARGS[@]}" attach --copy=symlink --now --runtime /tmp/overlay app1
+ 
+ systemctl is-active app1.service
+ 
+-- 
+2.33.0
+

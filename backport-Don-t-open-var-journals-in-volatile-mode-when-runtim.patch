@@ -1,0 +1,35 @@
+From 00e7f0994a39852ab1adabfb7e19ff2634e916a0 Mon Sep 17 00:00:00 2001
+From: Milo Turner <mturner@starry.com>
+Date: Fri, 13 Aug 2021 10:28:58 -0400
+Subject: [PATCH] Don't open /var journals in volatile mode when
+ runtime_journal==NULL
+
+(cherry picked from commit d64441b669932ab97fbbfc71cb143045f690039e)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/00e7f0994a39852ab1adabfb7e19ff2634e916a0
+---
+ src/journal/journald-server.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/journal/journald-server.c b/src/journal/journald-server.c
+index 30f04f5383..a0695ec519 100644
+--- a/src/journal/journald-server.c
++++ b/src/journal/journald-server.c
+@@ -415,6 +415,13 @@ static JournalFile* find_journal(Server *s, uid_t uid) {
+         if (s->runtime_journal)
+                 return s->runtime_journal;
+ 
++        /* If we are not in persistent mode, then we need return NULL immediately rather than opening a
++         * persistent journal of any sort.
++         *
++         * Fixes https://github.com/systemd/systemd/issues/20390 */
++        if (!IN_SET(s->storage, STORAGE_AUTO, STORAGE_PERSISTENT))
++                return NULL;
++
+         if (uid_for_system_journal(uid))
+                 return s->system_journal;
+ 
+-- 
+2.33.0
+

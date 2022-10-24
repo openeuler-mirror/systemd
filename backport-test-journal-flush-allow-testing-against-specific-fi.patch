@@ -1,0 +1,39 @@
+From bb29932a4172810357597175a62cb4c8cbd1087c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Fri, 26 Nov 2021 09:40:51 +0100
+Subject: [PATCH] test-journal-flush: allow testing against specific files
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+>=0 → ==0 because sd_journal_open* are documented to return 0.
+
+(cherry picked from commit 0fa167cd58b5a4ffe16a332131df70bf77edddbe)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/bb29932a4172810357597175a62cb4c8cbd1087c
+---
+ src/libsystemd/sd-journal/test-journal-flush.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/src/libsystemd/sd-journal/test-journal-flush.c b/src/libsystemd/sd-journal/test-journal-flush.c
+index dad277dd66..aa814225dd 100644
+--- a/src/libsystemd/sd-journal/test-journal-flush.c
++++ b/src/libsystemd/sd-journal/test-journal-flush.c
+@@ -29,8 +29,11 @@ int main(int argc, char *argv[]) {
+         r = journal_file_open(-1, fn, O_CREAT|O_RDWR, 0644, false, 0, false, NULL, NULL, NULL, NULL, &new_journal);
+         assert_se(r >= 0);
+ 
+-        r = sd_journal_open(&j, 0);
+-        assert_se(r >= 0);
++        if (argc > 1)
++                r = sd_journal_open_files(&j, (const char **) strv_skip(argv, 1), 0);
++        else
++                r = sd_journal_open(&j, 0);
++        assert_se(r == 0);
+ 
+         sd_journal_set_data_threshold(j, 0);
+ 
+-- 
+2.33.0
+
