@@ -1,0 +1,30 @@
+From 783b787a3aecbd2c9d6908546f89c9690728aa79 Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Thu, 22 Jul 2021 22:21:10 +0100
+Subject: [PATCH] discover-image: mount as read-only when extracting metadata
+
+We don't need to modify the image, and the loopback device is already set to read-only.
+
+(cherry picked from commit f6f4ec7951f429e8a470f8912cbeacde8fa1206e)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/783b787a3aecbd2c9d6908546f89c9690728aa79
+---
+ src/shared/discover-image.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/shared/discover-image.c b/src/shared/discover-image.c
+index 5c833afc78..521264ec29 100644
+--- a/src/shared/discover-image.c
++++ b/src/shared/discover-image.c
+@@ -1208,6 +1208,7 @@ int image_read_metadata(Image *i) {
+                                 DISSECT_IMAGE_GENERIC_ROOT |
+                                 DISSECT_IMAGE_REQUIRE_ROOT |
+                                 DISSECT_IMAGE_RELAX_VAR_CHECK |
++                                DISSECT_IMAGE_READ_ONLY |
+                                 DISSECT_IMAGE_USR_NO_ROOT,
+                                 &m);
+                 if (r < 0)
+-- 
+2.33.0
+

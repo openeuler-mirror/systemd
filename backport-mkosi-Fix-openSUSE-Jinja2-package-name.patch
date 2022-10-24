@@ -1,0 +1,34 @@
+From c135c18d0aedeb6043ea4e54a252b7d2452d0937 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michal=20Koutn=C3=BD?= <mkoutny@suse.com>
+Date: Thu, 10 Jun 2021 14:39:13 +0200
+Subject: [PATCH] mkosi: Fix openSUSE Jinja2 package name
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Dare to be different ¯\_(ツ)_/¯
+
+(cherry picked from commit ed802c44da7918ba1c14944b711a20b14d9e0fd4)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/c135c18d0aedeb6043ea4e54a252b7d2452d0937
+---
+ .mkosi/mkosi.opensuse | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.mkosi/mkosi.opensuse b/.mkosi/mkosi.opensuse
+index fdbbdeb1f8..7eb7b857ca 100644
+--- a/.mkosi/mkosi.opensuse
++++ b/.mkosi/mkosi.opensuse
+@@ -36,7 +36,7 @@ BuildPackages=
+         pcre-devel
+         python3
+         python3-lxml
+-        python3-jinja2
++        python3-Jinja2
+         qrencode-devel
+         system-user-nobody
+         systemd-sysvinit
+-- 
+2.33.0
+

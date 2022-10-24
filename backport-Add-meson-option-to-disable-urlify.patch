@@ -5,6 +5,9 @@ Subject: [PATCH] Add meson option to disable urlify.
 
 Useful for systems that don't use a version of less with hyperlink
 support.
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e5d86ebed5624ef62342c820a5868b1075deb300
 ---
  meson.build               | 1 +
  meson_options.txt         | 2 ++

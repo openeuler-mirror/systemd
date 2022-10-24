@@ -1,0 +1,95 @@
+From 01d9fbccddd694bc584aed24eaa0543f831dc929 Mon Sep 17 00:00:00 2001
+From: wangyuhang <wangyuhang27@huawei.com>
+Date: Tue, 19 Apr 2022 21:05:25 +0800
+Subject: [PATCH] virt: detect OpenStack Nova instance
+
+Conflict:add testcase for virt detect OpenStack Nova instance
+Reference:https://github.com/systemd/systemd/commit/01d9fbccddd694bc584aed24eaa0543f831dc929
+---
+ src/basic/virt.c     |  1 +
+ src/test/meson.build | 14 ++
+ src/test/test-virt.c | 39 ++++++++++++++++++++++++++++++
+ 3 file changed, 54 insertion(+)
+
+diff --git a/src/basic/virt.c b/src/basic/virt.c
+index 7e88f09..d8740cf 100644
+--- a/src/basic/virt.c
++++ b/src/basic/virt.c
+@@ -154,6 +154,7 @@ static int detect_vm_dmi_vendor(void) {
+                 int id;
+         } dmi_vendor_table[] = {
+                 { "KVM",                 VIRTUALIZATION_KVM       },
++                { "OpenStack",           VIRTUALIZATION_KVM       }, /* Detect OpenStack instance as KVM in non x86 architecture */
+                 { "Amazon EC2",          VIRTUALIZATION_AMAZON    },
+                 { "QEMU",                VIRTUALIZATION_QEMU      },
+                 { "VMware",              VIRTUALIZATION_VMWARE    }, /* https://kb.vmware.com/s/article/1009458 */
+
+diff --git a/src/test/meson.build b/src/test/meson.build
+index e106059..ea64a12 100644
+--- a/src/test/meson.build
++++ b/src/test/meson.build
+@@ -602,6 +602,14 @@ tests += [
+ 
+         [['src/test/test-nscd-flush.c'],
+          [], [], [], 'ENABLE_NSCD', 'manual'],
++
++        [['src/test/test-virt.c',
++          'src/basic/virt.c',
++          'src/basic/virt.h'],
++         [libcore,
++          libshared],
++         [],
++         core_includes],
+ ]
+ 
+ ############################################################
+
+diff --git a/src/test/test-virt.c b/src/test/test-virt.c
+new file mode 100644
+index 0000000..17cc22e
+--- /dev/null
++++ b/src/test/test-virt.c
+@@ -0,0 +1,39 @@
++/* SPDX-License-Identifier: LGPL-2.1-or-later */
++
++#include <stdio.h>
++#include <unistd.h>
++#include <sched.h>
++
++#include "string-util.h"
++#include "fileio.h"
++#include "virt.h"
++#include "log.h"
++#include "tests.h"
++
++static void detect_virt(const char *vendor) {
++        assert_se(write_string_file("/sys/class/dmi/id/product_name", vendor,
++                  WRITE_STRING_FILE_CREATE|WRITE_STRING_FILE_MKDIR_0755) == 0);
++
++        assert_se(detect_virtualization() == VIRTUALIZATION_KVM);
++}
++
++int main(int argc, char *argv[]) {
++        char template[] = "/tmp/test-virt.XXXXXX";
++        assert_se(mkdtemp(template));
++
++        if (geteuid() > 0 && unshare(CLONE_NEWUSER) != 0) {
++                (void) log_tests_skipped("Don't have namespace support");
++                return EXIT_TEST_SKIP;
++        }
++
++        if (chroot(template) != 0) {
++                (void) log_tests_skipped("Don't have chroot support");
++                return EXIT_TEST_SKIP;
++        }
++
++#if defined(__arm__) || defined(__aarch64__)
++        detect_virt("OpenStack Nova");
++#endif
++
++        return 0;
++}
+\ No newline at end of file
+-- 
+2.27.0
+

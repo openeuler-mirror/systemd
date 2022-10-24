@@ -1,0 +1,53 @@
+From 7b49704dfe47474be0d74996db45e6ba42d6b2e1 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 28 Oct 2021 19:06:52 +0200
+Subject: [PATCH] homework,repart: turn on cryptsetup logging before we have a
+ context
+
+Otherwise we'll miss the log message from allocation of the context. We
+already made this change in most of our tools that interface with
+libcryptsetup, but we forgot two.
+
+As suggested:
+
+https://github.com/systemd/systemd/pull/21135#discussion_r738287504
+(cherry picked from commit 30f194001ff647280ad49b68597c223e57ad7f6e)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7b49704dfe47474be0d74996db45e6ba42d6b2e1
+---
+ src/home/homework.c    | 2 ++
+ src/partition/repart.c | 4 ++++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/src/home/homework.c b/src/home/homework.c
+index bdd9ac649e..b20b4bdf3e 100644
+--- a/src/home/homework.c
++++ b/src/home/homework.c
+@@ -1651,6 +1651,8 @@ static int run(int argc, char *argv[]) {
+ 
+         log_setup();
+ 
++        cryptsetup_enable_logging(NULL);
++
+         umask(0022);
+ 
+         if (argc < 2 || argc > 3)
+diff --git a/src/partition/repart.c b/src/partition/repart.c
+index 3c80d1380a..7602ac6aa8 100644
+--- a/src/partition/repart.c
++++ b/src/partition/repart.c
+@@ -4863,6 +4863,10 @@ static int run(int argc, char *argv[]) {
+         if (r < 0)
+                 return r;
+ 
++#if HAVE_LIBCRYPTSETUP
++        cryptsetup_enable_logging(NULL);
++#endif
++
+         if (arg_image) {
+                 assert(!arg_root);
+ 
+-- 
+2.33.0
+

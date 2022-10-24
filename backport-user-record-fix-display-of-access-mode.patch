@@ -1,0 +1,29 @@
+From 9e318d9ff288b2b12b21a534d0cab3b4e153b462 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 5 Nov 2021 16:36:32 +0100
+Subject: [PATCH] user-record: fix display of access mode
+
+(cherry picked from commit 7cdd5c0d4c2213b791d8d22e7dd466a39e9c5db0)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9e318d9ff288b2b12b21a534d0cab3b4e153b462
+---
+ src/shared/user-record-show.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shared/user-record-show.c b/src/shared/user-record-show.c
+index 29790282b4..54ff949ff5 100644
+--- a/src/shared/user-record-show.c
++++ b/src/shared/user-record-show.c
+@@ -280,7 +280,7 @@ void user_record_show(UserRecord *hr, bool show_full_group_info) {
+                 printf("   IO Weight: %" PRIu64 "\n", hr->io_weight);
+ 
+         if (hr->access_mode != MODE_INVALID)
+-                printf(" Access Mode: 0%03oo\n", user_record_access_mode(hr));
++                printf(" Access Mode: 0%03o\n", user_record_access_mode(hr));
+ 
+         if (storage == USER_LUKS) {
+                 printf("LUKS Discard: online=%s offline=%s\n", yes_no(user_record_luks_discard(hr)), yes_no(user_record_luks_offline_discard(hr)));
+-- 
+2.33.0
+

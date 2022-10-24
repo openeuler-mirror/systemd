@@ -1,26 +1,31 @@
-From a42a93830fcc18da073a5ac06f93c386efc9109d Mon Sep 17 00:00:00 2001
+From 927898c86d121a2985bc6c8d261f505197df8e80 Mon Sep 17 00:00:00 2001
 From: Arfrever Frehtes Taifersar Arahesis <Arfrever@Apache.Org>
 Date: Thu, 27 Jan 2022 00:00:00 +0000
 Subject: [PATCH] logind.conf: Fix name of option: RuntimeDirectoryInodes ->
  RuntimeDirectoryInodesMax
 
+(cherry picked from commit a42a93830fcc18da073a5ac06f93c386efc9109d)
+(cherry picked from commit 5b20a2b19c847b8ad8b354f1b735fbbaf88d2f8f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/927898c86d121a2985bc6c8d261f505197df8e80
 ---
  src/login/logind.conf.in | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/login/logind.conf.in b/src/login/logind.conf.in
-index 2d084e134d..926bd6cfe9 100644
+index 27ba77ce79..be2eb790bf 100644
 --- a/src/login/logind.conf.in
 +++ b/src/login/logind.conf.in
-@@ -39,7 +39,7 @@
+@@ -38,7 +38,7 @@
  #IdleAction=ignore
  #IdleActionSec=30min
  #RuntimeDirectorySize=10%
 -#RuntimeDirectoryInodes=400k
 +#RuntimeDirectoryInodesMax=400k
- #RemoveIPC=no
+ #RemoveIPC=yes
  #InhibitorsMax=8192
  #SessionsMax=8192
 -- 
-2.27.0
+2.33.0
 

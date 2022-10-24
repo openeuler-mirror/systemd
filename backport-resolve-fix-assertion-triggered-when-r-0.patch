@@ -1,0 +1,35 @@
+From bfa7063dac7173858ddddda7c49eda95a9dd89bf Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 20 Jan 2022 05:24:31 +0900
+Subject: [PATCH] resolve: fix assertion triggered when r == 0
+
+Fixes #22178.
+
+(cherry picked from commit 98b1eb711cfc70776fefd3d4ec437a6a4f9aeff2)
+(cherry picked from commit 740dd39e070b3b827cbac37df2a40d61bd9cdb89)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/bfa7063dac7173858ddddda7c49eda95a9dd89bf
+---
+ src/resolve/resolved-etc-hosts.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/resolve/resolved-etc-hosts.c b/src/resolve/resolved-etc-hosts.c
+index 9af3a27bb1..a8da6c3d88 100644
+--- a/src/resolve/resolved-etc-hosts.c
++++ b/src/resolve/resolved-etc-hosts.c
+@@ -109,7 +109,10 @@ static int parse_line(EtcHosts *hosts, unsigned nr, const char *line) {
+ 
+                 r = dns_name_is_valid_ldh(name);
+                 if (r <= 0) {
+-                        log_warning_errno(r, "/etc/hosts:%u: hostname \"%s\" is not valid, ignoring.", nr, name);
++                        if (r < 0)
++                                log_warning_errno(r, "/etc/hosts:%u: Failed to check the validity of hostname \"%s\", ignoring: %m", nr, name);
++                        else
++                                log_warning("/etc/hosts:%u: hostname \"%s\" is not valid, ignoring.", nr, name);
+                         continue;
+                 }
+ 
+-- 
+2.33.0
+

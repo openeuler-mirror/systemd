@@ -1,0 +1,38 @@
+From e6407ca25852dadec355df2e6fdc92d1f189bceb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Mon, 5 Jul 2021 21:29:11 +0200
+Subject: [PATCH] shared/format-table: allocate buffer of sufficient size
+
+(cherry picked from commit 6dc57047ff0f1f9e98938ffb172dae06e6868b94)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e6407ca25852dadec355df2e6fdc92d1f189bceb
+---
+ src/shared/format-table.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/shared/format-table.c b/src/shared/format-table.c
+index c4c3439541..4c4e4593d8 100644
+--- a/src/shared/format-table.c
++++ b/src/shared/format-table.c
+@@ -1409,7 +1409,7 @@ static const char *table_data_format(Table *t, TableData *d, bool avoid_uppercas
+                 _cleanup_free_ char *p = NULL;
+                 char *ret;
+ 
+-                p = new(char, FORMAT_TIMESTAMP_MAX);
++                p = new(char, d->type == TABLE_TIMESTAMP_RELATIVE ? FORMAT_TIMESTAMP_RELATIVE_MAX : FORMAT_TIMESTAMP_MAX);
+                 if (!p)
+                         return NULL;
+ 
+@@ -1418,7 +1418,7 @@ static const char *table_data_format(Table *t, TableData *d, bool avoid_uppercas
+                 else if (d->type == TABLE_TIMESTAMP_UTC)
+                         ret = format_timestamp_style(p, FORMAT_TIMESTAMP_MAX, d->timestamp, TIMESTAMP_UTC);
+                 else
+-                        ret = format_timestamp_relative(p, FORMAT_TIMESTAMP_MAX, d->timestamp);
++                        ret = format_timestamp_relative(p, FORMAT_TIMESTAMP_RELATIVE_MAX, d->timestamp);
+                 if (!ret)
+                         return "n/a";
+ 
+-- 
+2.33.0
+

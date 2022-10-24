@@ -1,0 +1,53 @@
+From 74583cad5a3bf4051b879b8b1ac53934027ef485 Mon Sep 17 00:00:00 2001
+From: Andrew Soutar <andrew@andrewsoutar.com>
+Date: Tue, 5 Oct 2021 22:55:27 -0400
+Subject: [PATCH] basic/env-util: correctly parse extended vars after
+ non-extended vars (#20941)
+
+(cherry picked from commit 5ef97a712236f0ddddec52665c0aea7d4e6d3c13)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/74583cad5a3bf4051b879b8b1ac53934027ef485
+---
+ src/basic/env-util.c     | 1 +
+ src/test/test-env-util.c | 5 ++++-
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/basic/env-util.c b/src/basic/env-util.c
+index 81b1e3f10e..1ca445dab4 100644
+--- a/src/basic/env-util.c
++++ b/src/basic/env-util.c
+@@ -577,6 +577,7 @@ char *replace_env_n(const char *format, size_t n, char **env, unsigned flags) {
+ 
+                                 word = e+1;
+                                 state = WORD;
++                                nest--;
+                         } else if (*e == ':') {
+                                 if (flags & REPLACE_ENV_ALLOW_EXTENDED) {
+                                         len = e - word - 2;
+diff --git a/src/test/test-env-util.c b/src/test/test-env-util.c
+index ed4580e4af..3d5951c46e 100644
+--- a/src/test/test-env-util.c
++++ b/src/test/test-env-util.c
+@@ -198,7 +198,7 @@ static void test_replace_env2(bool extended) {
+                 "BAR=bar",
+                 NULL
+         };
+-        _cleanup_free_ char *t = NULL, *s = NULL, *q = NULL, *r = NULL, *p = NULL, *x = NULL;
++        _cleanup_free_ char *t = NULL, *s = NULL, *q = NULL, *r = NULL, *p = NULL, *x = NULL, *y = NULL;
+         unsigned flags = REPLACE_ENV_ALLOW_EXTENDED*extended;
+ 
+         t = replace_env("FOO=${FOO:-${BAR}}", (char**) env, flags);
+@@ -218,6 +218,9 @@ static void test_replace_env2(bool extended) {
+ 
+         x = replace_env("XXX=${XXX:+${BAR}post}", (char**) env, flags);
+         assert_se(streq(x, extended ? "XXX=" : "XXX=${XXX:+barpost}"));
++
++        y = replace_env("FOO=${FOO}between${BAR:-baz}", (char**) env, flags);
++        assert_se(streq(y, extended ? "FOO=foobetweenbar" : "FOO=foobetween${BAR:-baz}"));
+ }
+ 
+ static void test_replace_env_argv(void) {
+-- 
+2.33.0
+

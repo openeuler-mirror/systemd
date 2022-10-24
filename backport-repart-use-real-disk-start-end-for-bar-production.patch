@@ -1,0 +1,48 @@
+From 0c3c3db042a24d11da7accf777029fbaf8db5a29 Mon Sep 17 00:00:00 2001
+From: Tom Yan <tom.ty89@gmail.com>
+Date: Mon, 20 Dec 2021 01:30:38 +0800
+Subject: [PATCH] repart: use real disk start/end for bar production
+
+Partitions are not always within our aligned scope. Bar printing
+involves foreign partitions as well.
+
+Fixes #21817.
+
+(cherry picked from commit d8daed09f37bc9f8ecb9268a4e371f65aec8b24a)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/0c3c3db042a24d11da7accf777029fbaf8db5a29
+---
+ src/partition/repart.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/src/partition/repart.c b/src/partition/repart.c
+index 7602ac6aa8..9f0fe9e10d 100644
+--- a/src/partition/repart.c
++++ b/src/partition/repart.c
+@@ -2103,16 +2103,14 @@ static void context_bar_char_process_partition(
+         from = p->offset;
+         to = from + p->new_size;
+ 
+-        assert(context->end >= context->start);
+-        total = context->end - context->start;
++        assert(context->total > 0);
++        total = context->total;
+ 
+-        assert(from >= context->start);
+-        assert(from <= context->end);
+-        x = (from - context->start) * n / total;
++        assert(from <= total);
++        x = from * n / total;
+ 
+-        assert(to >= context->start);
+-        assert(to <= context->end);
+-        y = (to - context->start) * n / total;
++        assert(to <= total);
++        y = to * n / total;
+ 
+         assert(x <= y);
+         assert(y <= n);
+-- 
+2.33.0
+

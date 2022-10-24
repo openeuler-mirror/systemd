@@ -1,4 +1,4 @@
-From 7dbd330c7ef28852db0fb044503ed6f072477d50 Mon Sep 17 00:00:00 2001
+From 213ae9db6274227636fdca6731511499ed933e61 Mon Sep 17 00:00:00 2001
 From: Geass-LL <shenxiaogll@163.com>
 Date: Fri, 2 Apr 2021 11:27:59 +0800
 Subject: [PATCH] unit: coldplug both job and nop_job if possible
@@ -6,15 +6,20 @@ Subject: [PATCH] unit: coldplug both job and nop_job if possible
 Sometimes, both job and nop_job are deserialized. In this case,
 if we only cold plug the job, the nop_job will also stuck in the
 job list.
+
+(cherry picked from commit 7dbd330c7ef28852db0fb044503ed6f072477d50)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/213ae9db6274227636fdca6731511499ed933e61
 ---
  src/core/unit.c | 11 +++++++----
  1 file changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/src/core/unit.c b/src/core/unit.c
-index 7c39e4d0f8..2f7f022ef3 100644
+index e469beb534..38d3eb703f 100644
 --- a/src/core/unit.c
 +++ b/src/core/unit.c
-@@ -3588,7 +3588,6 @@ int unit_add_blockdev_dependency(Unit *u, const char *what, UnitDependencyMask m
+@@ -3581,7 +3581,6 @@ int unit_add_blockdev_dependency(Unit *u, const char *what, UnitDependencyMask m
  int unit_coldplug(Unit *u) {
          int r = 0, q;
          char **i;
@@ -22,7 +27,7 @@ index 7c39e4d0f8..2f7f022ef3 100644
  
          assert(u);
  
-@@ -3611,9 +3610,13 @@ int unit_coldplug(Unit *u) {
+@@ -3604,9 +3603,13 @@ int unit_coldplug(Unit *u) {
                          r = q;
          }
  
@@ -40,5 +45,5 @@ index 7c39e4d0f8..2f7f022ef3 100644
                          r = q;
          }
 -- 
-2.27.0
+2.33.0
 

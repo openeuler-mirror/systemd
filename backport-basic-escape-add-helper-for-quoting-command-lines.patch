@@ -1,0 +1,105 @@
+From 17d1b0d2dd109c5e413d8ef1eb5835344f9314b9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Wed, 7 Jul 2021 16:27:51 +0200
+Subject: [PATCH] basic/escape: add helper for quoting command lines
+
+(cherry picked from commit eeb91d29b0279d6bf8a3f1c4da54c9e9c0881a19)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/17d1b0d2dd109c5e413d8ef1eb5835344f9314b9
+---
+ src/basic/escape.c     | 21 +++++++++++++++++++++
+ src/basic/escape.h     |  1 +
+ src/test/test-escape.c | 24 ++++++++++++++++++++++++
+ 3 files changed, 46 insertions(+)
+
+diff --git a/src/basic/escape.c b/src/basic/escape.c
+index 2a3a0e31a1..fcade5a1b4 100644
+--- a/src/basic/escape.c
++++ b/src/basic/escape.c
+@@ -8,6 +8,7 @@
+ #include "escape.h"
+ #include "hexdecoct.h"
+ #include "macro.h"
++#include "strv.h"
+ #include "utf8.h"
+ 
+ int cescape_char(char c, char *buf) {
+@@ -542,3 +543,23 @@ char* shell_maybe_quote(const char *s, ShellEscapeFlags flags) {
+ 
+         return str_realloc(buf);
+ }
++
++char* quote_command_line(char **argv) {
++        _cleanup_free_ char *result = NULL;
++
++        assert(argv);
++
++        char **a;
++        STRV_FOREACH(a, argv) {
++                _cleanup_free_ char *t = NULL;
++
++                t = shell_maybe_quote(*a, SHELL_ESCAPE_EMPTY);
++                if (!t)
++                        return NULL;
++
++                if (!strextend_with_separator(&result, " ", t))
++                        return NULL;
++        }
++
++        return TAKE_PTR(result);
++}
+diff --git a/src/basic/escape.h b/src/basic/escape.h
+index 907b572bd4..e9d48d227a 100644
+--- a/src/basic/escape.h
++++ b/src/basic/escape.h
+@@ -68,3 +68,4 @@ char* escape_non_printable_full(const char *str, size_t console_width, XEscapeFl
+ 
+ char* shell_escape(const char *s, const char *bad);
+ char* shell_maybe_quote(const char *s, ShellEscapeFlags flags);
++char* quote_command_line(char **argv);
+diff --git a/src/test/test-escape.c b/src/test/test-escape.c
+index 991b135a33..8bda9cdc8d 100644
+--- a/src/test/test-escape.c
++++ b/src/test/test-escape.c
+@@ -192,6 +192,29 @@ static void test_shell_maybe_quote(void) {
+         test_shell_maybe_quote_one("głąb\002\003rząd", SHELL_ESCAPE_POSIX, "$'głąb\\002\\003rząd'");
+ }
+ 
++static void test_quote_command_line_one(char **argv, const char *expected) {
++        _cleanup_free_ char *s;
++
++        assert_se(s = quote_command_line(argv));
++        log_info("%s", s);
++        assert_se(streq(s, expected));
++}
++
++static void test_quote_command_line(void) {
++        log_info("/* %s */", __func__);
++
++        test_quote_command_line_one(STRV_MAKE("true", "true"),
++                                    "true true");
++        test_quote_command_line_one(STRV_MAKE("true", "with a space"),
++                                    "true \"with a space\"");
++        test_quote_command_line_one(STRV_MAKE("true", "with a 'quote'"),
++                                    "true \"with a 'quote'\"");
++        test_quote_command_line_one(STRV_MAKE("true", "with a \"quote\""),
++                                    "true \"with a \\\"quote\\\"\"");
++        test_quote_command_line_one(STRV_MAKE("true", "$dollar"),
++                                    "true \"\\$dollar\"");
++}
++
+ int main(int argc, char *argv[]) {
+         test_setup_logging(LOG_DEBUG);
+ 
+@@ -202,6 +225,7 @@ int main(int argc, char *argv[]) {
+         test_cunescape();
+         test_shell_escape();
+         test_shell_maybe_quote();
++        test_quote_command_line();
+ 
+         return 0;
+ }
+-- 
+2.33.0
+

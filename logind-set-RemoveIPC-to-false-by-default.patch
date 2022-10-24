@@ -43,7 +43,7 @@ index ed1084b06e..07ff0d195e 100644
 @@ -33,6 +33,6 @@
  #IdleActionSec=30min
  #RuntimeDirectorySize=10%
- #RuntimeDirectoryInodes=400k
+ #RuntimeDirectoryInodesMax=
 -#RemoveIPC=yes
 +#RemoveIPC=no
  #InhibitorsMax=8192

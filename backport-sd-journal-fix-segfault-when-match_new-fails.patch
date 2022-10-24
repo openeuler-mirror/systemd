@@ -1,0 +1,63 @@
+From 4bf497c3814e2f612cb055b838a656e6e14c0ed0 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 23 Dec 2021 21:45:29 +0900
+Subject: [PATCH] sd-journal: fix segfault when match_new() fails
+
+Fixes #21867.
+
+(cherry picked from commit 39dfc0de05238410e2cd4d7c0176a3f3994cc563)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/4bf497c3814e2f612cb055b838a656e6e14c0ed0
+---
+ src/libsystemd/sd-journal/sd-journal.c | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/src/libsystemd/sd-journal/sd-journal.c b/src/libsystemd/sd-journal/sd-journal.c
+index 63b8f0dc7b..dd28b8008f 100644
+--- a/src/libsystemd/sd-journal/sd-journal.c
++++ b/src/libsystemd/sd-journal/sd-journal.c
+@@ -211,7 +211,7 @@ static Match *match_new(Match *p, MatchType t) {
+         return m;
+ }
+ 
+-static void match_free(Match *m) {
++static Match *match_free(Match *m) {
+         assert(m);
+ 
+         while (m->matches)
+@@ -221,14 +221,14 @@ static void match_free(Match *m) {
+                 LIST_REMOVE(matches, m->parent->matches, m);
+ 
+         free(m->data);
+-        free(m);
++        return mfree(m);
+ }
+ 
+-static void match_free_if_empty(Match *m) {
++static Match *match_free_if_empty(Match *m) {
+         if (!m || m->matches)
+-                return;
++                return m;
+ 
+-        match_free(m);
++        return match_free(m);
+ }
+ 
+ _public_ int sd_journal_add_match(sd_journal *j, const void *data, size_t size) {
+@@ -323,9 +323,9 @@ _public_ int sd_journal_add_match(sd_journal *j, const void *data, size_t size)
+ fail:
+         match_free(m);
+         match_free_if_empty(add_here);
+-        match_free_if_empty(j->level2);
+-        match_free_if_empty(j->level1);
+-        match_free_if_empty(j->level0);
++        j->level2 = match_free_if_empty(j->level2);
++        j->level1 = match_free_if_empty(j->level1);
++        j->level0 = match_free_if_empty(j->level0);
+ 
+         return -ENOMEM;
+ }
+-- 
+2.33.0
+

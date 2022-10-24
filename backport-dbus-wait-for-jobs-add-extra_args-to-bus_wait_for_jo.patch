@@ -1,0 +1,143 @@
+From 84188acc6fe4a2f04c91c2c4d7b20a3166caa63b Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Thu, 30 Dec 2021 00:53:29 +0000
+Subject: [PATCH] dbus-wait-for-jobs: add extra_args to bus_wait_for_jobs_one()
+
+And pass it through to bus_wait_for_jobs()
+
+(cherry picked from commit 86980de64bf8c03505eec729808f52f3b3042998)
+(cherry picked from commit 0c4fe2e3dcde8225006a36cff643c112bd6c6523)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/84188acc6fe4a2f04c91c2c4d7b20a3166caa63b
+---
+ src/mount/mount-tool.c         | 6 +++---
+ src/nspawn/nspawn-register.c   | 2 +-
+ src/run/run.c                  | 6 +++---
+ src/shared/bus-wait-for-jobs.c | 4 ++--
+ src/shared/bus-wait-for-jobs.h | 2 +-
+ src/shared/tests.c             | 2 +-
+ 6 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/src/mount/mount-tool.c b/src/mount/mount-tool.c
+index 70b4c5a765..9659355c33 100644
+--- a/src/mount/mount-tool.c
++++ b/src/mount/mount-tool.c
+@@ -600,7 +600,7 @@ static int start_transient_mount(
+                 if (r < 0)
+                         return bus_log_parse_error(r);
+ 
+-                r = bus_wait_for_jobs_one(w, object, arg_quiet);
++                r = bus_wait_for_jobs_one(w, object, arg_quiet, NULL);
+                 if (r < 0)
+                         return r;
+         }
+@@ -709,7 +709,7 @@ static int start_transient_automount(
+                 if (r < 0)
+                         return bus_log_parse_error(r);
+ 
+-                r = bus_wait_for_jobs_one(w, object, arg_quiet);
++                r = bus_wait_for_jobs_one(w, object, arg_quiet, NULL);
+                 if (r < 0)
+                         return r;
+         }
+@@ -875,7 +875,7 @@ static int stop_mount(
+                 if (r < 0)
+                         return bus_log_parse_error(r);
+ 
+-                r = bus_wait_for_jobs_one(w, object, arg_quiet);
++                r = bus_wait_for_jobs_one(w, object, arg_quiet, NULL);
+                 if (r < 0)
+                         return r;
+         }
+diff --git a/src/nspawn/nspawn-register.c b/src/nspawn/nspawn-register.c
+index 2e6c12b3b7..c78bead4a4 100644
+--- a/src/nspawn/nspawn-register.c
++++ b/src/nspawn/nspawn-register.c
+@@ -313,7 +313,7 @@ int allocate_scope(
+         if (r < 0)
+                 return bus_log_parse_error(r);
+ 
+-        r = bus_wait_for_jobs_one(w, object, false);
++        r = bus_wait_for_jobs_one(w, object, false, NULL);
+         if (r < 0)
+                 return r;
+ 
+diff --git a/src/run/run.c b/src/run/run.c
+index 1c83e36e4e..9a7e1efaca 100644
+--- a/src/run/run.c
++++ b/src/run/run.c
+@@ -1228,7 +1228,7 @@ static int start_transient_service(
+                 if (r < 0)
+                         return bus_log_parse_error(r);
+ 
+-                r = bus_wait_for_jobs_one(w, object, arg_quiet);
++                r = bus_wait_for_jobs_one(w, object, arg_quiet, NULL);
+                 if (r < 0)
+                         return r;
+         }
+@@ -1473,7 +1473,7 @@ static int start_transient_scope(sd_bus *bus) {
+         if (r < 0)
+                 return bus_log_parse_error(r);
+ 
+-        r = bus_wait_for_jobs_one(w, object, arg_quiet);
++        r = bus_wait_for_jobs_one(w, object, arg_quiet, NULL);
+         if (r < 0)
+                 return r;
+ 
+@@ -1693,7 +1693,7 @@ static int start_transient_trigger(
+         if (r < 0)
+                 return bus_log_parse_error(r);
+ 
+-        r = bus_wait_for_jobs_one(w, object, arg_quiet);
++        r = bus_wait_for_jobs_one(w, object, arg_quiet, NULL);
+         if (r < 0)
+                 return r;
+ 
+diff --git a/src/shared/bus-wait-for-jobs.c b/src/shared/bus-wait-for-jobs.c
+index e4a3ab9a95..0cd47d5787 100644
+--- a/src/shared/bus-wait-for-jobs.c
++++ b/src/shared/bus-wait-for-jobs.c
+@@ -323,12 +323,12 @@ int bus_wait_for_jobs_add(BusWaitForJobs *d, const char *path) {
+         return set_put_strdup(&d->jobs, path);
+ }
+ 
+-int bus_wait_for_jobs_one(BusWaitForJobs *d, const char *path, bool quiet) {
++int bus_wait_for_jobs_one(BusWaitForJobs *d, const char *path, bool quiet, const char* const* extra_args) {
+         int r;
+ 
+         r = bus_wait_for_jobs_add(d, path);
+         if (r < 0)
+                 return log_oom();
+ 
+-        return bus_wait_for_jobs(d, quiet, NULL);
++        return bus_wait_for_jobs(d, quiet, extra_args);
+ }
+diff --git a/src/shared/bus-wait-for-jobs.h b/src/shared/bus-wait-for-jobs.h
+index 68c9d604ad..5acf8b9241 100644
+--- a/src/shared/bus-wait-for-jobs.h
++++ b/src/shared/bus-wait-for-jobs.h
+@@ -11,6 +11,6 @@ int bus_wait_for_jobs_new(sd_bus *bus, BusWaitForJobs **ret);
+ BusWaitForJobs* bus_wait_for_jobs_free(BusWaitForJobs *d);
+ int bus_wait_for_jobs_add(BusWaitForJobs *d, const char *path);
+ int bus_wait_for_jobs(BusWaitForJobs *d, bool quiet, const char* const* extra_args);
+-int bus_wait_for_jobs_one(BusWaitForJobs *d, const char *path, bool quiet);
++int bus_wait_for_jobs_one(BusWaitForJobs *d, const char *path, bool quiet, const char* const* extra_args);
+ 
+ DEFINE_TRIVIAL_CLEANUP_FUNC(BusWaitForJobs*, bus_wait_for_jobs_free);
+diff --git a/src/shared/tests.c b/src/shared/tests.c
+index ab7d799029..6d35bc6a8d 100644
+--- a/src/shared/tests.c
++++ b/src/shared/tests.c
+@@ -247,7 +247,7 @@ static int allocate_scope(void) {
+         if (r < 0)
+                 return bus_log_parse_error(r);
+ 
+-        r = bus_wait_for_jobs_one(w, object, false);
++        r = bus_wait_for_jobs_one(w, object, false, NULL);
+         if (r < 0)
+                 return r;
+ 
+-- 
+2.33.0
+

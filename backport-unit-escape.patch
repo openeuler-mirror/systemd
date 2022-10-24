@@ -12,15 +12,12 @@ diff --git a/units/tmp.mount b/units/tmp.mount
 index 4e1bb8de24..734acea237 100644
 --- a/units/tmp.mount
 +++ b/units/tmp.mount
-@@ -22,7 +22,7 @@ After=swap.target
+@@ -22,4 +22,4 @@ After=swap.target
  What=tmpfs
  Where=/tmp
  Type=tmpfs
 -Options=mode=1777,strictatime,nosuid,nodev,size=50%,nr_inodes=1m
 +Options=mode=1777,strictatime,nosuid,nodev,size=50%%,nr_inodes=1m
- 
- # Make 'systemctl enable tmp.mount' work:
- [Install]
 -- 
 2.27.0
 

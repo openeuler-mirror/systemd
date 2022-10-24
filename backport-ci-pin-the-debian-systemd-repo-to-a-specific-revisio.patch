@@ -1,0 +1,32 @@
+From cdc1cd4eb3f86f3100d6d04b1b5d12a2d87b8704 Mon Sep 17 00:00:00 2001
+From: Frantisek Sumsal <frantisek@sumsal.cz>
+Date: Sun, 14 Nov 2021 12:28:21 +0100
+Subject: [PATCH] ci: pin the debian systemd repo to a specific revision
+
+to work around missing systemd/systemd#20056 in pre-v250 stable
+branches.
+
+v249-stable-only
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/cdc1cd4eb3f86f3100d6d04b1b5d12a2d87b8704
+---
+ .semaphore/semaphore.yml | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/.semaphore/semaphore.yml b/.semaphore/semaphore.yml
+index 06f162007e..7fc38a553d 100644
+--- a/.semaphore/semaphore.yml
++++ b/.semaphore/semaphore.yml
+@@ -25,3 +25,8 @@ blocks:
+             - checkout --use-cache
+             - .semaphore/semaphore-runner.sh SETUP
+             - .semaphore/semaphore-runner.sh RUN
++          env_vars:
++            # Pin the debian systemd repo to a specific revision, to work around
++            # missing systemd/systemd#20056 in pre-v250 stable branches
++            - name: BRANCH
++              value: e138f8573a14f8f094bd6c9582bc26ed62c1347f
+-- 
+2.33.0
+

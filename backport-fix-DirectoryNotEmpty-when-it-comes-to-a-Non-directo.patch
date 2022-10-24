@@ -1,14 +1,18 @@
-From 5896a9ebdbe4d38c01390d0a5e82f9fcb4971059 Mon Sep 17 00:00:00 2001
+From 0fdcae09c44486e30e4fe0469606c02d034577be Mon Sep 17 00:00:00 2001
 From: yangmingtai <961612727@qq.com>
 Date: Mon, 6 Dec 2021 17:06:13 +0800
 Subject: [PATCH] fix DirectoryNotEmpty when it comes to a Non-directory file
 
+(cherry picked from commit 5896a9ebdbe4d38c01390d0a5e82f9fcb4971059)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/0fdcae09c44486e30e4fe0469606c02d034577be
 ---
  src/core/path.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/core/path.c b/src/core/path.c
-index 29ec66fd4d..bcd922901b 100644
+index e098e83a31..684e17f433 100644
 --- a/src/core/path.c
 +++ b/src/core/path.c
 @@ -215,7 +215,7 @@ static bool path_spec_check_good(PathSpec *s, bool initial, bool from_trigger_no
@@ -21,5 +25,5 @@ index 29ec66fd4d..bcd922901b 100644
          }
  
 -- 
-2.27.0
+2.33.0
 

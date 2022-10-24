@@ -1,0 +1,88 @@
+From 76bcd1d6d26ebe0424e2c5edc7f5a31a82ae3a7c Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 28 Jan 2022 11:53:49 +0900
+Subject: [PATCH] sd-dhcp-server: refuse too large packet to send
+
+Fixes https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=44134.
+
+(cherry picked from commit 71df50a9734f7006bc1ac8be59ca81c797b39c35)
+(cherry picked from commit 530a18d49361ade6d3f09abb78f8f901753a4cda)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/76bcd1d6d26ebe0424e2c5edc7f5a31a82ae3a7c
+---
+ src/libsystemd-network/sd-dhcp-server.c         |   3 +++
+ ...z-dhcp-server-relay-message-4972399731277824 | Bin 0 -> 65508 bytes
+ 2 files changed, 3 insertions(+)
+ create mode 100644 test/fuzz/fuzz-dhcp-server-relay-message/clusterfuzz-testcase-minimized-fuzz-dhcp-server-relay-message-4972399731277824
+
+diff --git a/src/libsystemd-network/sd-dhcp-server.c b/src/libsystemd-network/sd-dhcp-server.c
+index 3f4af8440e..0b3904c02a 100644
+--- a/src/libsystemd-network/sd-dhcp-server.c
++++ b/src/libsystemd-network/sd-dhcp-server.c
+@@ -296,6 +296,9 @@ static int dhcp_server_send_unicast_raw(sd_dhcp_server *server,
+ 
+         memcpy(&link.ll.sll_addr, &packet->dhcp.chaddr, ETH_ALEN);
+ 
++        if (len > UINT16_MAX)
++                return -EOVERFLOW;
++
+         dhcp_packet_append_ip_headers(packet, server->address, DHCP_PORT_SERVER,
+                                       packet->dhcp.yiaddr,
+                                       DHCP_PORT_CLIENT, len, -1);
+diff --git a/test/fuzz/fuzz-dhcp-server-relay-message/clusterfuzz-testcase-minimized-fuzz-dhcp-server-relay-message-4972399731277824 b/test/fuzz/fuzz-dhcp-server-relay-message/clusterfuzz-testcase-minimized-fuzz-dhcp-server-relay-message-4972399731277824
+new file mode 100644
+index 0000000000000000000000000000000000000000..e902b6989b419428fa0114c973b148fbe583c871
+GIT binary patch
+literal 65508
+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
+
+literal 0
+HcmV?d00001
+
+-- 
+2.33.0
+

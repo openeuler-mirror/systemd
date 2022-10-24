@@ -1,0 +1,50 @@
+From e444192a850854e5bc45673b29ba03e5a87a2297 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 10 Aug 2021 21:39:27 +0900
+Subject: [PATCH] sd-dhcp6-client: cirtainly adjust T1 and T2
+
+This fixes a bug introduced by 99f1d3fc5043b33dea5faa88f7015a487965333f.
+Note that in the information requesting mode, the lease has neither
+addresses nor PD prefixes.
+
+(cherry picked from commit de949e911ee15d1c9daaf5ba5a3cff806fb2b514)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e444192a850854e5bc45673b29ba03e5a87a2297
+---
+ src/libsystemd-network/sd-dhcp6-client.c | 17 ++++++++---------
+ 1 file changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/src/libsystemd-network/sd-dhcp6-client.c b/src/libsystemd-network/sd-dhcp6-client.c
+index afeb346944..f99c12620b 100644
+--- a/src/libsystemd-network/sd-dhcp6-client.c
++++ b/src/libsystemd-network/sd-dhcp6-client.c
+@@ -1328,17 +1328,16 @@ static int client_parse_message(
+                                          dhcp6_message_type_to_string(message->type));
+                         return -EINVAL;
+                 }
++        }
+ 
+-        } else {
+-                if (lease->ia.addresses) {
+-                        lease->ia.ia_na.lifetime_t1 = htobe32(lt_t1);
+-                        lease->ia.ia_na.lifetime_t2 = htobe32(lt_t2);
+-                }
++        if (lease->ia.addresses) {
++                lease->ia.ia_na.lifetime_t1 = htobe32(lt_t1);
++                lease->ia.ia_na.lifetime_t2 = htobe32(lt_t2);
++        }
+ 
+-                if (lease->pd.addresses) {
+-                        lease->pd.ia_pd.lifetime_t1 = htobe32(lt_t1);
+-                        lease->pd.ia_pd.lifetime_t2 = htobe32(lt_t2);
+-                }
++        if (lease->pd.addresses) {
++                lease->pd.ia_pd.lifetime_t1 = htobe32(lt_t1);
++                lease->pd.ia_pd.lifetime_t2 = htobe32(lt_t2);
+         }
+ 
+         client->information_refresh_time_usec = MAX(irt, IRT_MINIMUM);
+-- 
+2.33.0
+

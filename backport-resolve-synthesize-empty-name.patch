@@ -1,0 +1,97 @@
+From d3331adc66af4e69f7bdc378c1c591dd27703bf2 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 24 Jan 2022 06:07:33 +0900
+Subject: [PATCH] resolve: synthesize empty name
+
+Do not return any error for empty name. Just returns empty answer.
+
+Before:
+---
+$ dig .
+
+; <<>> DiG 9.16.24-RH <<>> .
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 13617
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 65494
+;; QUESTION SECTION:
+;.				IN	A
+
+;; Query time: 0 msec
+;; SERVER: 127.0.0.53#53(127.0.0.53)
+;; WHEN: Mon Jan 24 05:49:30 JST 2022
+;; MSG SIZE  rcvd: 28
+---
+
+After:
+---
+$ dig .
+
+; <<>> DiG 9.16.24-RH <<>> .
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 7957
+;; flags: qr aa rd ra ad; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 65494
+;; QUESTION SECTION:
+;.				IN	A
+
+;; Query time: 1 msec
+;; SERVER: 127.0.0.53#53(127.0.0.53)
+;; WHEN: Mon Jan 24 06:05:02 JST 2022
+;; MSG SIZE  rcvd: 28
+---
+
+Replaces #22197.
+
+Fixes RHBZ#2039854 (https://bugzilla.redhat.com/show_bug.cgi?id=2039854).
+
+(cherry picked from commit 3b2ac14ac45bef01cf489c3231b868936866444b)
+(cherry picked from commit 0fd3ccca64402eaec9535d0288d888f7fcacb9b8)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/d3331adc66af4e69f7bdc378c1c591dd27703bf2
+---
+ src/resolve/resolved-dns-scope.c      | 4 ++++
+ src/resolve/resolved-dns-synthesize.c | 5 ++++-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/resolve/resolved-dns-scope.c b/src/resolve/resolved-dns-scope.c
+index 178482727c..2546d0d4da 100644
+--- a/src/resolve/resolved-dns-scope.c
++++ b/src/resolve/resolved-dns-scope.c
+@@ -613,6 +613,10 @@ DnsScopeMatch dns_scope_good_domain(
+         if ((SD_RESOLVED_FLAGS_MAKE(s->protocol, s->family, false, false) & flags) == 0)
+                 return DNS_SCOPE_NO;
+ 
++        /* Never resolve empty name. */
++        if (dns_name_is_empty(domain))
++                return DNS_SCOPE_NO;
++
+         /* Never resolve any loopback hostname or IP address via DNS, LLMNR or mDNS. Instead, always rely on
+          * synthesized RRs for these. */
+         if (is_localhost(domain) ||
+diff --git a/src/resolve/resolved-dns-synthesize.c b/src/resolve/resolved-dns-synthesize.c
+index ef1423f441..ea239e686d 100644
+--- a/src/resolve/resolved-dns-synthesize.c
++++ b/src/resolve/resolved-dns-synthesize.c
+@@ -394,7 +394,10 @@ int dns_synthesize_answer(
+ 
+                 name = dns_resource_key_name(key);
+ 
+-                if (is_localhost(name)) {
++                if (dns_name_is_empty(name)) {
++                        /* Do nothing. */
++
++                } else if (is_localhost(name)) {
+ 
+                         r = synthesize_localhost_rr(m, key, ifindex, &answer);
+                         if (r < 0)
+-- 
+2.33.0
+

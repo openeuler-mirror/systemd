@@ -1,0 +1,34 @@
+From 08693ce568f0967046b669fcd99ba0939a1df86d Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 28 Oct 2021 16:47:40 +0200
+Subject: [PATCH] systemctl: only fall back to local cgroup display if we talk
+ to local systemd
+
+Otherwise we likely show rubbish because even in local containers we
+nowadays have cgroup namespacing, hence we likely can't access the
+cgroup tree from the host at the same place as inside the container.
+
+(cherry picked from commit 35ac0260db7b896604d156e9638ad15700083508)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/08693ce568f0967046b669fcd99ba0939a1df86d
+---
+ src/systemctl/systemctl-show.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/systemctl/systemctl-show.c b/src/systemctl/systemctl-show.c
+index 290a501c52..dd99bc5323 100644
+--- a/src/systemctl/systemctl-show.c
++++ b/src/systemctl/systemctl-show.c
+@@ -741,7 +741,7 @@ static void print_status_info(
+                         c = 0;
+ 
+                 r = unit_show_processes(bus, i->id, i->control_group, prefix, c, get_output_flags(), &error);
+-                if (r == -EBADR) {
++                if (r == -EBADR && arg_transport == BUS_TRANSPORT_LOCAL) {
+                         unsigned k = 0;
+                         pid_t extra[2];
+ 
+-- 
+2.33.0
+

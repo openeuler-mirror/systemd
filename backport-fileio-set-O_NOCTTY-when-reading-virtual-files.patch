@@ -1,0 +1,32 @@
+From ca6c93956879e368e40bbf5a742fcb1689712d81 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 14 Sep 2021 23:11:55 +0200
+Subject: [PATCH] fileio: set O_NOCTTY when reading virtual files
+
+Better be safe than sorry, maybe someone points this call to a TTY one
+day, and we'd rather not make it our controlling TTY in that case.
+
+(cherry picked from commit be991d7678c35aa037ef79672c0c70781eebed9c)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/ca6c93956879e368e40bbf5a742fcb1689712d81
+---
+ src/basic/fileio.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/basic/fileio.c b/src/basic/fileio.c
+index ba0ca98d72..39abf985eb 100644
+--- a/src/basic/fileio.c
++++ b/src/basic/fileio.c
+@@ -395,7 +395,7 @@ int read_virtual_file(const char *filename, size_t max_size, char **ret_contents
+          * contents* may be returned. (Though the read is still done using one syscall.) Returns 0 on
+          * partial success, 1 if untruncated contents were read. */
+ 
+-        fd = open(filename, O_RDONLY|O_CLOEXEC);
++        fd = open(filename, O_RDONLY|O_NOCTTY|O_CLOEXEC);
+         if (fd < 0)
+                 return -errno;
+ 
+-- 
+2.33.0
+

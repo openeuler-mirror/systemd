@@ -1,0 +1,44 @@
+From 88afe98fa9887ba636d5f271c7b9c9b7c5a65960 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 24 Mar 2022 21:24:23 +0100
+Subject: [PATCH] journal-file: if we are going down, don't use event loop to
+ schedule post
+
+The event loop is already shutting down, hence no point in using it
+anymore, it's not going to run any further iteration.
+
+(cherry picked from commit 47f04c2a69d5a604411f17a2e660021165d09c89)
+(cherry picked from commit 6253eb576cdde2230b75f84532f745b4409f71ad)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/88afe98fa9887ba636d5f271c7b9c9b7c5a65960
+---
+ src/libsystemd/sd-journal/journal-file.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/libsystemd/sd-journal/journal-file.c b/src/libsystemd/sd-journal/journal-file.c
+index a8029c2868..e3e926b0f0 100644
+--- a/src/libsystemd/sd-journal/journal-file.c
++++ b/src/libsystemd/sd-journal/journal-file.c
+@@ -2022,11 +2022,18 @@ static int post_change_thunk(sd_event_source *timer, uint64_t usec, void *userda
+ }
+ 
+ static void schedule_post_change(JournalFile *f) {
++        sd_event *e;
+         int r;
+ 
+         assert(f);
+         assert(f->post_change_timer);
+ 
++        assert_se(e = sd_event_source_get_event(f->post_change_timer));
++
++        /* If we are aleady going down, post the change immediately. */
++        if (IN_SET(sd_event_get_state(e), SD_EVENT_EXITING, SD_EVENT_FINISHED))
++                goto fail;
++
+         r = sd_event_source_get_enabled(f->post_change_timer, NULL);
+         if (r < 0) {
+                 log_debug_errno(r, "Failed to get ftruncate timer state: %m");
+-- 
+2.33.0
+

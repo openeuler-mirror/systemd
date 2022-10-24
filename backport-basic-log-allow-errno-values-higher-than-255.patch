@@ -1,0 +1,48 @@
+From fb824c90e5a83218e4252a2c21c7f365d0167458 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Mon, 3 Jan 2022 17:53:29 +0100
+Subject: [PATCH] basic/log: allow errno values higher than 255
+
+When the support for "synthetic errno" was added, we started truncating
+the errno value to just the least significant byte. This is generally OK,
+because errno values are defined up to ~130.
+
+The docs don't really say what the maximum value is. But at least in principle
+higher values could be added in the future. So let's stop truncating
+the values needlessly.
+
+The kernel (or libbpf?) have an error where they return 524 as an errno
+value (https://bugzilla.redhat.com/show_bug.cgi?id=2036145). We would
+confusingly truncate this to 12 (ENOMEM). It seems much nicer to let
+strerror() give us "Unknown error 524" rather than to print the bogus
+message about ENOMEM.
+
+(cherry picked from commit 5f74fcd41cb1a1b26c23e0f2ab405ae9cf6bcc93)
+(cherry picked from commit cd686fe4c719bfb894bd24d673c51f19cea64643)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/fb824c90e5a83218e4252a2c21c7f365d0167458
+---
+ src/basic/log.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/basic/log.h b/src/basic/log.h
+index 738c181070..8bfae8e0e5 100644
+--- a/src/basic/log.h
++++ b/src/basic/log.h
+@@ -27,10 +27,10 @@ typedef enum LogTarget{
+         _LOG_TARGET_INVALID = -EINVAL,
+ } LogTarget;
+ 
+-/* Note to readers: << and >> have lower precedence than & and | */
++/* Note to readers: << and >> have lower precedence (are evaluated earlier) than & and | */
+ #define SYNTHETIC_ERRNO(num)                (1 << 30 | (num))
+ #define IS_SYNTHETIC_ERRNO(val)             ((val) >> 30 & 1)
+-#define ERRNO_VALUE(val)                    (abs(val) & 255)
++#define ERRNO_VALUE(val)                    (abs(val) & ~(1 << 30))
+ 
+ const char *log_target_to_string(LogTarget target) _const_;
+ LogTarget log_target_from_string(const char *s) _pure_;
+-- 
+2.33.0
+

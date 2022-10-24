@@ -1,0 +1,37 @@
+From a7cfaa555379f19ab229c024027a74a5d22991d6 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 17 Feb 2022 14:47:34 +0100
+Subject: [PATCH] docs: $SYSTEMD_NSS_BYPASS_BUS is not honoured anymore, don't
+ document it
+
+It was removed back in 1684c56f40f020e685e70b3d1785d596ff16f892
+
+Follow-up for: 1684c56f40f020e685e70b3d1785d596ff16f892
+
+(cherry picked from commit cec16155e3dab4f123ba073223477a4ef2cf10f9)
+(cherry picked from commit 4ec9aec4b695e1f0a26dc9cd55719c2f91ebdd6a)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/a7cfaa555379f19ab229c024027a74a5d22991d6
+---
+ docs/ENVIRONMENT.md | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/docs/ENVIRONMENT.md b/docs/ENVIRONMENT.md
+index 2cec3bdc16..efb360f0a4 100644
+--- a/docs/ENVIRONMENT.md
++++ b/docs/ENVIRONMENT.md
+@@ -208,10 +208,6 @@ All tools:
+   user/group records for dynamically registered service users (i.e. users
+   registered through `DynamicUser=1`).
+ 
+-* `$SYSTEMD_NSS_BYPASS_BUS=1` — if set, `nss-systemd` won't use D-Bus to do
+-  dynamic user lookups. This is primarily useful to make `nss-systemd` work
+-  safely from within `dbus-daemon`.
+-
+ `systemd-timedated`:
+ 
+ * `$SYSTEMD_TIMEDATED_NTP_SERVICES=…` — colon-separated list of unit names of
+-- 
+2.33.0
+
