@@ -1,0 +1,36 @@
+From 7f7ad0e691eb2a05e7f319be8d098af760258dcd Mon Sep 17 00:00:00 2001
+From: Mike Gilbert <floppym@gentoo.org>
+Date: Tue, 4 Jan 2022 23:43:10 -0500
+Subject: [PATCH] test-watchdog: mark as unsafe
+
+If something goes wrong with this test it may result in an unsafe
+system restart. Let's avoid running it automatically.
+
+See https://github.com/systemd/systemd/issues/22001.
+
+(cherry picked from commit 70652c2a6fa9c06c7faac62f41c72e2e4eaa9340)
+(cherry picked from commit 4c0ed19c520a8944f68f613edc3acbd0471dcc81)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7f7ad0e691eb2a05e7f319be8d098af760258dcd
+---
+ src/test/meson.build | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/test/meson.build b/src/test/meson.build
+index 64dbb82002..a327a1f8f9 100644
+--- a/src/test/meson.build
++++ b/src/test/meson.build
+@@ -521,7 +521,8 @@ tests += [
+          [],
+          core_includes, '', 'manual'],
+ 
+-        [['src/test/test-watchdog.c']],
++        [['src/test/test-watchdog.c'],
++         [], [], [], '', 'unsafe'],
+ 
+         [['src/test/test-sched-prio.c'],
+          [libcore,
+-- 
+2.33.0
+

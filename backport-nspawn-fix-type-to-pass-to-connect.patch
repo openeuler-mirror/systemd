@@ -1,0 +1,34 @@
+From caa0827ca920617dc54e62be1ff8422ad9ce2d3a Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 1 Sep 2021 14:41:37 +0200
+Subject: [PATCH] nspawn: fix type to pass to connect()
+
+It expects a generic "struct sockaddr", not a "struct sockaddr_un".
+Pass the right member of the union.
+
+Not sure why gcc/llvm never complained about this...
+
+(cherry picked from commit 32b9736a230d47b73babcc5cfa27d672bb721bd0)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/caa0827ca920617dc54e62be1ff8422ad9ce2d3a
+---
+ src/nspawn/nspawn.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/nspawn/nspawn.c b/src/nspawn/nspawn.c
+index 04685fecba..575b9da447 100644
+--- a/src/nspawn/nspawn.c
++++ b/src/nspawn/nspawn.c
+@@ -5354,7 +5354,7 @@ static int cant_be_in_netns(void) {
+         if (fd < 0)
+                 return log_error_errno(errno, "Failed to allocate udev control socket: %m");
+ 
+-        if (connect(fd, &sa.un, SOCKADDR_UN_LEN(sa.un)) < 0) {
++        if (connect(fd, &sa.sa, SOCKADDR_UN_LEN(sa.un)) < 0) {
+ 
+                 if (errno == ENOENT || ERRNO_IS_DISCONNECT(errno))
+                         return log_error_errno(SYNTHETIC_ERRNO(EOPNOTSUPP),
+-- 
+2.33.0
+

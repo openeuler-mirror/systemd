@@ -1,0 +1,61 @@
+From ae53f4b5e48860b473c4d05958486a77f84ecc6d Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 12 Nov 2021 13:41:59 +0100
+Subject: [PATCH] tests: add test case for UMask=+BindPaths= combination
+
+Inspired by the test case described in #19899
+
+(cherry picked from commit 875afa02fabe1dad5aa3d1e9bff89d493a369fd0)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/ae53f4b5e48860b473c4d05958486a77f84ecc6d
+---
+ src/test/test-execute.c                        |  5 +++++
+ test/test-execute/exec-umask-namespace.service | 12 ++++++++++++
+ 2 files changed, 17 insertions(+)
+ create mode 100644 test/test-execute/exec-umask-namespace.service
+
+diff --git a/src/test/test-execute.c b/src/test/test-execute.c
+index 1119ad4acf..88e1b30095 100644
+--- a/src/test/test-execute.c
++++ b/src/test/test-execute.c
+@@ -828,6 +828,10 @@ static void test_exec_condition(Manager *m) {
+         test_service(m, "exec-condition-skip.service", SERVICE_SKIP_CONDITION);
+ }
+ 
++static void test_exec_umask_namespace(Manager *m) {
++        test(m, "exec-umask-namespace.service", can_unshare ? 0 : EXIT_NAMESPACE, CLD_EXITED);
++}
++
+ typedef struct test_entry {
+         test_function_t f;
+         const char *name;
+@@ -904,6 +908,7 @@ int main(int argc, char *argv[]) {
+                 entry(test_exec_dynamicuser),
+                 entry(test_exec_specifier),
+                 entry(test_exec_systemcallfilter_system),
++                entry(test_exec_umask_namespace),
+                 {},
+         };
+         int r;
+diff --git a/test/test-execute/exec-umask-namespace.service b/test/test-execute/exec-umask-namespace.service
+new file mode 100644
+index 0000000000..8419c86c9a
+--- /dev/null
++++ b/test/test-execute/exec-umask-namespace.service
+@@ -0,0 +1,12 @@
++# SPDX-License-Identifier: LGPL-2.1-or-later
++[Unit]
++Description=Test for UMask= + namespacing
++
++[Service]
++ExecStart=/bin/ls -lahd /tmp/subdir
++Type=oneshot
++User=65534
++Group=65534
++TemporaryFileSystem=/tmp:ro
++BindPaths=/etc:/tmp/subdir/subsub
++UMask=0007
+-- 
+2.33.0
+

@@ -1,0 +1,33 @@
+From d3dfc9afa2297e2e15019adf974da8fb0ab7270c Mon Sep 17 00:00:00 2001
+From: Marcus Harrison <marcus@harrisonland.co.uk>
+Date: Wed, 15 Sep 2021 03:55:07 +0200
+Subject: [PATCH] Fix error building repart with no libcryptsetup (#20739)
+
+(cherry picked from commit 2709d02906dd3ab5ecc2b3e19e2846b1714a7e5a)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/d3dfc9afa2297e2e15019adf974da8fb0ab7270c
+---
+ src/partition/repart.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/partition/repart.c b/src/partition/repart.c
+index 589acaa49d..851c68cc4b 100644
+--- a/src/partition/repart.c
++++ b/src/partition/repart.c
+@@ -206,7 +206,12 @@ static const char *encrypt_mode_table[_ENCRYPT_MODE_MAX] = {
+         [ENCRYPT_KEY_FILE_TPM2] = "key-file+tpm2",
+ };
+ 
++#if HAVE_LIBCRYPTSETUP
+ DEFINE_PRIVATE_STRING_TABLE_LOOKUP_WITH_BOOLEAN(encrypt_mode, EncryptMode, ENCRYPT_KEY_FILE);
++#else
++DEFINE_PRIVATE_STRING_TABLE_LOOKUP_FROM_STRING_WITH_BOOLEAN(encrypt_mode, EncryptMode, ENCRYPT_KEY_FILE);
++#endif
++
+ 
+ static uint64_t round_down_size(uint64_t v, uint64_t p) {
+         return (v / p) * p;
+-- 
+2.33.0
+

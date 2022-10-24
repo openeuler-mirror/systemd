@@ -1,0 +1,39 @@
+From 5f326b0388d4b0a7fcab8cedca255e93a6e311f4 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 24 Oct 2021 00:16:57 +0900
+Subject: [PATCH] test: do not use alloca() in function call
+
+(cherry picked from commit 4150584e63562616e16242f7b1016c0e642fb59e)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/5f326b0388d4b0a7fcab8cedca255e93a6e311f4
+---
+ src/test/test-path.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/test/test-path.c b/src/test/test-path.c
+index 490fb136a7..88457d177f 100644
+--- a/src/test/test-path.c
++++ b/src/test/test-path.c
+@@ -306,7 +306,7 @@ static void test_path_unit(Manager *m) {
+ }
+ 
+ static void test_path_directorynotempty(Manager *m) {
+-        const char *test_path = "/tmp/test-path_directorynotempty/";
++        const char *test_file, *test_path = "/tmp/test-path_directorynotempty/";
+         Unit *unit = NULL;
+         Path *path = NULL;
+         Service *service = NULL;
+@@ -328,7 +328,8 @@ static void test_path_directorynotempty(Manager *m) {
+         assert_se(access(test_path, F_OK) < 0);
+ 
+         assert_se(mkdir_p(test_path, 0755) >= 0);
+-        assert_se(touch(strjoina(test_path, "test_file")) >= 0);
++        test_file = strjoina(test_path, "test_file");
++        assert_se(touch(test_file) >= 0);
+         if (check_states(m, path, service, PATH_RUNNING, SERVICE_RUNNING) < 0)
+                 return;
+ 
+-- 
+2.33.0
+

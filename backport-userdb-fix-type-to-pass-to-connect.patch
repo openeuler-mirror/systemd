@@ -1,0 +1,31 @@
+From 667eab61d4c5520d7875de5df489ec68a4c9f123 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sat, 16 Oct 2021 05:04:26 +0900
+Subject: [PATCH] userdb: fix type to pass to connect()
+
+Fixes https://github.com/systemd/systemd/pull/20613#issuecomment-944621275.
+
+(cherry picked from commit c14e57356f1e82c35bf3a3e8aaeac134b545801b)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/667eab61d4c5520d7875de5df489ec68a4c9f123
+---
+ src/userdb/userdbctl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/userdb/userdbctl.c b/src/userdb/userdbctl.c
+index 8db0c34fb5..9ec0ad6c5e 100644
+--- a/src/userdb/userdbctl.c
++++ b/src/userdb/userdbctl.c
+@@ -512,7 +512,7 @@ static int display_services(int argc, char *argv[], void *userdata) {
+                 if (fd < 0)
+                         return log_error_errno(r, "Failed to allocate AF_UNIX/SOCK_STREAM socket: %m");
+ 
+-                if (connect(fd, &sockaddr.un, sockaddr_len) < 0) {
++                if (connect(fd, &sockaddr.sa, sockaddr_len) < 0) {
+                         no = strjoin("No (", errno_to_name(errno), ")");
+                         if (!no)
+                                 return log_oom();
+-- 
+2.33.0
+

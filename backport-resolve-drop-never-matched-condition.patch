@@ -1,0 +1,49 @@
+From 7b99795c46d4cd61501a31364894f13ac3a9e60d Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 23 Feb 2022 07:49:40 +0900
+Subject: [PATCH] resolve: drop never matched condition
+
+As dns_scope_good_domain() does not return negative errno.
+
+(cherry picked from commit 830f50ab1e03fa7ee262876ed42023d10e89688d)
+(cherry picked from commit 499115dbc3408f9a85160099e114bbaf0bacfe84)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7b99795c46d4cd61501a31364894f13ac3a9e60d
+---
+ src/resolve/resolved-dns-query.c | 12 ++----------
+ 1 file changed, 2 insertions(+), 10 deletions(-)
+
+diff --git a/src/resolve/resolved-dns-query.c b/src/resolve/resolved-dns-query.c
+index 192bfd3bf5..4d15240e25 100644
+--- a/src/resolve/resolved-dns-query.c
++++ b/src/resolve/resolved-dns-query.c
+@@ -743,11 +743,7 @@ int dns_query_go(DnsQuery *q) {
+                         continue;
+ 
+                 match = dns_scope_good_domain(s, q->ifindex, q->flags, name);
+-                if (match < 0) {
+-                        log_debug("Couldn't check if '%s' matches against scope, ignoring.", name);
+-                        continue;
+-                }
+-
++                assert(match >= 0);
+                 if (match > found) { /* Does this match better? If so, remember how well it matched, and the first one
+                                       * that matches this well */
+                         found = match;
+@@ -779,11 +775,7 @@ int dns_query_go(DnsQuery *q) {
+                         continue;
+ 
+                 match = dns_scope_good_domain(s, q->ifindex, q->flags, name);
+-                if (match < 0) {
+-                        log_debug("Couldn't check if '%s' matches against scope, ignoring.", name);
+-                        continue;
+-                }
+-
++                assert(match >= 0);
+                 if (match < found)
+                         continue;
+ 
+-- 
+2.33.0
+

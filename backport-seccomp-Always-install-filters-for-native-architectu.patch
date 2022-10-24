@@ -1,0 +1,64 @@
+From ba8bce7b562f9ef83a4de697eae2f97cf1806e3d Mon Sep 17 00:00:00 2001
+From: Benjamin Berg <bberg@redhat.com>
+Date: Fri, 17 Sep 2021 13:05:32 +0200
+Subject: [PATCH] seccomp: Always install filters for native architecture
+
+The commit 6597686865ff ("seccomp: don't install filters for archs that
+can't use syscalls") introduced a regression where filters may not be
+installed for the "native" architecture. This means that setting
+SystemCallArchitectures=native for a unit effectively disables the
+SystemCallFilter= and SystemCallLog= options.
+
+Conceptually, we have two filter stages:
+ 1. architecture used for syscall (SystemCallArchitectures=)
+ 2. syscall + architecture combination (SystemCallFilter=)
+
+The above commit tried to optimize the filter generation by skipping the
+second level filtering when it is not required.
+
+However, systemd will never fully block the "native" architecture using
+the first level filter. This makes the code a lot simpler, as systemd
+can execve() the target binary using its own architecture. And, it
+should be perfectly fine as the "native" architecture will always be the
+one with the most restrictive seccomp filtering.
+
+Said differently, the bug arises because (on x86_64):
+ 1. x86_64 is permitted by libseccomp already
+ 2. native != x86_64
+ 3. the loop wants to block x86_64 because the permitted set only
+    contains "native" (i.e. "native" != "x86_64")
+ 4. x86_64 is marked as blocked in seccomp_local_archs
+
+Thereby we have an inconsistency, where it is marked as blocked in the
+seccomp_local_archs array but it is allowed by libseccomp. i.e. we will
+skip generating filter stage 2 without having stage 1 in place.
+
+The fix is simple, we just skip the native architecture when looping
+seccomp_local_archs. This way the inconsistency cannot happen.
+
+(cherry picked from commit f833df38488ea40fc3d601ccefd64cfa3fce8bb4)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/ba8bce7b562f9ef83a4de697eae2f97cf1806e3d
+---
+ src/shared/seccomp-util.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/shared/seccomp-util.c b/src/shared/seccomp-util.c
+index 631ca5dd34..31d6b542c0 100644
+--- a/src/shared/seccomp-util.c
++++ b/src/shared/seccomp-util.c
+@@ -1789,6 +1789,10 @@ int seccomp_restrict_archs(Set *archs) {
+         for (unsigned i = 0; seccomp_local_archs[i] != SECCOMP_LOCAL_ARCH_END; ++i) {
+                 uint32_t arch = seccomp_local_archs[i];
+ 
++                /* See above comment, our "native" architecture is never blocked. */
++                if (arch == seccomp_arch_native())
++                        continue;
++
+                 /* That architecture might have already been blocked by a previous call to seccomp_restrict_archs. */
+                 if (arch == SECCOMP_LOCAL_ARCH_BLOCKED)
+                         continue;
+-- 
+2.33.0
+

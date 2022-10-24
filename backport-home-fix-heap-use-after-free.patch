@@ -1,0 +1,38 @@
+From 5ed20345db356121bc72e0092c17b74e2de67ff7 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 14 Dec 2021 15:38:12 +0900
+Subject: [PATCH] home: fix heap-use-after-free
+
+`bus_home_emit_remove()` may be called from manager_free() -> home_free().
+In that case, manager->bus is already unref()ed.
+
+Fixes #21767.
+
+(cherry picked from commit 2ff457720bd3bc59985e807b748f6305bdf27826)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/5ed20345db356121bc72e0092c17b74e2de67ff7
+---
+ src/home/homed-home-bus.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/home/homed-home-bus.c b/src/home/homed-home-bus.c
+index c71256d15e..601ecc5cf5 100644
+--- a/src/home/homed-home-bus.c
++++ b/src/home/homed-home-bus.c
+@@ -940,6 +940,12 @@ int bus_home_emit_remove(Home *h) {
+         if (!h->announced)
+                 return 0;
+ 
++        if (!h->manager)
++                return 0;
++
++        if (!h->manager->bus)
++                return 0;
++
+         r = bus_home_path(h, &path);
+         if (r < 0)
+                 return r;
+-- 
+2.33.0
+

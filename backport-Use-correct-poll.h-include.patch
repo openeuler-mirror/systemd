@@ -1,0 +1,43 @@
+From fba9fd963bb3b5fafdb123788b3fabe6ed0830c9 Mon Sep 17 00:00:00 2001
+From: David Seifert <soap@gentoo.org>
+Date: Mon, 2 Aug 2021 16:09:10 +0200
+Subject: [PATCH] Use correct `<poll.h>` include
+
+* `<sys/poll.h>` is not specified in POSIX
+
+(cherry picked from commit 2b6c0bb2a341c95223ce672249e43c743b03d78c)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/fba9fd963bb3b5fafdb123788b3fabe6ed0830c9
+---
+ src/shared/nscd-flush.c | 2 +-
+ src/shared/varlink.c    | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/shared/nscd-flush.c b/src/shared/nscd-flush.c
+index dfc47c4234..19e16d9345 100644
+--- a/src/shared/nscd-flush.c
++++ b/src/shared/nscd-flush.c
+@@ -1,5 +1,5 @@
+ /* SPDX-License-Identifier: LGPL-2.1-or-later */
+-#include <sys/poll.h>
++#include <poll.h>
+ 
+ #include "fd-util.h"
+ #include "io-util.h"
+diff --git a/src/shared/varlink.c b/src/shared/varlink.c
+index 6b0b343ae9..8da568e208 100644
+--- a/src/shared/varlink.c
++++ b/src/shared/varlink.c
+@@ -1,7 +1,7 @@
+ /* SPDX-License-Identifier: LGPL-2.1-or-later */
+ 
+ #include <malloc.h>
+-#include <sys/poll.h>
++#include <poll.h>
+ 
+ #include "alloc-util.h"
+ #include "errno-util.h"
+-- 
+2.33.0
+

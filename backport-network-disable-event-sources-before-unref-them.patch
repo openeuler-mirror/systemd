@@ -1,0 +1,61 @@
+From 847168ed320e9ff14ed95dbde0a1f392acbe4a44 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 24 Sep 2021 17:26:10 +0900
+Subject: [PATCH] network: disable event sources before unref them
+
+(cherry picked from commit d105befc976ad704d3b17b3a5ee1b659a5f624d4)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/847168ed320e9ff14ed95dbde0a1f392acbe4a44
+---
+ src/network/networkd-lldp-tx.c | 2 +-
+ src/network/networkd-route.c   | 6 +++---
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/network/networkd-lldp-tx.c b/src/network/networkd-lldp-tx.c
+index 45a087b301..82a403fe21 100644
+--- a/src/network/networkd-lldp-tx.c
++++ b/src/network/networkd-lldp-tx.c
+@@ -413,7 +413,7 @@ int link_lldp_emit_start(Link *link) {
+ void link_lldp_emit_stop(Link *link) {
+         assert(link);
+ 
+-        link->lldp_emit_event_source = sd_event_source_unref(link->lldp_emit_event_source);
++        link->lldp_emit_event_source = sd_event_source_disable_unref(link->lldp_emit_event_source);
+ }
+ 
+ int config_parse_lldp_mud(
+diff --git a/src/network/networkd-route.c b/src/network/networkd-route.c
+index b7852f6eec..791fd64c39 100644
+--- a/src/network/networkd-route.c
++++ b/src/network/networkd-route.c
+@@ -290,7 +290,7 @@ Route *route_free(Route *route) {
+ 
+         ordered_set_free_with_destructor(route->multipath_routes, multipath_route_free);
+ 
+-        sd_event_source_unref(route->expire);
++        sd_event_source_disable_unref(route->expire);
+ 
+         return mfree(route);
+ }
+@@ -1273,7 +1273,7 @@ static int route_expire_handler(sd_event_source *s, uint64_t usec, void *userdat
+ }
+ 
+ static int route_add_and_setup_timer_one(Link *link, const Route *route, const MultipathRoute *m, const NextHop *nh, uint8_t nh_weight, Route **ret) {
+-        _cleanup_(sd_event_source_unrefp) sd_event_source *expire = NULL;
++        _cleanup_(sd_event_source_disable_unrefp) sd_event_source *expire = NULL;
+         Route *nr;
+         int r;
+ 
+@@ -1311,7 +1311,7 @@ static int route_add_and_setup_timer_one(Link *link, const Route *route, const M
+                         return log_link_error_errno(link, r, "Could not arm expiration timer: %m");
+         }
+ 
+-        sd_event_source_unref(nr->expire);
++        sd_event_source_disable_unref(nr->expire);
+         nr->expire = TAKE_PTR(expire);
+ 
+         *ret = nr;
+-- 
+2.33.0
+

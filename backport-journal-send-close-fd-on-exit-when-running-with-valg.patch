@@ -1,0 +1,132 @@
+From 6e5141ba038c1d8e22933f969b2bfe25bbc031d8 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 23 Feb 2022 02:03:54 +0900
+Subject: [PATCH] journal-send: close fd on exit when running with valgrind
+
+Fixes an issue reported in #22576.
+
+(cherry picked from commit eb9752d2be82d994cd6a17f271be27c4d56423d6)
+(cherry picked from commit a7ec2be1509372974f44f1d98bf243a155cd203f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/6e5141ba038c1d8e22933f969b2bfe25bbc031d8
+---
+ src/libsystemd/meson.build                    |  1 +
+ src/libsystemd/sd-journal/journal-send.c      | 26 +++++++++++++++++--
+ src/libsystemd/sd-journal/journal-send.h      |  8 ++++++
+ src/libsystemd/sd-journal/test-journal-send.c |  3 +++
+ 4 files changed, 36 insertions(+), 2 deletions(-)
+ create mode 100644 src/libsystemd/sd-journal/journal-send.h
+
+diff --git a/src/libsystemd/meson.build b/src/libsystemd/meson.build
+index 489ed12a73..3be5b3ec5e 100644
+--- a/src/libsystemd/meson.build
++++ b/src/libsystemd/meson.build
+@@ -12,6 +12,7 @@ sd_journal_sources = files(
+         'sd-journal/journal-file.h',
+         'sd-journal/journal-internal.h',
+         'sd-journal/journal-send.c',
++        'sd-journal/journal-send.h',
+         'sd-journal/journal-vacuum.c',
+         'sd-journal/journal-vacuum.h',
+         'sd-journal/journal-verify.c',
+diff --git a/src/libsystemd/sd-journal/journal-send.c b/src/libsystemd/sd-journal/journal-send.c
+index fd3fd7ef9c..d96e422d3b 100644
+--- a/src/libsystemd/sd-journal/journal-send.c
++++ b/src/libsystemd/sd-journal/journal-send.c
+@@ -6,6 +6,9 @@
+ #include <stddef.h>
+ #include <sys/un.h>
+ #include <unistd.h>
++#if HAVE_VALGRIND_VALGRIND_H
++#include <valgrind/valgrind.h>
++#endif
+ 
+ #define SD_JOURNAL_SUPPRESS_LOCATION
+ 
+@@ -14,8 +17,9 @@
+ #include "alloc-util.h"
+ #include "errno-util.h"
+ #include "fd-util.h"
+-#include "io-util.h"
+ #include "fileio.h"
++#include "io-util.h"
++#include "journal-send.h"
+ #include "memfd-util.h"
+ #include "socket-util.h"
+ #include "stdio-util.h"
+@@ -39,10 +43,10 @@
+  * all its threads, and all its subprocesses. This means we need to
+  * initialize it atomically, and need to operate on it atomically
+  * never assuming we are the only user */
++static int fd_plus_one = 0;
+ 
+ static int journal_fd(void) {
+         int fd;
+-        static int fd_plus_one = 0;
+ 
+ retry:
+         if (fd_plus_one > 0)
+@@ -62,6 +66,24 @@ retry:
+         return fd;
+ }
+ 
++#if VALGRIND
++void close_journal_fd(void) {
++        /* Be nice to valgrind. This is not atomic. This must be used only in tests. */
++
++        if (!RUNNING_ON_VALGRIND)
++                return;
++
++        if (getpid() != gettid())
++                return;
++
++        if (fd_plus_one <= 0)
++                return;
++
++        safe_close(fd_plus_one - 1);
++        fd_plus_one = 0;
++}
++#endif
++
+ _public_ int sd_journal_print(int priority, const char *format, ...) {
+         int r;
+         va_list ap;
+diff --git a/src/libsystemd/sd-journal/journal-send.h b/src/libsystemd/sd-journal/journal-send.h
+new file mode 100644
+index 0000000000..cf8b199297
+--- /dev/null
++++ b/src/libsystemd/sd-journal/journal-send.h
+@@ -0,0 +1,8 @@
++/* SPDX-License-Identifier: LGPL-2.1-or-later */
++#pragma once
++
++#if VALGRIND
++void close_journal_fd(void);
++#else
++static inline void close_journal_fd(void) {}
++#endif
+diff --git a/src/libsystemd/sd-journal/test-journal-send.c b/src/libsystemd/sd-journal/test-journal-send.c
+index b6644e65c1..533b8d91e6 100644
+--- a/src/libsystemd/sd-journal/test-journal-send.c
++++ b/src/libsystemd/sd-journal/test-journal-send.c
+@@ -5,7 +5,9 @@
+ #include <unistd.h>
+ 
+ #include "sd-journal.h"
++
+ #include "fileio.h"
++#include "journal-send.h"
+ #include "macro.h"
+ #include "memory-util.h"
+ 
+@@ -103,5 +105,6 @@ int main(int argc, char *argv[]) {
+         /* Sleep a bit to make it easy for journald to collect metadata. */
+         sleep(1);
+ 
++        close_journal_fd();
+         return 0;
+ }
+-- 
+2.33.0
+

@@ -1,0 +1,65 @@
+From 2540b0e3e0aa3e9bc4eef39723aa869f235923dd Mon Sep 17 00:00:00 2001
+From: Christian Brauner <brauner@kernel.org>
+Date: Mon, 24 Jan 2022 10:12:57 +0100
+Subject: [PATCH] core/namespace: s/normalize_mounts()/drop_unused_mounts()
+
+Rename the normalize_mounts() helper to drop_unused_mounts. All the
+helpers called in there get rid of mounts that are unused for a variety
+of reasons. And whereas the helpers are aptly prefixed with "drop" the
+overall helper isn't and instead uses "normalize".
+
+Make it more obvious what the helper actually does by renaming it from
+normalize_mounts() to drop_unused_mounts(). Readers of code calling this
+helper will immediately see that it will get rid of unused mounts.
+
+Link: https://github.com/systemd/systemd/issues/22206
+(cherry picked from commit fbf90c0d5cadc5d1e95485f770f45a7d4cd39daa)
+(cherry picked from commit 09936a7ec92c859b3c4c9520ecd49c2909a8b35c)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/2540b0e3e0aa3e9bc4eef39723aa869f235923dd
+---
+ src/core/namespace.c | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/namespace.c b/src/core/namespace.c
+index 5961b14f98..a6c6963bb7 100644
+--- a/src/core/namespace.c
++++ b/src/core/namespace.c
+@@ -1578,7 +1578,14 @@ static size_t namespace_calculate_mounts(
+                 ns_info->private_ipc; /* /dev/mqueue */
+ }
+ 
+-static void normalize_mounts(const char *root_directory, MountEntry *mounts, size_t *n_mounts) {
++/* Walk all mount entries and dropping any unused mounts. This affects all
++ * mounts:
++ * - that are implicitly protected by a path that has been rendered inaccessible
++ * - whose immediate parent requests the same protection mode as the mount itself
++ * - that are outside of the relevant root directory
++ * - which are duplicates
++ */
++static void drop_unused_mounts(const char *root_directory, MountEntry *mounts, size_t *n_mounts) {
+         assert(root_directory);
+         assert(n_mounts);
+         assert(mounts || *n_mounts == 0);
+@@ -1659,7 +1666,7 @@ static int apply_mounts(
+                 if (!again)
+                         break;
+ 
+-                normalize_mounts(root, mounts, n_mounts);
++                drop_unused_mounts(root, mounts, n_mounts);
+         }
+ 
+         /* Create a deny list we can pass to bind_mount_recursive() */
+@@ -2208,7 +2215,7 @@ int setup_namespace(
+                 if (r < 0)
+                         goto finish;
+ 
+-                normalize_mounts(root, mounts, &n_mounts);
++                drop_unused_mounts(root, mounts, &n_mounts);
+         }
+ 
+         /* All above is just preparation, figuring out what to do. Let's now actually start doing something. */
+-- 
+2.33.0
+

@@ -1,0 +1,45 @@
+From f160a20a6bf995617cf8a22466638755f9a07813 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 24 Sep 2021 23:45:13 +0900
+Subject: [PATCH] sd-dhcp6-client: make dhcp6_lease_free() accepts NULL
+
+(cherry picked from commit 5cf67bb4072f149d0404398bfc359b068312ba28)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/f160a20a6bf995617cf8a22466638755f9a07813
+---
+ src/libsystemd-network/sd-dhcp6-lease.c | 10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/src/libsystemd-network/sd-dhcp6-lease.c b/src/libsystemd-network/sd-dhcp6-lease.c
+index 8378971422..4804f0941a 100644
+--- a/src/libsystemd-network/sd-dhcp6-lease.c
++++ b/src/libsystemd-network/sd-dhcp6-lease.c
+@@ -366,20 +366,18 @@ int sd_dhcp6_lease_get_fqdn(sd_dhcp6_lease *lease, const char **fqdn) {
+ }
+ 
+ static sd_dhcp6_lease *dhcp6_lease_free(sd_dhcp6_lease *lease) {
+-        assert(lease);
++        if (!lease)
++                return NULL;
+ 
+         free(lease->serverid);
+         dhcp6_lease_free_ia(&lease->ia);
+         dhcp6_lease_free_ia(&lease->pd);
+-
+         free(lease->dns);
+         free(lease->fqdn);
+-
+-        lease->domains = strv_free(lease->domains);
+-
++        strv_free(lease->domains);
+         free(lease->ntp);
++        strv_free(lease->ntp_fqdn);
+ 
+-        lease->ntp_fqdn = strv_free(lease->ntp_fqdn);
+         return mfree(lease);
+ }
+ 
+-- 
+2.33.0
+

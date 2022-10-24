@@ -1,0 +1,34 @@
+From 1bb8af46d1181a407cbc858025b85392f3af7812 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 29 Aug 2021 21:20:43 +0900
+Subject: [PATCH] core/mount: add implicit unit dependencies even if when mount
+ unit is generated from /proc/self/mountinfo
+
+Hopefully fixes #20566.
+
+(cherry picked from commit aebff2e7ce209fc2d75b894a3ae8b80f6f36ec11)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/1bb8af46d1181a407cbc858025b85392f3af7812
+---
+ src/core/mount.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/core/mount.c b/src/core/mount.c
+index cde4b52731..9bec190cb6 100644
+--- a/src/core/mount.c
++++ b/src/core/mount.c
+@@ -1576,6 +1576,10 @@ static int mount_setup_new_unit(
+         if (r < 0)
+                 return r;
+ 
++        r = mount_add_non_exec_dependencies(MOUNT(u));
++        if (r < 0)
++                return r;
++
+         /* This unit was generated because /proc/self/mountinfo reported it. Remember this, so that by the time we load
+          * the unit file for it (and thus add in extra deps right after) we know what source to attributes the deps
+          * to. */
+-- 
+2.33.0
+

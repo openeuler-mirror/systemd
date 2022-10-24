@@ -1,0 +1,38 @@
+From 42ca0ab5082344004c0f26b2d6ec57b7a9d4ff03 Mon Sep 17 00:00:00 2001
+From: Vito Caputo <vcaputo@pengaru.com>
+Date: Thu, 25 Nov 2021 07:05:06 -0800
+Subject: [PATCH] mmap-cache: LIST_REMOVE() *after* w->unused_prev
+
+The LIST_REMOVE() macro always assigns NULL to w->unused_prev,
+meaning every time this window was in last_unused, the remainder
+of the unused list was lost to the ether.
+
+Turns out there's been a memory leak in journald after all, this
+code has been there since at least 2013...
+
+(cherry picked from commit b82aca89a5b366c4377b3b140e54313e817e8f57)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/42ca0ab5082344004c0f26b2d6ec57b7a9d4ff03
+---
+ src/libsystemd/sd-journal/mmap-cache.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/libsystemd/sd-journal/mmap-cache.c b/src/libsystemd/sd-journal/mmap-cache.c
+index 9e0be01d41..02d2d721cf 100644
+--- a/src/libsystemd/sd-journal/mmap-cache.c
++++ b/src/libsystemd/sd-journal/mmap-cache.c
+@@ -224,9 +224,9 @@ static void context_attach_window(Context *c, Window *w) {
+ 
+         if (w->in_unused) {
+                 /* Used again? */
+-                LIST_REMOVE(unused, c->cache->unused, w);
+                 if (c->cache->last_unused == w)
+                         c->cache->last_unused = w->unused_prev;
++                LIST_REMOVE(unused, c->cache->unused, w);
+ 
+                 w->in_unused = false;
+         }
+-- 
+2.33.0
+

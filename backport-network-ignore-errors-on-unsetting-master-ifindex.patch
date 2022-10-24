@@ -1,0 +1,68 @@
+From 090378dcb1de5ca66900503210e85d63075fa70a Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Thu, 5 Aug 2021 00:10:52 +0900
+Subject: [PATCH] network: ignore errors on unsetting master ifindex
+
+Fixes #20241.
+
+(cherry picked from commit c347a98272bd1b81682c266b9720fad107b96ab0)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/090378dcb1de5ca66900503210e85d63075fa70a
+---
+ src/network/networkd-setlink.c | 20 ++++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/src/network/networkd-setlink.c b/src/network/networkd-setlink.c
+index 8130bb6bcc..10c312c480 100644
+--- a/src/network/networkd-setlink.c
++++ b/src/network/networkd-setlink.c
+@@ -95,9 +95,16 @@ static int set_link_handler_internal(
+         return 1;
+ 
+ on_error:
+-        if (op == SET_LINK_FLAGS) {
++        switch (op) {
++        case SET_LINK_FLAGS:
+                 assert(link->set_flags_messages > 0);
+                 link->set_flags_messages--;
++                break;
++        case SET_LINK_MASTER:
++                link->master_set = true;
++                break;
++        default:
++                break;
+         }
+ 
+         return 0;
+@@ -183,6 +190,11 @@ static int link_set_master_handler(sd_netlink *rtnl, sd_netlink_message *m, Link
+         return set_link_handler_internal(rtnl, m, link, SET_LINK_MASTER, /* ignore = */ false, get_link_master_handler);
+ }
+ 
++static int link_unset_master_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) {
++        /* Some devices do not support setting master ifindex. Let's ignore error on unsetting master ifindex. */
++        return set_link_handler_internal(rtnl, m, link, SET_LINK_MASTER, /* ignore = */ true, get_link_master_handler);
++}
++
+ static int link_set_mtu_handler(sd_netlink *rtnl, sd_netlink_message *m, Link *link) {
+         int r;
+ 
+@@ -745,10 +757,14 @@ int link_request_to_set_mac(Link *link, bool allow_retry) {
+ 
+ int link_request_to_set_master(Link *link) {
+         assert(link);
++        assert(link->network);
+ 
+         link->master_set = false;
+ 
+-        return link_request_set_link(link, SET_LINK_MASTER, link_set_master_handler, NULL);
++        if (link->network->batadv || link->network->bond || link->network->bridge || link->network->vrf)
++                return link_request_set_link(link, SET_LINK_MASTER, link_set_master_handler, NULL);
++        else
++                return link_request_set_link(link, SET_LINK_MASTER, link_unset_master_handler, NULL);
+ }
+ 
+ int link_request_to_set_mtu(Link *link, uint32_t mtu) {
+-- 
+2.33.0
+

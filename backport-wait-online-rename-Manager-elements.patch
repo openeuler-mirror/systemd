@@ -1,0 +1,175 @@
+From 5d4fc5cb2a0d18f8a67468209227a59ec3f30b5f Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 26 Jan 2022 20:54:39 +0900
+Subject: [PATCH] wait-online: rename Manager elements
+
+(cherry picked from commit 5f200833ed0754adaba548b0b617f6c192615acd)
+(cherry picked from commit 397ede8dcd29f35350c015f1d945e50c88476a93)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/5d4fc5cb2a0d18f8a67468209227a59ec3f30b5f
+---
+ src/network/wait-online/link.c    |  4 ++--
+ src/network/wait-online/manager.c | 33 ++++++++++++++++++-------------
+ src/network/wait-online/manager.h |  8 ++++----
+ 3 files changed, 25 insertions(+), 20 deletions(-)
+
+diff --git a/src/network/wait-online/link.c b/src/network/wait-online/link.c
+index 5a33d563c2..0f5f68e765 100644
+--- a/src/network/wait-online/link.c
++++ b/src/network/wait-online/link.c
+@@ -32,7 +32,7 @@ int link_new(Manager *m, Link **ret, int ifindex, const char *ifname) {
+                 .required_operstate = LINK_OPERSTATE_RANGE_DEFAULT,
+         };
+ 
+-        r = hashmap_ensure_put(&m->links, NULL, INT_TO_PTR(ifindex), l);
++        r = hashmap_ensure_put(&m->links_by_index, NULL, INT_TO_PTR(ifindex), l);
+         if (r < 0)
+                 return r;
+ 
+@@ -53,7 +53,7 @@ Link *link_free(Link *l) {
+                 return NULL;
+ 
+         if (l->manager) {
+-                hashmap_remove(l->manager->links, INT_TO_PTR(l->ifindex));
++                hashmap_remove(l->manager->links_by_index, INT_TO_PTR(l->ifindex));
+                 hashmap_remove(l->manager->links_by_name, l->ifname);
+         }
+ 
+diff --git a/src/network/wait-online/manager.c b/src/network/wait-online/manager.c
+index e1df0345c0..d8cf2338b0 100644
+--- a/src/network/wait-online/manager.c
++++ b/src/network/wait-online/manager.c
+@@ -21,14 +21,15 @@ static bool manager_ignore_link(Manager *m, Link *link) {
+                 return true;
+ 
+         /* if interfaces are given on the command line, ignore all others */
+-        if (m->interfaces && !hashmap_contains(m->interfaces, link->ifname))
++        if (m->command_line_interfaces_by_name &&
++            !hashmap_contains(m->command_line_interfaces_by_name, link->ifname))
+                 return true;
+ 
+         if (!link->required_for_online)
+                 return true;
+ 
+         /* ignore interfaces we explicitly are asked to ignore */
+-        return strv_fnmatch(m->ignore, link->ifname);
++        return strv_fnmatch(m->ignored_interfaces, link->ifname);
+ }
+ 
+ static int manager_link_is_online(Manager *m, Link *l, LinkOperationalStateRange s) {
+@@ -101,14 +102,14 @@ static int manager_link_is_online(Manager *m, Link *l, LinkOperationalStateRange
+ bool manager_configured(Manager *m) {
+         bool one_ready = false;
+         const char *ifname;
+-        void *p;
+         Link *l;
+         int r;
+ 
+-        if (!hashmap_isempty(m->interfaces)) {
++        if (!hashmap_isempty(m->command_line_interfaces_by_name)) {
++                LinkOperationalStateRange *range;
++
+                 /* wait for all the links given on the command line to appear */
+-                HASHMAP_FOREACH_KEY(p, ifname, m->interfaces) {
+-                        LinkOperationalStateRange *range = p;
++                HASHMAP_FOREACH_KEY(range, ifname, m->command_line_interfaces_by_name) {
+ 
+                         l = hashmap_get(m->links_by_name, ifname);
+                         if (!l && range->min == LINK_OPERSTATE_MISSING) {
+@@ -139,7 +140,7 @@ bool manager_configured(Manager *m) {
+ 
+         /* wait for all links networkd manages to be in admin state 'configured'
+          * and at least one link to gain a carrier */
+-        HASHMAP_FOREACH(l, m->links) {
++        HASHMAP_FOREACH(l, m->links_by_index) {
+                 if (manager_ignore_link(m, l)) {
+                         log_link_debug(l, "link is ignored");
+                         continue;
+@@ -191,7 +192,7 @@ static int manager_process_link(sd_netlink *rtnl, sd_netlink_message *mm, void *
+                 return 0;
+         }
+ 
+-        l = hashmap_get(m->links, INT_TO_PTR(ifindex));
++        l = hashmap_get(m->links_by_index, INT_TO_PTR(ifindex));
+ 
+         switch (type) {
+ 
+@@ -294,7 +295,7 @@ static int on_network_event(sd_event_source *s, int fd, uint32_t revents, void *
+ 
+         sd_network_monitor_flush(m->network_monitor);
+ 
+-        HASHMAP_FOREACH(l, m->links) {
++        HASHMAP_FOREACH(l, m->links_by_index) {
+                 r = link_update_monitor(l);
+                 if (r < 0 && r != -ENODATA)
+                         log_link_warning_errno(l, r, "Failed to update link state, ignoring: %m");
+@@ -331,10 +332,14 @@ static int manager_network_monitor_listen(Manager *m) {
+         return 0;
+ }
+ 
+-int manager_new(Manager **ret, Hashmap *interfaces, char **ignore,
++int manager_new(Manager **ret,
++                Hashmap *command_line_interfaces_by_name,
++                char **ignored_interfaces,
+                 LinkOperationalStateRange required_operstate,
+                 AddressFamily required_family,
+-                bool any, usec_t timeout) {
++                bool any,
++                usec_t timeout) {
++
+         _cleanup_(manager_freep) Manager *m = NULL;
+         int r;
+ 
+@@ -345,8 +350,8 @@ int manager_new(Manager **ret, Hashmap *interfaces, char **ignore,
+                 return -ENOMEM;
+ 
+         *m = (Manager) {
+-                .interfaces = interfaces,
+-                .ignore = ignore,
++                .command_line_interfaces_by_name = command_line_interfaces_by_name,
++                .ignored_interfaces = ignored_interfaces,
+                 .required_operstate = required_operstate,
+                 .required_family = required_family,
+                 .any = any,
+@@ -384,7 +389,7 @@ Manager* manager_free(Manager *m) {
+         if (!m)
+                 return NULL;
+ 
+-        hashmap_free_with_destructor(m->links, link_free);
++        hashmap_free_with_destructor(m->links_by_index, link_free);
+         hashmap_free(m->links_by_name);
+ 
+         sd_event_source_unref(m->network_monitor_event_source);
+diff --git a/src/network/wait-online/manager.h b/src/network/wait-online/manager.h
+index f2e091638c..01ad18f8f6 100644
+--- a/src/network/wait-online/manager.h
++++ b/src/network/wait-online/manager.h
+@@ -13,12 +13,12 @@ typedef struct Manager Manager;
+ typedef struct Link Link;
+ 
+ struct Manager {
+-        Hashmap *links;
++        Hashmap *links_by_index;
+         Hashmap *links_by_name;
+ 
+         /* Do not free the two members below. */
+-        Hashmap *interfaces;
+-        char **ignore;
++        Hashmap *command_line_interfaces_by_name;
++        char **ignored_interfaces;
+ 
+         LinkOperationalStateRange required_operstate;
+         AddressFamily required_family;
+@@ -34,7 +34,7 @@ struct Manager {
+ };
+ 
+ Manager* manager_free(Manager *m);
+-int manager_new(Manager **ret, Hashmap *interfaces, char **ignore,
++int manager_new(Manager **ret, Hashmap *command_line_interfaces_by_name, char **ignored_interfaces,
+                 LinkOperationalStateRange required_operstate,
+                 AddressFamily required_family,
+                 bool any, usec_t timeout);
+-- 
+2.33.0
+

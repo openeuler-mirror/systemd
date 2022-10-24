@@ -1,0 +1,52 @@
+From 798baafc027d829bdf6fc41163e6d12085a2c620 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 15 Sep 2021 22:59:52 +0900
+Subject: [PATCH] ether-addr-util: make hw_addr_to_string() return valid string
+ even if hardware address is null
+
+Previously, when the length of the hardware address is zero, then the
+buffer was not nul-terminated.
+
+This also replaces sprintf() with hexchar().
+
+(cherry picked from commit 914ac555cd40f9c09e655a737214bfb7de21b8d9)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/798baafc027d829bdf6fc41163e6d12085a2c620
+---
+ src/basic/ether-addr-util.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/src/basic/ether-addr-util.c b/src/basic/ether-addr-util.c
+index e660ac2c6f..dc5b5b833d 100644
+--- a/src/basic/ether-addr-util.c
++++ b/src/basic/ether-addr-util.c
+@@ -7,6 +7,7 @@
+ #include <sys/types.h>
+ 
+ #include "ether-addr-util.h"
++#include "hexdecoct.h"
+ #include "macro.h"
+ #include "string-util.h"
+ 
+@@ -15,12 +16,13 @@ char* hw_addr_to_string(const struct hw_addr_data *addr, char buffer[HW_ADDR_TO_
+         assert(buffer);
+         assert(addr->length <= HW_ADDR_MAX_SIZE);
+ 
+-        for (size_t i = 0; i < addr->length; i++) {
+-                sprintf(&buffer[3*i], "%02"PRIx8, addr->bytes[i]);
+-                if (i < addr->length - 1)
+-                        buffer[3*i + 2] = ':';
++        for (size_t i = 0, j = 0; i < addr->length; i++) {
++                buffer[j++] = hexchar(addr->bytes[i] >> 4);
++                buffer[j++] = hexchar(addr->bytes[i] & 0x0f);
++                buffer[j++] = ':';
+         }
+ 
++        buffer[addr->length > 0 ? addr->length * 3 - 1 : 0] = '\0';
+         return buffer;
+ }
+ 
+-- 
+2.33.0
+

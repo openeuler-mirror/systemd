@@ -1,0 +1,31 @@
+From e4e572117b41f6e8152a30acc6f60a0385090137 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michal=20Koutn=C3=BD?= <mkoutny@suse.com>
+Date: Fri, 12 Feb 2021 18:11:18 +0100
+Subject: [PATCH] mkosi: openSUSE update --bootable=no dependencies
+
+Since we can build --bootable=no images without dracut->systemd, we need
+to add systemd runtime dependencies explicitely.
+
+(cherry picked from commit f2bb8857cd093eb9bd5e1dad6fb996a0a4463556)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e4e572117b41f6e8152a30acc6f60a0385090137
+---
+ .mkosi/mkosi.opensuse | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/.mkosi/mkosi.opensuse b/.mkosi/mkosi.opensuse
+index b468433f34..fdbbdeb1f8 100644
+--- a/.mkosi/mkosi.opensuse
++++ b/.mkosi/mkosi.opensuse
+@@ -60,6 +60,7 @@ Packages=
+         libapparmor1
+         libcrypt1
+         libcryptsetup12
++        libgcrypt20
+         libkmod2
+         liblz4-1
+         libmount1
+-- 
+2.33.0
+

@@ -1,0 +1,33 @@
+From 428d4988d2bc68e189481f7b46ffd1f84090aadd Mon Sep 17 00:00:00 2001
+From: Frantisek Sumsal <frantisek@sumsal.cz>
+Date: Wed, 10 Nov 2021 20:15:41 +0100
+Subject: [PATCH] ci: take CIFuzz's matrix into consideration
+
+Otherwise the jobs will try to cancel each other out.
+
+Follow-up to 3884837610168e6fb69fc2d5709f6c017a30beb9.
+
+(cherry picked from commit 8b212f3596d03f8e1025cd151d17f9a82433844a)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/428d4988d2bc68e189481f7b46ffd1f84090aadd
+---
+ .github/workflows/cifuzz.yml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.github/workflows/cifuzz.yml b/.github/workflows/cifuzz.yml
+index df1fb15ace..8ab2a4cf55 100644
+--- a/.github/workflows/cifuzz.yml
++++ b/.github/workflows/cifuzz.yml
+@@ -20,7 +20,7 @@ jobs:
+     runs-on: ubuntu-latest
+     if: github.repository == 'systemd/systemd'
+     concurrency:
+-      group: ${{ github.workflow }}-${{ github.ref }}
++      group: ${{ github.workflow }}-${{ matrix.sanitizer }}-${{ github.ref }}
+       cancel-in-progress: true
+     strategy:
+       fail-fast: false
+-- 
+2.33.0
+

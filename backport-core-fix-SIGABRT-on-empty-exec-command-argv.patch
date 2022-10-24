@@ -1,7 +1,7 @@
-From 29500cf8c47e6eb0518d171d62aa8213020c9152 Mon Sep 17 00:00:00 2001
+From 7a58bf7aac8b2c812ee0531b0cc426e0067edd35 Mon Sep 17 00:00:00 2001
 From: Henri Chain <henri.chain@enioka.com>
 Date: Tue, 5 Oct 2021 13:10:31 +0200
-Subject: [PATCH 1/2] core: fix SIGABRT on empty exec command argv
+Subject: [PATCH] core: fix SIGABRT on empty exec command argv
 
 This verifies that the argv part of any exec_command parameters that
 are sent through dbus is not empty at deserialization time.
@@ -11,6 +11,11 @@ checks if all exec_commands are correctly populated, after the service
 has been loaded, whether through dbus or otherwise.
 
 Fixes #20933.
+
+(cherry picked from commit 29500cf8c47e6eb0518d171d62aa8213020c9152)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7a58bf7aac8b2c812ee0531b0cc426e0067edd35
 ---
  src/core/dbus-execute.c    |  4 ++++
  src/core/service.c         | 10 ++++++++++
@@ -18,10 +23,10 @@ Fixes #20933.
  3 files changed, 45 insertions(+)
 
 diff --git a/src/core/dbus-execute.c b/src/core/dbus-execute.c
-index 488de1242a..5665656b7b 100644
+index 50daef6702..902e074bd2 100644
 --- a/src/core/dbus-execute.c
 +++ b/src/core/dbus-execute.c
-@@ -1423,6 +1423,10 @@ int bus_set_transient_exec_command(
+@@ -1421,6 +1421,10 @@ int bus_set_transient_exec_command(
                  if (r < 0)
                          return r;
  
@@ -33,10 +38,10 @@ index 488de1242a..5665656b7b 100644
                  if (r < 0)
                          return r;
 diff --git a/src/core/service.c b/src/core/service.c
-index 9299813d45..4c75819a8f 100644
+index b7cfc04c84..e061d488c7 100644
 --- a/src/core/service.c
 +++ b/src/core/service.c
-@@ -564,6 +564,16 @@ static int service_verify(Service *s) {
+@@ -548,6 +548,16 @@ static int service_verify(Service *s) {
          assert(s);
          assert(UNIT(s)->load_state == UNIT_LOADED);
  
@@ -96,5 +101,5 @@ index 4ef7c878a8..5488447a87 100755
  
  echo OK >/testok
 -- 
-2.27.0
+2.33.0
 

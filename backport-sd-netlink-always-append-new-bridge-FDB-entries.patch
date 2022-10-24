@@ -1,0 +1,39 @@
+From f65dedbb8f3bd8a0ec69a02f63f62f339a791423 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 4 Aug 2021 18:16:44 +0900
+Subject: [PATCH] sd-netlink: always append new bridge FDB entries
+
+This partially reverts 192a9d95ea3e058afd824d38a9cea16ad0a84a57 (#19432).
+
+Fixes #20305.
+
+(cherry picked from commit 74c1ab841fbad9d4f237c819577fcd1d46a072b6)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/f65dedbb8f3bd8a0ec69a02f63f62f339a791423
+---
+ src/libsystemd/sd-netlink/rtnl-message.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/libsystemd/sd-netlink/rtnl-message.c b/src/libsystemd/sd-netlink/rtnl-message.c
+index e771b95e08..7f83bf58b3 100644
+--- a/src/libsystemd/sd-netlink/rtnl-message.c
++++ b/src/libsystemd/sd-netlink/rtnl-message.c
+@@ -443,8 +443,12 @@ int sd_rtnl_message_new_neigh(sd_netlink *rtnl, sd_netlink_message **ret, uint16
+         if (r < 0)
+                 return r;
+ 
+-        if (nlmsg_type == RTM_NEWNEIGH)
+-                (*ret)->hdr->nlmsg_flags |= NLM_F_CREATE | NLM_F_REPLACE;
++        if (nlmsg_type == RTM_NEWNEIGH) {
++                if (ndm_family == AF_BRIDGE)
++                        (*ret)->hdr->nlmsg_flags |= NLM_F_CREATE | NLM_F_APPEND;
++                else
++                        (*ret)->hdr->nlmsg_flags |= NLM_F_CREATE | NLM_F_REPLACE;
++        }
+ 
+         ndm = NLMSG_DATA((*ret)->hdr);
+ 
+-- 
+2.33.0
+

@@ -1,0 +1,98 @@
+From 8280bec34df8e35592f4a4a549127471a9199231 Mon Sep 17 00:00:00 2001
+From: Steven Siloti <ssiloti@gmail.com>
+Date: Sun, 11 Jul 2021 11:05:26 -0700
+Subject: [PATCH] resolved: retry on SERVFAIL before downgrading feature level
+
+The SERVFAIL RCODE can be generated for many reasons which may not be related
+to lack of feature support. For example, the Stubby resolver generates
+SERVFAIL when a request times out. Such transient failures can cause
+unnecessary downgrades to both the transaction and the server's feature level.
+The consequences of this are especially severe if the server is in DNSSEC
+strict mode. In this case repeated downgrades eventually cause the server to
+stop resolving entirely with the error "incompatible-server".
+
+To avoid unnecessary downgrades the request should be retried once with the
+current level before the transaction's feature level is downgraded.
+
+(cherry picked from commit 8a33aa199dc1cea14494469ac9d7d08dc6721df1)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/8280bec34df8e35592f4a4a549127471a9199231
+---
+ src/resolve/resolved-dns-server.c      |  3 +-
+ src/resolve/resolved-dns-transaction.c | 43 +++++++++++++++++---------
+ 2 files changed, 29 insertions(+), 17 deletions(-)
+
+diff --git a/src/resolve/resolved-dns-server.c b/src/resolve/resolved-dns-server.c
+index e7a4bce71a..58a1376708 100644
+--- a/src/resolve/resolved-dns-server.c
++++ b/src/resolve/resolved-dns-server.c
+@@ -362,9 +362,8 @@ void dns_server_packet_rcode_downgrade(DnsServer *s, DnsServerFeatureLevel level
+         if (s->possible_feature_level > level) {
+                 s->possible_feature_level = level;
+                 dns_server_reset_counters(s);
++                log_debug("Downgrading transaction feature level fixed an RCODE error, downgrading server %s too.", strna(dns_server_string_full(s)));
+         }
+-
+-        log_debug("Downgrading transaction feature level fixed an RCODE error, downgrading server %s too.", strna(dns_server_string_full(s)));
+ }
+ 
+ void dns_server_packet_invalid(DnsServer *s, DnsServerFeatureLevel level) {
+diff --git a/src/resolve/resolved-dns-transaction.c b/src/resolve/resolved-dns-transaction.c
+index 9535a7ba4c..cf10c5c359 100644
+--- a/src/resolve/resolved-dns-transaction.c
++++ b/src/resolve/resolved-dns-transaction.c
+@@ -1142,22 +1142,35 @@ void dns_transaction_process_reply(DnsTransaction *t, DnsPacket *p, bool encrypt
+                                 break;
+                         }
+ 
+-                        /* Reduce this feature level by one and try again. */
+-                        switch (t->current_feature_level) {
+-                        case DNS_SERVER_FEATURE_LEVEL_TLS_DO:
+-                                t->clamp_feature_level_servfail = DNS_SERVER_FEATURE_LEVEL_TLS_PLAIN;
+-                                break;
+-                        case DNS_SERVER_FEATURE_LEVEL_TLS_PLAIN + 1:
+-                                /* Skip plain TLS when TLS is not supported */
+-                                t->clamp_feature_level_servfail = DNS_SERVER_FEATURE_LEVEL_TLS_PLAIN - 1;
+-                                break;
+-                        default:
+-                                t->clamp_feature_level_servfail = t->current_feature_level - 1;
+-                        }
++                        /* SERVFAIL can happen for many reasons and may be transient.
++                         * To avoid unnecessary downgrades retry once with the initial level.
++                         * Check for clamp_feature_level_servfail having an invalid value as a sign that this is the
++                         * first attempt to downgrade. If so, clamp to the current value so that the transaction
++                         * is retried without actually downgrading. If the next try also fails we will downgrade by
++                         * hitting the else branch below. */
++                        if (DNS_PACKET_RCODE(p) == DNS_RCODE_SERVFAIL &&
++                            t->clamp_feature_level_servfail < 0) {
++                                t->clamp_feature_level_servfail = t->current_feature_level;
++                                log_debug("Server returned error %s, retrying transaction.",
++                                          dns_rcode_to_string(DNS_PACKET_RCODE(p)));
++                        } else {
++                                /* Reduce this feature level by one and try again. */
++                                switch (t->current_feature_level) {
++                                case DNS_SERVER_FEATURE_LEVEL_TLS_DO:
++                                        t->clamp_feature_level_servfail = DNS_SERVER_FEATURE_LEVEL_TLS_PLAIN;
++                                        break;
++                                case DNS_SERVER_FEATURE_LEVEL_TLS_PLAIN + 1:
++                                        /* Skip plain TLS when TLS is not supported */
++                                        t->clamp_feature_level_servfail = DNS_SERVER_FEATURE_LEVEL_TLS_PLAIN - 1;
++                                        break;
++                                default:
++                                        t->clamp_feature_level_servfail = t->current_feature_level - 1;
++                                }
+ 
+-                        log_debug("Server returned error %s, retrying transaction with reduced feature level %s.",
+-                                  dns_rcode_to_string(DNS_PACKET_RCODE(p)),
+-                                  dns_server_feature_level_to_string(t->clamp_feature_level_servfail));
++                                log_debug("Server returned error %s, retrying transaction with reduced feature level %s.",
++                                          dns_rcode_to_string(DNS_PACKET_RCODE(p)),
++                                          dns_server_feature_level_to_string(t->clamp_feature_level_servfail));
++                        }
+ 
+                         dns_transaction_retry(t, false /* use the same server */);
+                         return;
+-- 
+2.33.0
+

@@ -1,0 +1,70 @@
+From fb999b918462361fefa435f86884f81edff503c5 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 30 Aug 2021 13:21:55 +0200
+Subject: [PATCH] run/mount/systemctl: don't fork off PolicyKit/ask-pw agent
+ when in --user mode
+
+When we are in --user mode there's no point in doing PolicyKit/ask-pw
+because both of these systems are only used by system-level services.
+Let's disable the two agents for that automaticlly hence.
+
+Prompted by: #20576
+
+(cherry picked from commit 966f3a246c8c804d8a9c9d393f03c5c3fe0dd393)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/fb999b918462361fefa435f86884f81edff503c5
+---
+ src/mount/mount-tool.c    | 3 +++
+ src/run/run.c             | 4 ++++
+ src/systemctl/systemctl.c | 5 +++++
+ 3 files changed, 12 insertions(+)
+
+diff --git a/src/mount/mount-tool.c b/src/mount/mount-tool.c
+index c213c905a1..70b4c5a765 100644
+--- a/src/mount/mount-tool.c
++++ b/src/mount/mount-tool.c
+@@ -332,6 +332,9 @@ static int parse_argv(int argc, char *argv[]) {
+                         assert_not_reached("Unhandled option");
+                 }
+ 
++        if (arg_user)
++                arg_ask_password = false;
++
+         if (arg_user && arg_transport != BUS_TRANSPORT_LOCAL)
+                 return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
+                                        "Execution in user context is not supported on non-local systems.");
+diff --git a/src/run/run.c b/src/run/run.c
+index 38de0322e0..1c83e36e4e 100644
+--- a/src/run/run.c
++++ b/src/run/run.c
+@@ -506,6 +506,10 @@ static int parse_argv(int argc, char *argv[]) {
+                         assert_not_reached("Unhandled option");
+                 }
+ 
++        /* If we are talking to the per-user instance PolicyKit isn't going to help */
++        if (arg_user)
++                arg_ask_password = false;
++
+         with_trigger = !!arg_path_property || !!arg_socket_property || arg_with_timer;
+ 
+         /* currently, only single trigger (path, socket, timer) unit can be created simultaneously */
+diff --git a/src/systemctl/systemctl.c b/src/systemctl/systemctl.c
+index 4cc723aab5..2f6f58127c 100644
+--- a/src/systemctl/systemctl.c
++++ b/src/systemctl/systemctl.c
+@@ -925,6 +925,11 @@ static int systemctl_parse_argv(int argc, char *argv[]) {
+                         assert_not_reached("Unhandled option");
+                 }
+ 
++        /* If we are in --user mode, there's no point in talking to PolicyKit or the infra to query system
++         * passwords */
++        if (arg_scope != UNIT_FILE_SYSTEM)
++                arg_ask_password = false;
++
+         if (arg_transport == BUS_TRANSPORT_REMOTE && arg_scope != UNIT_FILE_SYSTEM)
+                 return log_error_errno(SYNTHETIC_ERRNO(EINVAL),
+                                        "Cannot access user instance remotely.");
+-- 
+2.33.0
+

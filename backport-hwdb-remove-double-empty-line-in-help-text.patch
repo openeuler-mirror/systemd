@@ -1,0 +1,29 @@
+From da61fe147e40ba26ed8cf405dbf0a0e71e060d0b Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 30 Aug 2021 13:20:59 +0200
+Subject: [PATCH] hwdb: remove double empty line in --help text
+
+(cherry picked from commit aecc04f1800c87e0479e74e0225e288a403ba77e)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/da61fe147e40ba26ed8cf405dbf0a0e71e060d0b
+---
+ src/hwdb/hwdb.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/hwdb/hwdb.c b/src/hwdb/hwdb.c
+index 26cc83f31b..50b4cb304a 100644
+--- a/src/hwdb/hwdb.c
++++ b/src/hwdb/hwdb.c
+@@ -43,7 +43,7 @@ static int help(void) {
+                "     --version    Show package version\n"
+                "  -s --strict     When updating, return non-zero exit value on any parsing error\n"
+                "     --usr        Generate in " UDEVLIBEXECDIR " instead of /etc/udev\n"
+-               "  -r --root=PATH  Alternative root path in the filesystem\n\n"
++               "  -r --root=PATH  Alternative root path in the filesystem\n"
+                "\nSee the %s for details.\n",
+                program_invocation_short_name,
+                ansi_highlight(),
+-- 
+2.33.0
+

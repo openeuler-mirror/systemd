@@ -1,0 +1,40 @@
+From 133354a3b9fc7b88fb143f241cfc4565b943ae87 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alvin=20=C5=A0ipraga?= <alsi@bang-olufsen.dk>
+Date: Tue, 31 Aug 2021 14:17:33 +0200
+Subject: [PATCH] network: print Ethernet Link-Layer DHCP client ID with
+ leading 0's
+
+This is a small cosmetic change.
+
+Before:
+
+   Offered DHCP leases: 192.168.0.183 (to 0:9:a7:36:bc:89)
+
+After:
+
+   Offered DHCP leases: 192.168.0.183 (to 00:09:a7:36:bc:89)
+
+(cherry picked from commit 8e664ab6ecc9c420d2151f14b36824aecc76d8ac)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/133354a3b9fc7b88fb143f241cfc4565b943ae87
+---
+ src/libsystemd-network/sd-dhcp-client.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/libsystemd-network/sd-dhcp-client.c b/src/libsystemd-network/sd-dhcp-client.c
+index dc8ff19d1a..030b50cf2a 100644
+--- a/src/libsystemd-network/sd-dhcp-client.c
++++ b/src/libsystemd-network/sd-dhcp-client.c
+@@ -192,7 +192,7 @@ int sd_dhcp_client_id_to_string(const void *data, size_t len, char **ret) {
+                 if (len != sizeof_field(sd_dhcp_client_id, eth))
+                         return -EINVAL;
+ 
+-                r = asprintf(&t, "%x:%x:%x:%x:%x:%x",
++                r = asprintf(&t, "%02x:%02x:%02x:%02x:%02x:%02x",
+                              client_id->eth.haddr[0],
+                              client_id->eth.haddr[1],
+                              client_id->eth.haddr[2],
+-- 
+2.33.0
+

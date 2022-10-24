@@ -1,0 +1,154 @@
+From b8a852e515002e5e312dd99b964bb17b9ca8fc1d Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 24 Sep 2021 01:24:52 +0900
+Subject: [PATCH] sd-dhcp6-client: fix buffer size calculation in
+ dhcp6_option_parse_ip6addrs()
+
+GREEDY_REALLOC() takes number of elements, not buffer size.
+
+This also rename dhcp6_option_parse_ip6addrs() to
+dhcp6_option_parse_addresses().
+
+(cherry picked from commit ad3c84204c76e03a0b9b761563f6cd8907515014)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/b8a852e515002e5e312dd99b964bb17b9ca8fc1d
+---
+ src/libsystemd-network/dhcp6-internal.h |  7 ++++--
+ src/libsystemd-network/dhcp6-option.c   | 22 +++++++++++-------
+ src/libsystemd-network/sd-dhcp6-lease.c | 30 +++++--------------------
+ 3 files changed, 24 insertions(+), 35 deletions(-)
+
+diff --git a/src/libsystemd-network/dhcp6-internal.h b/src/libsystemd-network/dhcp6-internal.h
+index 8d083d3858..e555557914 100644
+--- a/src/libsystemd-network/dhcp6-internal.h
++++ b/src/libsystemd-network/dhcp6-internal.h
+@@ -111,8 +111,11 @@ int dhcp6_option_parse(
+                 const uint8_t **ret_option_data);
+ int dhcp6_option_parse_status(DHCP6Option *option, size_t len);
+ int dhcp6_option_parse_ia(sd_dhcp6_client *client, DHCP6Option *iaoption, be32_t iaid, DHCP6IA *ia, uint16_t *ret_status_code);
+-int dhcp6_option_parse_ip6addrs(const uint8_t *optval, uint16_t optlen,
+-                                struct in6_addr **addrs, size_t count);
++int dhcp6_option_parse_addresses(
++                const uint8_t *optval,
++                size_t optlen,
++                struct in6_addr **addrs,
++                size_t *count);
+ int dhcp6_option_parse_domainname_list(const uint8_t *optval, uint16_t optlen,
+                                        char ***str_arr);
+ int dhcp6_option_parse_domainname(const uint8_t *optval, uint16_t optlen, char **str);
+diff --git a/src/libsystemd-network/dhcp6-option.c b/src/libsystemd-network/dhcp6-option.c
+index 781d391c0c..8f763de133 100644
+--- a/src/libsystemd-network/dhcp6-option.c
++++ b/src/libsystemd-network/dhcp6-option.c
+@@ -699,20 +699,26 @@ int dhcp6_option_parse_ia(
+         return 1;
+ }
+ 
+-int dhcp6_option_parse_ip6addrs(const uint8_t *optval, uint16_t optlen,
+-                                struct in6_addr **addrs, size_t count) {
++int dhcp6_option_parse_addresses(
++                const uint8_t *optval,
++                size_t optlen,
++                struct in6_addr **addrs,
++                size_t *count) {
++
++        assert(optval);
++        assert(addrs);
++        assert(count);
+ 
+         if (optlen == 0 || optlen % sizeof(struct in6_addr) != 0)
+-                return -EINVAL;
++                return -EBADMSG;
+ 
+-        if (!GREEDY_REALLOC(*addrs, count * sizeof(struct in6_addr) + optlen))
++        if (!GREEDY_REALLOC(*addrs, *count + optlen / sizeof(struct in6_addr)))
+                 return -ENOMEM;
+ 
+-        memcpy(*addrs + count, optval, optlen);
++        memcpy(*addrs + *count, optval, optlen);
++        *count += optlen / sizeof(struct in6_addr);
+ 
+-        count += optlen / sizeof(struct in6_addr);
+-
+-        return count;
++        return 0;
+ }
+ 
+ static int parse_domain(const uint8_t **data, uint16_t *len, char **out_domain) {
+diff --git a/src/libsystemd-network/sd-dhcp6-lease.c b/src/libsystemd-network/sd-dhcp6-lease.c
+index 6375a22537..9c77b146c7 100644
+--- a/src/libsystemd-network/sd-dhcp6-lease.c
++++ b/src/libsystemd-network/sd-dhcp6-lease.c
+@@ -194,22 +194,13 @@ void sd_dhcp6_lease_reset_pd_prefix_iter(sd_dhcp6_lease *lease) {
+ }
+ 
+ int dhcp6_lease_set_dns(sd_dhcp6_lease *lease, uint8_t *optval, size_t optlen) {
+-        int r;
+-
+         assert_return(lease, -EINVAL);
+         assert_return(optval, -EINVAL);
+ 
+-        if (!optlen)
++        if (optlen == 0)
+                 return 0;
+ 
+-        r = dhcp6_option_parse_ip6addrs(optval, optlen, &lease->dns,
+-                                        lease->dns_count);
+-        if (r < 0)
+-                return r;
+-
+-        lease->dns_count = r;
+-
+-        return 0;
++        return dhcp6_option_parse_addresses(optval, optlen, &lease->dns, &lease->dns_count);
+ }
+ 
+ int sd_dhcp6_lease_get_dns(sd_dhcp6_lease *lease, const struct in6_addr **addrs) {
+@@ -281,12 +272,10 @@ int dhcp6_lease_set_ntp(sd_dhcp6_lease *lease, uint8_t *optval, size_t optlen) {
+                         if (sublen != 16)
+                                 return 0;
+ 
+-                        r = dhcp6_option_parse_ip6addrs(subval, sublen, &lease->ntp, lease->ntp_count);
++                        r = dhcp6_option_parse_addresses(subval, sublen, &lease->ntp, &lease->ntp_count);
+                         if (r < 0)
+                                 return r;
+ 
+-                        lease->ntp_count = r;
+-
+                         break;
+ 
+                 case DHCP6_NTP_SUBOPTION_SRV_FQDN: {
+@@ -307,12 +296,10 @@ int dhcp6_lease_set_ntp(sd_dhcp6_lease *lease, uint8_t *optval, size_t optlen) {
+ }
+ 
+ int dhcp6_lease_set_sntp(sd_dhcp6_lease *lease, uint8_t *optval, size_t optlen) {
+-        int r;
+-
+         assert_return(lease, -EINVAL);
+         assert_return(optval, -EINVAL);
+ 
+-        if (!optlen)
++        if (optlen == 0)
+                 return 0;
+ 
+         if (lease->ntp || lease->ntp_fqdn)
+@@ -320,14 +307,7 @@ int dhcp6_lease_set_sntp(sd_dhcp6_lease *lease, uint8_t *optval, size_t optlen)
+ 
+         /* Using deprecated SNTP information */
+ 
+-        r = dhcp6_option_parse_ip6addrs(optval, optlen, &lease->ntp,
+-                                        lease->ntp_count);
+-        if (r < 0)
+-                return r;
+-
+-        lease->ntp_count = r;
+-
+-        return 0;
++        return dhcp6_option_parse_addresses(optval, optlen, &lease->ntp, &lease->ntp_count);
+ }
+ 
+ int sd_dhcp6_lease_get_ntp_addrs(sd_dhcp6_lease *lease,
+-- 
+2.33.0
+

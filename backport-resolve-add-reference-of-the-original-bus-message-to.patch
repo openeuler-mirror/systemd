@@ -1,0 +1,34 @@
+From 965e8b5a691d05b32ecadbe1d4d00de2200492c2 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 11 Feb 2022 09:43:16 +0900
+Subject: [PATCH] resolve: add reference of the original bus message to the aux
+ queries
+
+Otherwise, the error in aux queries cannot be replied.
+
+Fixes #22477.
+
+(cherry picked from commit 08275791d85a1852e79951212f6cbbc727db789a)
+(cherry picked from commit 919d398668d2baa1873e61f7f502fac910a9d606)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/965e8b5a691d05b32ecadbe1d4d00de2200492c2
+---
+ src/resolve/resolved-bus.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/resolve/resolved-bus.c b/src/resolve/resolved-bus.c
+index ed06895ed9..61d4b50c5b 100644
+--- a/src/resolve/resolved-bus.c
++++ b/src/resolve/resolved-bus.c
+@@ -1137,6 +1137,7 @@ static int resolve_service_hostname(DnsQuery *q, DnsResourceRecord *rr, int ifin
+         if (r < 0)
+                 return r;
+ 
++        aux->bus_request = sd_bus_message_ref(q->bus_request);
+         aux->request_family = q->request_family;
+         aux->complete = resolve_service_hostname_complete;
+ 
+-- 
+2.33.0
+

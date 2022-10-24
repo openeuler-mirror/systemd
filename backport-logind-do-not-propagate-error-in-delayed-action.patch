@@ -1,0 +1,65 @@
+From e6ca5aa8ac8d79217d11240b09dfbdb9364cdb36 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Wed, 5 Jan 2022 15:10:33 +0100
+Subject: [PATCH] logind: do not propagate error in delayed action
+
+If the action failed, we should log about the issue, and continue.
+Exiting would bring the graphical session down, which of course is not
+appreciated by users.
+
+As documented in previous commits, a non-negative return from the callback
+doesn't matter, so the callback is simplified a bit.
+
+Fixes #21991.
+
+(cherry picked from commit 8207b8321bbbcbd19a345deb77d455d98e6ffb84)
+(cherry picked from commit fb9bbbee6a3c09b75817f9f343176fa2170fdb31)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e6ca5aa8ac8d79217d11240b09dfbdb9364cdb36
+---
+ src/login/logind-dbus.c | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/src/login/logind-dbus.c b/src/login/logind-dbus.c
+index 19c3f9bd6e..b3c204f0b0 100644
+--- a/src/login/logind-dbus.c
++++ b/src/login/logind-dbus.c
+@@ -1639,7 +1639,6 @@ error:
+ }
+ 
+ int manager_dispatch_delayed(Manager *manager, bool timeout) {
+-
+         _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
+         Inhibitor *offending = NULL;
+         int r;
+@@ -1671,10 +1670,9 @@ int manager_dispatch_delayed(Manager *manager, bool timeout) {
+ 
+                 manager->action_unit = NULL;
+                 manager->action_what = 0;
+-                return r;
+         }
+ 
+-        return 1;
++        return 1; /* We did some work. */
+ }
+ 
+ static int manager_inhibit_timeout_handler(
+@@ -1683,13 +1681,11 @@ static int manager_inhibit_timeout_handler(
+                         void *userdata) {
+ 
+         Manager *manager = userdata;
+-        int r;
+ 
+         assert(manager);
+         assert(manager->inhibit_timeout_source == s);
+ 
+-        r = manager_dispatch_delayed(manager, true);
+-        return (r < 0) ? r : 0;
++        return manager_dispatch_delayed(manager, true);
+ }
+ 
+ static int delay_shutdown_or_sleep(
+-- 
+2.33.0
+

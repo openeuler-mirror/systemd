@@ -1,0 +1,46 @@
+From deda69dad784f9c4367533555ff4d7bf6308c0ff Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 3 Nov 2021 15:54:28 +0100
+Subject: [PATCH] process-util: wait for processes we killed even if killing
+ failed
+
+The processes might be zombies in which case killing will fail, but
+reaping them still matters.
+
+(cherry picked from commit 2c1612100daae9cef1b71c06ae4c4ec5f9378f09)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/deda69dad784f9c4367533555ff4d7bf6308c0ff
+---
+ src/basic/process-util.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/basic/process-util.c b/src/basic/process-util.c
+index 14259ea8df..461bbfe9a5 100644
+--- a/src/basic/process-util.c
++++ b/src/basic/process-util.c
+@@ -858,8 +858,8 @@ int wait_for_terminate_with_timeout(pid_t pid, usec_t timeout) {
+ void sigkill_wait(pid_t pid) {
+         assert(pid > 1);
+ 
+-        if (kill(pid, SIGKILL) >= 0)
+-                (void) wait_for_terminate(pid, NULL);
++        (void) kill(pid, SIGKILL);
++        (void) wait_for_terminate(pid, NULL);
+ }
+ 
+ void sigkill_waitp(pid_t *pid) {
+@@ -876,8 +876,8 @@ void sigkill_waitp(pid_t *pid) {
+ void sigterm_wait(pid_t pid) {
+         assert(pid > 1);
+ 
+-        if (kill_and_sigcont(pid, SIGTERM) >= 0)
+-                (void) wait_for_terminate(pid, NULL);
++        (void) kill_and_sigcont(pid, SIGTERM);
++        (void) wait_for_terminate(pid, NULL);
+ }
+ 
+ int kill_and_sigcont(pid_t pid, int sig) {
+-- 
+2.33.0
+

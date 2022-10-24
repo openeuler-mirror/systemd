@@ -1,0 +1,36 @@
+From 6745eaa6308b835e2c5e68d49e9bece29fd37fa2 Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Wed, 6 Oct 2021 13:20:36 +0100
+Subject: [PATCH] coredump: Don't log an error if D-Bus isn't running
+
+coredumpctl could be used in a chroot where D-Bus isn't running. If
+that's the case, we shouldn't consider it an error if we can't connect
+to the D-Bus daemon so let's reduce the severity of the error we log
+when we can't connect to D-Bus because the socket doesn't exist.
+
+(cherry picked from commit 414bd2e786f9912f51b82e5fe4a1126179a5652a)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/6745eaa6308b835e2c5e68d49e9bece29fd37fa2
+---
+ src/coredump/coredumpctl.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/coredump/coredumpctl.c b/src/coredump/coredumpctl.c
+index def3650bb4..3d44e51e32 100644
+--- a/src/coredump/coredumpctl.c
++++ b/src/coredump/coredumpctl.c
+@@ -1186,6 +1186,10 @@ static int check_units_active(void) {
+                 return false;
+ 
+         r = sd_bus_default_system(&bus);
++        if (r == -ENOENT) {
++                log_debug("D-Bus is not running, skipping active unit check");
++                return 0;
++        }
+         if (r < 0)
+                 return log_error_errno(r, "Failed to acquire bus: %m");
+ 
+-- 
+2.33.0
+

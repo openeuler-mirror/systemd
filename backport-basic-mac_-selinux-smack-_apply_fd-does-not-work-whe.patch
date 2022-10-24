@@ -1,0 +1,76 @@
+From fdb86800e854d5079c13d3a4597f73617db991f6 Mon Sep 17 00:00:00 2001
+From: Donald Chan <hoiho@amazon.com>
+Date: Fri, 28 Jan 2022 22:53:46 +0000
+Subject: [PATCH] basic: mac_[selinux,smack]_apply_fd does not work when
+ applying labels
+
+Commit a7fdc6c introduced a regression where file descriptors are opened
+using O_PATH option. mac_smack_apply_fd() calls fsetxattr() and would fail
+with a -EBADF (Bad file descriptor) error.
+
+Use FORMAT_PROC_FD_PATH(fd) to convert the fd back into a full path and
+call setxattr() or setfilecon() instead.
+
+Signed-off-by: Donald Chan <hoiho@amazon.com>
+(cherry picked from commit a718364e9d9242cc2111c9860f2ab5bb9bb26db9)
+(cherry picked from commit 9f596964f6e403b089450dc083724b48fb4b4bb1)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/fdb86800e854d5079c13d3a4597f73617db991f6
+---
+ src/shared/selinux-util.c | 6 +++++-
+ src/shared/smack-util.c   | 7 +++++--
+ 2 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/src/shared/selinux-util.c b/src/shared/selinux-util.c
+index 03cee76f64..832c29435d 100644
+--- a/src/shared/selinux-util.c
++++ b/src/shared/selinux-util.c
+@@ -344,12 +344,16 @@ int mac_selinux_apply_fd(int fd, const char *path, const char *label) {
+         assert(fd >= 0);
+ 
+ #if HAVE_SELINUX
++        char procfs_path[STRLEN("/proc/self/fd/") + DECIMAL_STR_MAX(int) + 1];
++
+         if (!mac_selinux_use())
+                 return 0;
+ 
+         assert(label);
+ 
+-        if (fsetfilecon(fd, label) < 0)
++        xsprintf(procfs_path, "/proc/self/fd/%i", fd);
++
++        if (setfilecon(procfs_path, label) < 0)
+                 return log_enforcing_errno(errno, "Failed to set SELinux security context %s on path %s: %m", label, strna(path));
+ #endif
+         return 0;
+diff --git a/src/shared/smack-util.c b/src/shared/smack-util.c
+index 3362ee3924..8d88a7b49a 100644
+--- a/src/shared/smack-util.c
++++ b/src/shared/smack-util.c
+@@ -86,6 +86,7 @@ int mac_smack_apply(const char *path, SmackAttr attr, const char *label) {
+ }
+ 
+ int mac_smack_apply_fd(int fd, SmackAttr attr, const char *label) {
++        char procfs_path[STRLEN("/proc/self/fd/") + DECIMAL_STR_MAX(int) + 1];
+         int r;
+ 
+         assert(fd >= 0);
+@@ -94,10 +95,12 @@ int mac_smack_apply_fd(int fd, SmackAttr attr, const char *label) {
+         if (!mac_smack_use())
+                 return 0;
+ 
++        xsprintf(procfs_path, "/proc/self/fd/%i", fd);
++
+         if (label)
+-                r = fsetxattr(fd, smack_attr_to_string(attr), label, strlen(label), 0);
++                r = setxattr(procfs_path, smack_attr_to_string(attr), label, strlen(label), 0);
+         else
+-                r = fremovexattr(fd, smack_attr_to_string(attr));
++                r = removexattr(procfs_path, smack_attr_to_string(attr));
+         if (r < 0)
+                 return -errno;
+ 
+-- 
+2.33.0
+

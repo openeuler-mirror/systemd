@@ -1,0 +1,79 @@
+From 47b12629b47d9dfc857874a1b680f60ffc0af0bd Mon Sep 17 00:00:00 2001
+From: Frantisek Sumsal <frantisek@sumsal.cz>
+Date: Wed, 10 Nov 2021 16:45:12 +0100
+Subject: [PATCH] ci: cancel previous jobs on ref update
+
+Let's save the environment (and reduce the number of jobs in GH Actions
+queues) by cancelling old jobs on a ref update (force push).
+
+See: https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#concurrency
+(cherry picked from commit 3884837610168e6fb69fc2d5709f6c017a30beb9)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/47b12629b47d9dfc857874a1b680f60ffc0af0bd
+---
+ .github/workflows/build_test.yml | 3 +++
+ .github/workflows/cifuzz.yml     | 3 +++
+ .github/workflows/mkosi.yml      | 3 +++
+ .github/workflows/unit_tests.yml | 3 +++
+ 4 files changed, 12 insertions(+)
+
+diff --git a/.github/workflows/build_test.yml b/.github/workflows/build_test.yml
+index 486016abc1..fa86236c2a 100644
+--- a/.github/workflows/build_test.yml
++++ b/.github/workflows/build_test.yml
+@@ -14,6 +14,9 @@ on:
+ jobs:
+   build:
+     runs-on: ubuntu-20.04
++    concurrency:
++      group: ${{ github.workflow }}-${{ matrix.env.COMPILER }}-${{ matrix.env.COMPILER_VERSION }}-${{ github.ref }}
++      cancel-in-progress: true
+     strategy:
+       fail-fast: false
+       matrix:
+diff --git a/.github/workflows/cifuzz.yml b/.github/workflows/cifuzz.yml
+index 5296dc7069..df1fb15ace 100644
+--- a/.github/workflows/cifuzz.yml
++++ b/.github/workflows/cifuzz.yml
+@@ -19,6 +19,9 @@ jobs:
+   Fuzzing:
+     runs-on: ubuntu-latest
+     if: github.repository == 'systemd/systemd'
++    concurrency:
++      group: ${{ github.workflow }}-${{ github.ref }}
++      cancel-in-progress: true
+     strategy:
+       fail-fast: false
+       matrix:
+diff --git a/.github/workflows/mkosi.yml b/.github/workflows/mkosi.yml
+index babdf7ae6e..f67fd23b1c 100644
+--- a/.github/workflows/mkosi.yml
++++ b/.github/workflows/mkosi.yml
+@@ -13,6 +13,9 @@ on:
+ jobs:
+   ci:
+     runs-on: ubuntu-20.04
++    concurrency:
++      group: ${{ github.workflow }}-${{ matrix.distro }}-${{ github.ref }}
++      cancel-in-progress: true
+     strategy:
+       fail-fast: false
+       matrix:
+diff --git a/.github/workflows/unit_tests.yml b/.github/workflows/unit_tests.yml
+index ca1e6e0c30..aaf8fcad3d 100644
+--- a/.github/workflows/unit_tests.yml
++++ b/.github/workflows/unit_tests.yml
+@@ -10,6 +10,9 @@ on:
+ jobs:
+   build:
+     runs-on: ubuntu-20.04
++    concurrency:
++      group: ${{ github.workflow }}-${{ matrix.run_phase }}-${{ github.ref }}
++      cancel-in-progress: true
+     strategy:
+       fail-fast: false
+       matrix:
+-- 
+2.33.0
+

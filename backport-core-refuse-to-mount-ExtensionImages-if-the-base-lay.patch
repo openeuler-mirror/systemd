@@ -1,0 +1,34 @@
+From af8d87d6bc8506629f1e73599ccdc4b8f8eaa6c8 Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Wed, 19 Jan 2022 00:08:57 +0000
+Subject: [PATCH] core: refuse to mount ExtensionImages if the base layer
+ doesn't at least have ID in os-release
+
+We can't match an extension if we don't at least have an ID,
+so refuse to continue
+
+(cherry picked from commit 78ab2b5064a0f87579ce5430f9cb83bba0db069a)
+(cherry picked from commit 179bd47f04c538ed1f2c1de2cf2c18f17b027a51)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/af8d87d6bc8506629f1e73599ccdc4b8f8eaa6c8
+---
+ src/core/namespace.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/core/namespace.c b/src/core/namespace.c
+index b933d46cf6..e3aebe8b5e 100644
+--- a/src/core/namespace.c
++++ b/src/core/namespace.c
+@@ -1151,6 +1151,8 @@ static int mount_image(const MountEntry *m, const char *root_directory) {
+                                 NULL);
+                 if (r < 0)
+                         return log_debug_errno(r, "Failed to acquire 'os-release' data of OS tree '%s': %m", empty_to_root(root_directory));
++                if (isempty(host_os_release_id))
++                        return log_debug_errno(SYNTHETIC_ERRNO(EINVAL), "'ID' field not found or empty in 'os-release' data of OS tree '%s': %m", empty_to_root(root_directory));
+         }
+ 
+         r = verity_dissect_and_mount(
+-- 
+2.33.0
+

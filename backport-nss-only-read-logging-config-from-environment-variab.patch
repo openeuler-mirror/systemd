@@ -1,0 +1,118 @@
+From 9e29d13926b62c10d931d287b30b7874872bfe39 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Tue, 11 Jan 2022 13:36:39 +0100
+Subject: [PATCH] nss: only read logging config from environment variables
+
+log_parse_environment() uses should_parse_proc_cmdline() to determine whether
+it should parse settings from the kernel command line. But the checks that
+should_parse_proc_cmdline() apply to the whole process, and we could get a positive
+answer also when log_parse_environment() was called from one of the nss modules.
+In case of nss-modules, we don't want to look at the kernel command line.
+
+log_parse_environment_variables() that only looks at the environment variables
+is split out and used in the nss modules.
+
+Fixes #22020.
+
+(cherry picked from commit a7d15a24659770b0fa9f4cd26fc7bbb17765cbb7)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9e29d13926b62c10d931d287b30b7874872bfe39
+---
+ src/basic/log.c                     | 16 ++++++++++------
+ src/basic/log.h                     |  1 +
+ src/nss-mymachines/nss-mymachines.c |  2 +-
+ src/nss-resolve/nss-resolve.c       |  2 +-
+ src/nss-systemd/nss-systemd.c       |  2 +-
+ 5 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/src/basic/log.c b/src/basic/log.c
+index fb183ea9e7..1d68b49963 100644
+--- a/src/basic/log.c
++++ b/src/basic/log.c
+@@ -1189,14 +1189,9 @@ static bool should_parse_proc_cmdline(void) {
+         return getpid_cached() == p;
+ }
+ 
+-void log_parse_environment(void) {
++void log_parse_environment_variables(void) {
+         const char *e;
+ 
+-        /* Do not call from library code. */
+-
+-        if (should_parse_proc_cmdline())
+-                (void) proc_cmdline_parse(parse_proc_cmdline_item, NULL, PROC_CMDLINE_STRIP_RD_PREFIX);
+-
+         e = getenv("SYSTEMD_LOG_TARGET");
+         if (e && log_set_target_from_string(e) < 0)
+                 log_warning("Failed to parse log target '%s'. Ignoring.", e);
+@@ -1222,6 +1217,15 @@ void log_parse_environment(void) {
+                 log_warning("Failed to parse log tid '%s'. Ignoring.", e);
+ }
+ 
++void log_parse_environment(void) {
++        /* Do not call from library code. */
++
++        if (should_parse_proc_cmdline())
++                (void) proc_cmdline_parse(parse_proc_cmdline_item, NULL, PROC_CMDLINE_STRIP_RD_PREFIX);
++
++        log_parse_environment_variables();
++}
++
+ LogTarget log_get_target(void) {
+         return log_target;
+ }
+diff --git a/src/basic/log.h b/src/basic/log.h
+index 8bfae8e0e5..3dbd01a75d 100644
+--- a/src/basic/log.h
++++ b/src/basic/log.h
+@@ -69,6 +69,7 @@ int log_open(void);
+ void log_close(void);
+ void log_forget_fds(void);
+ 
++void log_parse_environment_variables(void);
+ void log_parse_environment(void);
+ 
+ int log_dispatch_internal(
+diff --git a/src/nss-mymachines/nss-mymachines.c b/src/nss-mymachines/nss-mymachines.c
+index 781fd48d72..c64e79bdff 100644
+--- a/src/nss-mymachines/nss-mymachines.c
++++ b/src/nss-mymachines/nss-mymachines.c
+@@ -24,7 +24,7 @@
+ 
+ static void setup_logging_once(void) {
+         static pthread_once_t once = PTHREAD_ONCE_INIT;
+-        assert_se(pthread_once(&once, log_parse_environment) == 0);
++        assert_se(pthread_once(&once, log_parse_environment_variables) == 0);
+ }
+ 
+ #define NSS_ENTRYPOINT_BEGIN                    \
+diff --git a/src/nss-resolve/nss-resolve.c b/src/nss-resolve/nss-resolve.c
+index 4f54973202..dd2e5206e2 100644
+--- a/src/nss-resolve/nss-resolve.c
++++ b/src/nss-resolve/nss-resolve.c
+@@ -22,7 +22,7 @@
+ static JsonDispatchFlags json_dispatch_flags = 0;
+ 
+ static void setup_logging(void) {
+-        log_parse_environment();
++        log_parse_environment_variables();
+ 
+         if (DEBUG_LOGGING)
+                 json_dispatch_flags = JSON_LOG;
+diff --git a/src/nss-systemd/nss-systemd.c b/src/nss-systemd/nss-systemd.c
+index c6c00c40e6..e87f1d31b3 100644
+--- a/src/nss-systemd/nss-systemd.c
++++ b/src/nss-systemd/nss-systemd.c
+@@ -118,7 +118,7 @@ static GetentData getsgent_data = {
+ 
+ static void setup_logging_once(void) {
+         static pthread_once_t once = PTHREAD_ONCE_INIT;
+-        assert_se(pthread_once(&once, log_parse_environment) == 0);
++        assert_se(pthread_once(&once, log_parse_environment_variables) == 0);
+ }
+ 
+ #define NSS_ENTRYPOINT_BEGIN                    \
+-- 
+2.33.0
+

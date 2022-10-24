@@ -1,0 +1,55 @@
+From 1d1b7de63902e5fa8d1ba900e9bf608e2ccd2b23 Mon Sep 17 00:00:00 2001
+From: Tom Yan <tom.ty89@gmail.com>
+Date: Mon, 16 Aug 2021 18:00:42 +0800
+Subject: [PATCH] network: allow users to forbid passthru MACVLAN from putting
+ its link into promiscuous mode
+
+While we haven't implemented a key for users to set MACVLAN/MACVTAP flags,
+we can at least allow them to make use of the Promiscuous= key of
+the corresponding link to set the nopromisc flag.
+
+(cherry picked from commit 17a6a4ae2e7104a1105a0cef0ba049799f3ef6bc)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/1d1b7de63902e5fa8d1ba900e9bf608e2ccd2b23
+---
+ src/network/netdev/macvlan.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/src/network/netdev/macvlan.c b/src/network/netdev/macvlan.c
+index 46b0826148..9d037c2f36 100644
+--- a/src/network/netdev/macvlan.c
++++ b/src/network/netdev/macvlan.c
+@@ -5,6 +5,7 @@
+ #include "conf-parser.h"
+ #include "macvlan.h"
+ #include "macvlan-util.h"
++#include "networkd-network.h"
+ #include "parse-util.h"
+ 
+ DEFINE_CONFIG_PARSE_ENUM(config_parse_macvlan_mode, macvlan_mode, MacVlanMode, "Failed to parse macvlan mode");
+@@ -16,6 +17,7 @@ static int netdev_macvlan_fill_message_create(NetDev *netdev, Link *link, sd_net
+         assert(netdev);
+         assert(link);
+         assert(netdev->ifname);
++        assert(link->network);
+ 
+         if (netdev->kind == NETDEV_KIND_MACVLAN)
+                 m = MACVLAN(netdev);
+@@ -52,6 +54,13 @@ static int netdev_macvlan_fill_message_create(NetDev *netdev, Link *link, sd_net
+                         return log_netdev_error_errno(netdev, r, "Could not append IFLA_MACVLAN_MODE attribute: %m");
+         }
+ 
++        /* set the nopromisc flag if Promiscuous= of the link is explicitly set to false */
++        if (m->mode == NETDEV_MACVLAN_MODE_PASSTHRU && link->network->promiscuous == 0) {
++                r = sd_netlink_message_append_u16(req, IFLA_MACVLAN_FLAGS, MACVLAN_FLAG_NOPROMISC);
++                if (r < 0)
++                        return log_netdev_error_errno(netdev, r, "Could not append IFLA_MACVLAN_FLAGS attribute: %m");
++        }
++
+         if (m->bc_queue_length != UINT32_MAX) {
+                 r = sd_netlink_message_append_u32(req, IFLA_MACVLAN_BC_QUEUE_LEN, m->bc_queue_length);
+                 if (r < 0)
+-- 
+2.33.0
+

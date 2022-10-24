@@ -1,0 +1,84 @@
+From bf6bd21f7c887ffa4591ed0cee00b234835ca2be Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 15 Oct 2021 17:58:13 +0200
+Subject: [PATCH] homed,shutdown: call valgrind magic after LOOP_GET_STATUS64
+
+valgrind doesn't understand LOOP_GET_STATUS64. We already work around
+this in various placed, via VALGRIND_MAKE_MEM_DEFINE(), but we forgot
+three places. Let's fix that.
+
+(cherry picked from commit 48f462547d63e1d03bee612e1c77073263e71293)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/bf6bd21f7c887ffa4591ed0cee00b234835ca2be
+---
+ src/home/homework-luks.c |  8 ++++++++
+ src/shutdown/umount.c    | 12 ++++++++++++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/src/home/homework-luks.c b/src/home/homework-luks.c
+index 38d7d7cc70..05a0ed861e 100644
+--- a/src/home/homework-luks.c
++++ b/src/home/homework-luks.c
+@@ -8,6 +8,10 @@
+ #include <sys/mount.h>
+ #include <sys/xattr.h>
+ 
++#if HAVE_VALGRIND_MEMCHECK_H
++#include <valgrind/memcheck.h>
++#endif
++
+ #include "blkid-util.h"
+ #include "blockdev-util.h"
+ #include "btrfs-util.h"
+@@ -1136,6 +1140,10 @@ int home_prepare_luks(
+                                 offset *= 512U;
+                         }
+                 } else {
++#if HAVE_VALGRIND_MEMCHECK_H
++                        VALGRIND_MAKE_MEM_DEFINED(&info, sizeof(info));
++#endif
++
+                         offset = info.lo_offset;
+                         size = info.lo_sizelimit;
+                 }
+diff --git a/src/shutdown/umount.c b/src/shutdown/umount.c
+index c2a26242c0..1f945b7875 100644
+--- a/src/shutdown/umount.c
++++ b/src/shutdown/umount.c
+@@ -15,6 +15,10 @@
+ #include <sys/types.h>
+ #include <unistd.h>
+ 
++#if HAVE_VALGRIND_MEMCHECK_H
++#include <valgrind/memcheck.h>
++#endif
++
+ #include "sd-device.h"
+ 
+ #include "alloc-util.h"
+@@ -409,6 +413,10 @@ static int delete_loopback(const char *device) {
+                         return -EBUSY; /* propagate original error */
+                 }
+ 
++#if HAVE_VALGRIND_MEMCHECK_H
++                VALGRIND_MAKE_MEM_DEFINED(&info, sizeof(info));
++#endif
++
+                 if (FLAGS_SET(info.lo_flags, LO_FLAGS_AUTOCLEAR)) /* someone else already set LO_FLAGS_AUTOCLEAR for us? fine by us */
+                         return -EBUSY; /* propagate original error */
+ 
+@@ -434,6 +442,10 @@ static int delete_loopback(const char *device) {
+                 return 1;
+         }
+ 
++#if HAVE_VALGRIND_MEMCHECK_H
++        VALGRIND_MAKE_MEM_DEFINED(&info, sizeof(info));
++#endif
++
+         /* Linux makes LOOP_CLR_FD succeed whenever LO_FLAGS_AUTOCLEAR is set without actually doing
+          * anything. Very confusing. Let's hence not claim we did anything in this case. */
+         if (FLAGS_SET(info.lo_flags, LO_FLAGS_AUTOCLEAR))
+-- 
+2.33.0
+

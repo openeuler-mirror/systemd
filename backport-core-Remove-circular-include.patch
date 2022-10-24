@@ -1,0 +1,45 @@
+From a203879ae5914fa1a676dbd480a7ad41ca0d8e40 Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Tue, 24 Aug 2021 16:19:03 +0100
+Subject: [PATCH] core: Remove circular include
+
+service.h includes socket.h and socket.h includes service.h. Move
+service.h include from socket.h to socket.c to remove the circular
+dependency.
+
+(cherry picked from commit a243128d1fcfc378df9fce1b4997148a17ef23a5)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/a203879ae5914fa1a676dbd480a7ad41ca0d8e40
+---
+ src/core/socket.c | 1 +
+ src/core/socket.h | 1 -
+ 2 files changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/core/socket.c b/src/core/socket.c
+index 8144780bf8..f362a5baa8 100644
+--- a/src/core/socket.c
++++ b/src/core/socket.c
+@@ -34,6 +34,7 @@
+ #include "process-util.h"
+ #include "selinux-util.h"
+ #include "serialize.h"
++#include "service.h"
+ #include "signal-util.h"
+ #include "smack-util.h"
+ #include "socket.h"
+diff --git a/src/core/socket.h b/src/core/socket.h
+index a65195f2aa..6813bdcf8c 100644
+--- a/src/core/socket.h
++++ b/src/core/socket.h
+@@ -5,7 +5,6 @@ typedef struct Socket Socket;
+ typedef struct SocketPeer SocketPeer;
+ 
+ #include "mount.h"
+-#include "service.h"
+ #include "socket-util.h"
+ #include "unit.h"
+ 
+-- 
+2.33.0
+
