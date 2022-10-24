@@ -1,0 +1,40 @@
+From 6076f379d6911abd69c9565cbbecc60d34be8ce8 Mon Sep 17 00:00:00 2001
+From: Ludwig Nussel <ludwig.nussel@suse.de>
+Date: Tue, 21 Dec 2021 11:38:49 +0100
+Subject: [PATCH] machined: set TTYPath for container shell
+
+TTYPath is needed for proper utmp registration of the shell to
+receive wall messages.
+
+(cherry picked from commit a9c97bbbfb271d68b2ca4f3aa346fdf5e9c70c27)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/6076f379d6911abd69c9565cbbecc60d34be8ce8
+---
+ src/machine/machine-dbus.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/machine/machine-dbus.c b/src/machine/machine-dbus.c
+index 0022a980c5..404ff1ca46 100644
+--- a/src/machine/machine-dbus.c
++++ b/src/machine/machine-dbus.c
+@@ -688,7 +688,7 @@ int bus_machine_method_open_shell(sd_bus_message *message, void *userdata, sd_bu
+ 
+         description = strjoina("Shell for User ", user);
+         r = sd_bus_message_append(tm,
+-                                  "(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)",
++                                  "(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)(sv)",
+                                   "Description", "s", description,
+                                   "StandardInputFileDescriptor", "h", slave,
+                                   "StandardOutputFileDescriptor", "h", slave,
+@@ -696,6 +696,7 @@ int bus_machine_method_open_shell(sd_bus_message *message, void *userdata, sd_bu
+                                   "SendSIGHUP", "b", true,
+                                   "IgnoreSIGPIPE", "b", false,
+                                   "KillMode", "s", "mixed",
++                                  "TTYPath", "s", pty_name,
+                                   "TTYReset", "b", true,
+                                   "UtmpIdentifier", "s", utmp_id,
+                                   "UtmpMode", "s", "user",
+-- 
+2.33.0
+

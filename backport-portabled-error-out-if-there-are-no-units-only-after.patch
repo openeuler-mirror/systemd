@@ -1,0 +1,74 @@
+From 6ea63e538eaa13e1efacd33e4ade2cd096b818e0 Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Wed, 18 Aug 2021 16:37:13 +0100
+Subject: [PATCH] portabled: error out if there are no units only after parsing
+ all images
+
+It's ok if the OS image doesn't have matching units, if we find them
+in the extensions. Tidies up the parsing logic a bit.
+
+(cherry picked from commit 7bf5ec4538cd4c77979dd9d09d9e9429a0a3535c)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/6ea63e538eaa13e1efacd33e4ade2cd096b818e0
+---
+ src/portable/portable.c | 29 ++++++++++++++++++++++++++---
+ 1 file changed, 26 insertions(+), 3 deletions(-)
+
+diff --git a/src/portable/portable.c b/src/portable/portable.c
+index 5ecbeec2de..8550becded 100644
+--- a/src/portable/portable.c
++++ b/src/portable/portable.c
+@@ -504,9 +504,6 @@ static int portable_extract_by_path(
+         if (extract_os_release && !os_release)
+                 return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Image '%s' lacks os-release data, refusing.", path);
+ 
+-        if (!extract_os_release && hashmap_isempty(unit_files))
+-                return sd_bus_error_setf(error, SD_BUS_ERROR_INVALID_ARGS, "Couldn't find any matching unit files in image '%s', refusing.", path);
+-
+         if (ret_unit_files)
+                 *ret_unit_files = TAKE_PTR(unit_files);
+ 
+@@ -573,6 +570,19 @@ int portable_extract(
+                         return r;
+         }
+ 
++        if (hashmap_isempty(unit_files)) {
++                _cleanup_free_ char *extensions = strv_join(extension_image_paths, ", ");
++                if (!extensions)
++                        return -ENOMEM;
++
++                return sd_bus_error_setf(error,
++                                         SD_BUS_ERROR_INVALID_ARGS,
++                                         "Couldn't find any matching unit files in image '%s%s%s', refusing.",
++                                         image->path,
++                                         isempty(extensions) ? "" : "' or any of its extensions '",
++                                         isempty(extensions) ? "" : extensions);
++        }
++
+         *ret_os_release = TAKE_PTR(os_release);
+         *ret_unit_files = TAKE_PTR(unit_files);
+ 
+@@ -1189,6 +1199,19 @@ int portable_attach(
+                         return r;
+         }
+ 
++        if (hashmap_isempty(unit_files)) {
++                _cleanup_free_ char *extensions = strv_join(extension_image_paths, ", ");
++                if (!extensions)
++                        return -ENOMEM;
++
++                return sd_bus_error_setf(error,
++                                         SD_BUS_ERROR_INVALID_ARGS,
++                                         "Couldn't find any matching unit files in image '%s%s%s', refusing.",
++                                         image->path,
++                                         isempty(extensions) ? "" : "' or any of its extensions '",
++                                         isempty(extensions) ? "" : extensions);
++        }
++
+         r = lookup_paths_init(&paths, UNIT_FILE_SYSTEM, LOOKUP_PATHS_SPLIT_USR, NULL);
+         if (r < 0)
+                 return r;
+-- 
+2.33.0
+

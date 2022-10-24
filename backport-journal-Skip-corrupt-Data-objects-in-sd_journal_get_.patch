@@ -1,0 +1,43 @@
+From 2124893b258ffc23ae034bce388b61fb148c805f Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Wed, 17 Nov 2021 16:46:29 +0000
+Subject: [PATCH] journal: Skip corrupt Data objects in sd_journal_get_data()
+
+Similar to the change we made for sd_journal_enumerate_data(), let's
+skip corrupt entry items and data objects in sd_journal_get_data().
+
+(cherry picked from commit 8a799bed4c25be5792acf4d375bd2cdf0a4a3165)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/2124893b258ffc23ae034bce388b61fb148c805f
+---
+ src/libsystemd/sd-journal/sd-journal.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/src/libsystemd/sd-journal/sd-journal.c b/src/libsystemd/sd-journal/sd-journal.c
+index 18ede19e26..71875a4dc8 100644
+--- a/src/libsystemd/sd-journal/sd-journal.c
++++ b/src/libsystemd/sd-journal/sd-journal.c
+@@ -2309,11 +2309,17 @@ _public_ int sd_journal_get_data(sd_journal *j, const char *field, const void **
+                 p = le64toh(o->entry.items[i].object_offset);
+                 le_hash = o->entry.items[i].hash;
+                 r = journal_file_move_to_object(f, OBJECT_DATA, p, &d);
++                if (r == -EBADMSG) {
++                        log_debug("Entry item %"PRIu64" data object is bad, skipping over it.", i);
++                        continue;
++                }
+                 if (r < 0)
+                         return r;
+ 
+-                if (le_hash != d->data.hash)
+-                        return -EBADMSG;
++                if (le_hash != d->data.hash) {
++                        log_debug("Entry item %"PRIu64" hash is bad, skipping over it.", i);
++                        continue;
++                }
+ 
+                 l = le64toh(d->object.size) - offsetof(Object, data.payload);
+ 
+-- 
+2.33.0
+

@@ -1,0 +1,57 @@
+From 4fe53426991e829c0add9378d91f3677a23076fd Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 29 Sep 2021 10:48:24 +0200
+Subject: [PATCH] resolvconf-compat: make "-u" operation a NOP
+
+According to the various man pages of "resolvconf" the -u switch is for:
+
+"-u Just run the update scripts (if updating is enabled)."
+
+"-u Force resolvconf to update all its subscribers. resolvconf does not
+    update the subscribers when adding a resolv.conf that matches what
+    it already has for that interface."
+
+We have no "subscribers", we ourselves are the only "subscriber" we
+support. Hence it's probably better to ignore such a request and make it
+a NOP, then to fail.
+
+Fixes: #20748
+(cherry picked from commit bee07a399572e0d60600c040a84099ecb418ed33)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/4fe53426991e829c0add9378d91f3677a23076fd
+---
+ src/resolve/resolvconf-compat.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/src/resolve/resolvconf-compat.c b/src/resolve/resolvconf-compat.c
+index 93ded6d564..991c62e21d 100644
+--- a/src/resolve/resolvconf-compat.c
++++ b/src/resolve/resolvconf-compat.c
+@@ -39,8 +39,8 @@ static int resolvconf_help(void) {
+                "This is a compatibility alias for the resolvectl(1) tool, providing native\n"
+                "command line compatibility with the resolvconf(8) tool of various Linux\n"
+                "distributions and BSD systems. Some options supported by other implementations\n"
+-               "are not supported and are ignored: -m, -p. Various options supported by other\n"
+-               "implementations are not supported and will cause the invocation to fail: -u,\n"
++               "are not supported and are ignored: -m, -p, -u. Various options supported by other\n"
++               "implementations are not supported and will cause the invocation to fail:\n"
+                "-I, -i, -l, -R, -r, -v, -V, --enable-updates, --disable-updates,\n"
+                "--updates-are-enabled.\n"
+                "\nSee the %2$s for details.\n",
+@@ -171,8 +171,11 @@ int resolvconf_parse_argv(int argc, char *argv[]) {
+                         log_debug("Switch -%c ignored.", c);
+                         break;
+ 
+-                /* Everybody else can agree on the existence of -u but we don't support it. */
++                /* -u supposedly should "update all subscribers". We have no subscribers, hence let's make
++                    this a NOP, and exit immediately, cleanly. */
+                 case 'u':
++                        log_info("Switch -%c ignored.", c);
++                        return 0;
+ 
+                 /* The following options are openresolv inventions we don't support. */
+                 case 'I':
+-- 
+2.33.0
+

@@ -1,0 +1,45 @@
+From 38d0d41e0fc5d559cff5a1bcf46482aec9d6f5ef Mon Sep 17 00:00:00 2001
+From: Topi Miettinen <toiwoton@gmail.com>
+Date: Sat, 30 Oct 2021 19:58:41 +0300
+Subject: [PATCH] execute: respect selinux_context_ignore
+
+When `SELinuxContext=` parameter is prefixed with `-`, the documentation states
+that any errors determining or changing context should be ignored, but this
+doesn't actually happen and the service may fail with `229/SELINUX_CONTEXT`.
+
+Fix by adding checks to `context->selinux_context_ignore`.
+
+Closes: #21057
+(cherry picked from commit 2ad2925de5f258d128ec8cdb07f10f3c52fa4fcf)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/38d0d41e0fc5d559cff5a1bcf46482aec9d6f5ef
+---
+ src/core/execute.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/execute.c b/src/core/execute.c
+index 6ff757ff04..e324db87cc 100644
+--- a/src/core/execute.c
++++ b/src/core/execute.c
+@@ -4361,7 +4361,7 @@ static int exec_child(
+ 
+                 if (fd >= 0) {
+                         r = mac_selinux_get_child_mls_label(fd, executable, context->selinux_context, &mac_selinux_context_net);
+-                        if (r < 0) {
++                        if (r < 0 && !context->selinux_context_ignore) {
+                                 *exit_status = EXIT_SELINUX_CONTEXT;
+                                 return log_unit_error_errno(unit, r, "Failed to determine SELinux context: %m");
+                         }
+@@ -4495,7 +4495,7 @@ static int exec_child(
+ 
+                         if (exec_context) {
+                                 r = setexeccon(exec_context);
+-                                if (r < 0) {
++                                if (r < 0 && !context->selinux_context_ignore) {
+                                         *exit_status = EXIT_SELINUX_CONTEXT;
+                                         return log_unit_error_errno(unit, r, "Failed to change SELinux context to %s: %m", exec_context);
+                                 }
+-- 
+2.33.0
+

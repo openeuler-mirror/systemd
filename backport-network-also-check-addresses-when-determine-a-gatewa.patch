@@ -1,0 +1,71 @@
+From 2f599380f1ab1ee5fe3f7b02926ae2dd642bed9b Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 12 Jul 2021 15:46:44 +0900
+Subject: [PATCH] network: also check addresses when determine a gateway
+ address is reachable or not
+
+Fixes #20201.
+
+(cherry picked from commit 11046cea1414c70b5d7aab37ea88d5a839cbd209)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/2f599380f1ab1ee5fe3f7b02926ae2dd642bed9b
+---
+ src/network/networkd-route.c | 34 ++++++++++++++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+
+diff --git a/src/network/networkd-route.c b/src/network/networkd-route.c
+index 77a93beca9..068915616e 100644
+--- a/src/network/networkd-route.c
++++ b/src/network/networkd-route.c
+@@ -746,6 +746,26 @@ static bool route_address_is_reachable(const Route *route, int family, const uni
+                         FAMILY_ADDRESS_SIZE(family) * 8) > 0;
+ }
+ 
++static bool prefix_route_address_is_reachable(const Address *a, int family, const union in_addr_union *address) {
++        assert(a);
++        assert(IN_SET(family, AF_INET, AF_INET6));
++        assert(address);
++
++        if (a->family != family)
++                return false;
++        if (FLAGS_SET(a->flags, IFA_F_NOPREFIXROUTE))
++                return false;
++        if (in_addr_is_set(a->family, &a->in_addr_peer))
++                return false;
++
++        return in_addr_prefix_intersect(
++                        family,
++                        &a->in_addr,
++                        a->prefixlen,
++                        address,
++                        FAMILY_ADDRESS_SIZE(family) * 8) > 0;
++}
++
+ bool manager_address_is_reachable(Manager *manager, int family, const union in_addr_union *address) {
+         Link *link;
+ 
+@@ -764,6 +784,20 @@ bool manager_address_is_reachable(Manager *manager, int family, const union in_a
+                                 return true;
+         }
+ 
++        /* If we do not manage foreign routes, then there may exist a prefix route we do not know,
++         * which was created on configuring an address. Hence, also check the addresses. */
++        if (!manager->manage_foreign_routes)
++                HASHMAP_FOREACH(link, manager->links_by_index) {
++                        Address *a;
++
++                        SET_FOREACH(a, link->addresses)
++                                if (prefix_route_address_is_reachable(a, family, address))
++                                        return true;
++                        SET_FOREACH(a, link->addresses_foreign)
++                                if (prefix_route_address_is_reachable(a, family, address))
++                                        return true;
++                }
++
+         return false;
+ }
+ 
+-- 
+2.33.0
+

@@ -1,0 +1,49 @@
+From 9d08ba9b3fa7542037e0522c10d63517366afda6 Mon Sep 17 00:00:00 2001
+From: Frantisek Sumsal <frantisek@sumsal.cz>
+Date: Fri, 12 Nov 2021 17:37:15 +0100
+Subject: [PATCH] ci: run the unit_tests and mkosi jobs on stable branches as
+ well
+
+To provide more coverage for the systemd-stable repo.
+
+See: https://github.com/systemd/systemd-stable/issues/24
+(cherry picked from commit c76a83858996148fea36d1018b4707ce5334363b)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9d08ba9b3fa7542037e0522c10d63517366afda6
+---
+ .github/workflows/mkosi.yml      | 2 ++
+ .github/workflows/unit_tests.yml | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/.github/workflows/mkosi.yml b/.github/workflows/mkosi.yml
+index f67fd23b1c..489eb01880 100644
+--- a/.github/workflows/mkosi.yml
++++ b/.github/workflows/mkosi.yml
+@@ -6,9 +6,11 @@ on:
+   push:
+     branches:
+       - main
++      - v[0-9]+-stable
+   pull_request:
+     branches:
+       - main
++      - v[0-9]+-stable
+ 
+ jobs:
+   ci:
+diff --git a/.github/workflows/unit_tests.yml b/.github/workflows/unit_tests.yml
+index aaf8fcad3d..4a19a6a1c8 100644
+--- a/.github/workflows/unit_tests.yml
++++ b/.github/workflows/unit_tests.yml
+@@ -6,6 +6,7 @@ on:
+   pull_request:
+     branches:
+       - main
++      - v[0-9]+-stable
+ 
+ jobs:
+   build:
+-- 
+2.33.0
+

@@ -1,0 +1,104 @@
+From 07b5c382361a310b3ec1fa6ccfcfc99fb4fc1ee0 Mon Sep 17 00:00:00 2001
+From: Anita Zhang <the.anitazha@gmail.com>
+Date: Wed, 19 Jan 2022 13:26:01 -0800
+Subject: [PATCH] oomd: handle situations when no cgroups are killed
+
+Currently if systemd-oomd doesn't kill anything in a selected cgroup, it
+selects a new candidate immediately. But if a selected cgroup wasn't killed,
+it is likely due to it disappearing or getting cleaned up between the time
+it was selected as a candidate and getting sent SIGKILL(s). We should handle
+it as though systemd-oomd did perform a kill so that it will check
+swap/pressure again before it tries to select a new candidate.
+
+(cherry picked from commit 914d4e99f43761f1ce77b520850cf096aa5196cd)
+(cherry picked from commit c4d89cd602b94ab3baac746395c797ec4da43679)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/07b5c382361a310b3ec1fa6ccfcfc99fb4fc1ee0
+---
+ src/oom/oomd-manager.c | 10 +++++++---
+ src/oom/oomd-util.c    | 11 +++++------
+ 2 files changed, 12 insertions(+), 9 deletions(-)
+
+diff --git a/src/oom/oomd-manager.c b/src/oom/oomd-manager.c
+index 9cae0c9c8a..727206d0b3 100644
+--- a/src/oom/oomd-manager.c
++++ b/src/oom/oomd-manager.c
+@@ -364,7 +364,7 @@ static int monitor_swap_contexts_handler(sd_event_source *s, uint64_t usec, void
+                 if (r < 0)
+                         log_notice_errno(r, "Failed to kill any cgroup(s) based on swap: %m");
+                 else {
+-                        if (selected)
++                        if (selected && r > 0)
+                                 log_notice("Killed %s due to memory used (%"PRIu64") / total (%"PRIu64") and "
+                                            "swap used (%"PRIu64") / total (%"PRIu64") being more than "
+                                            PERMYRIAD_AS_PERCENT_FORMAT_STR,
+@@ -475,9 +475,13 @@ static int monitor_memory_pressure_contexts_handler(sd_event_source *s, uint64_t
+                         if (r < 0)
+                                 log_notice_errno(r, "Failed to kill any cgroup(s) under %s based on pressure: %m", t->path);
+                         else {
+-                                /* Don't act on all the high pressure cgroups at once; return as soon as we kill one */
++                                /* Don't act on all the high pressure cgroups at once; return as soon as we kill one.
++                                 * If r == 0 then it means there were not eligible candidates, the candidate cgroup
++                                 * disappeared, or the candidate cgroup has no processes by the time we tried to kill
++                                 * it. In either case, go through the event loop again and select a new candidate if
++                                 * pressure is still high. */
+                                 m->mem_pressure_post_action_delay_start = usec_now;
+-                                if (selected)
++                                if (selected && r > 0)
+                                         log_notice("Killed %s due to memory pressure for %s being %lu.%02lu%% > %lu.%02lu%%"
+                                                    " for > %s with reclaim activity",
+                                                    selected, t->path,
+diff --git a/src/oom/oomd-util.c b/src/oom/oomd-util.c
+index 503ede9a9f..5867d2946c 100644
+--- a/src/oom/oomd-util.c
++++ b/src/oom/oomd-util.c
+@@ -206,6 +206,9 @@ int oomd_cgroup_kill(const char *path, bool recurse, bool dry_run) {
+         else if (r < 0)
+                 return r;
+ 
++        if (set_isempty(pids_killed))
++                log_debug("Nothing killed when attempting to kill %s", path);
++
+         r = increment_oomd_xattr(path, "user.oomd_kill", set_size(pids_killed));
+         if (r < 0)
+                 log_debug_errno(r, "Failed to set user.oomd_kill on kill: %m");
+@@ -231,8 +234,6 @@ int oomd_kill_by_pgscan_rate(Hashmap *h, const char *prefix, bool dry_run, char
+                         continue;
+ 
+                 r = oomd_cgroup_kill(sorted[i]->path, true, dry_run);
+-                if (r == 0)
+-                        continue; /* We didn't find anything to kill */
+                 if (r == -ENOMEM)
+                         return r; /* Treat oom as a hard error */
+                 if (r < 0) {
+@@ -245,7 +246,7 @@ int oomd_kill_by_pgscan_rate(Hashmap *h, const char *prefix, bool dry_run, char
+                 if (!selected)
+                         return -ENOMEM;
+                 *ret_selected = selected;
+-                return 1;
++                return r;
+         }
+ 
+         return ret;
+@@ -271,8 +272,6 @@ int oomd_kill_by_swap_usage(Hashmap *h, uint64_t threshold_usage, bool dry_run,
+                         continue;
+ 
+                 r = oomd_cgroup_kill(sorted[i]->path, true, dry_run);
+-                if (r == 0)
+-                        continue; /* We didn't find anything to kill */
+                 if (r == -ENOMEM)
+                         return r; /* Treat oom as a hard error */
+                 if (r < 0) {
+@@ -285,7 +284,7 @@ int oomd_kill_by_swap_usage(Hashmap *h, uint64_t threshold_usage, bool dry_run,
+                 if (!selected)
+                         return -ENOMEM;
+                 *ret_selected = selected;
+-                return 1;
++                return r;
+         }
+ 
+         return ret;
+-- 
+2.33.0
+

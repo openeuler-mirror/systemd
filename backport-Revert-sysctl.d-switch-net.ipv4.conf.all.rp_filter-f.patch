@@ -1,0 +1,35 @@
+From 47b256d63ac092137fe44e27560a14ee4aa5b7c8 Mon Sep 17 00:00:00 2001
+From: Lukas Nykryn <lnykryn@redhat.com>
+Date: Fri, 8 Feb 2019 10:54:34 +0100
+Subject: Revert "sysctl.d: switch net.ipv4.conf.all.rp_filter
+ from 1 to 2"
+
+Conflict:according def94437934 and 5d4fc0e665a, modify default.rp_filter
+and *.rp_filter
+Reference:https://github.com/systemd/systemd/commit/230450d4e4f1f5fc9fa4295ed9185eea5b6ea16e
+
+This reverts commit 75c9af80cf3529c76988451e63f98010c86f48f1.
+
+Resolves: #1653824
+---
+ sysctl.d/50-default.conf | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/sysctl.d/50-default.conf b/sysctl.d/50-default.conf
+index 1b76b9d..2717a4d 100644
+--- a/sysctl.d/50-default.conf
++++ b/sysctl.d/50-default.conf
+@@ -26,8 +26,8 @@ kernel.core_uses_pid = 1
+ kernel.core_uses_pid = 1
+ 
+ # Source route verification
+-net.ipv4.conf.default.rp_filter = 2
+-net.ipv4.conf.*.rp_filter = 2
++net.ipv4.conf.default.rp_filter = 1
++net.ipv4.conf.*.rp_filter = 1
+ -net.ipv4.conf.all.rp_filter
+ 
+ # Do not accept source routing
+-- 
+2.23.0
+

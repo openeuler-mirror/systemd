@@ -1,0 +1,32 @@
+From 00b0393e65252bf631670604f58b844780b08c50 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 11 Oct 2021 13:56:22 +0200
+Subject: [PATCH] localed: use PROJECT_FILE rather than __FILE__ for logging
+
+All our log.h code uses PROJECT_FILE for this, let's hence use it here
+too.
+
+(cherry picked from commit 11c8b1f1031d368358286f4bb26abebd73cd2868)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/00b0393e65252bf631670604f58b844780b08c50
+---
+ src/locale/localed.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/locale/localed.c b/src/locale/localed.c
+index df0eb030d4..c228385d0e 100644
+--- a/src/locale/localed.c
++++ b/src/locale/localed.c
+@@ -560,7 +560,7 @@ static void log_xkb(struct xkb_context *ctx, enum xkb_log_level lvl, const char
+ 
+         fmt = strjoina("libxkbcommon: ", format);
+         DISABLE_WARNING_FORMAT_NONLITERAL;
+-        log_internalv(LOG_DEBUG, 0, __FILE__, __LINE__, __func__, fmt, args);
++        log_internalv(LOG_DEBUG, 0, PROJECT_FILE, __LINE__, __func__, fmt, args);
+         REENABLE_WARNING;
+ }
+ 
+-- 
+2.33.0
+

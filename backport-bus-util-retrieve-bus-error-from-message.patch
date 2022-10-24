@@ -1,0 +1,57 @@
+From 443f25f3cd34ce504a4850373babcde5d572335f Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 30 Jan 2022 05:36:56 +0900
+Subject: [PATCH] bus-util: retrieve bus error from message
+
+The error in argument is not input, but used for output.
+
+(cherry picked from commit 853b94863cf26d084454edd63ce987cc7ab0505a)
+(cherry picked from commit b9e144629bdb7c3d4535fb0a0ad8639140a25034)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/443f25f3cd34ce504a4850373babcde5d572335f
+---
+ src/shared/bus-wait-for-units.c | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/src/shared/bus-wait-for-units.c b/src/shared/bus-wait-for-units.c
+index 29620e0d1b..c867f1cbfd 100644
+--- a/src/shared/bus-wait-for-units.c
++++ b/src/shared/bus-wait-for-units.c
+@@ -1,5 +1,6 @@
+ /* SPDX-License-Identifier: LGPL-2.1-or-later */
+ 
++#include "bus-error.h"
+ #include "bus-map-properties.h"
+ #include "bus-wait-for-units.h"
+ #include "hashmap.h"
+@@ -288,19 +289,22 @@ static int on_properties_changed(sd_bus_message *m, void *userdata, sd_bus_error
+         return 0;
+ }
+ 
+-static int on_get_all_properties(sd_bus_message *m, void *userdata, sd_bus_error *error) {
++static int on_get_all_properties(sd_bus_message *m, void *userdata, sd_bus_error *ret_error) {
+         WaitForItem *item = userdata;
++        const sd_bus_error *e;
+         int r;
+ 
+         assert(item);
+ 
+-        if (sd_bus_error_is_set(error)) {
++        e = sd_bus_message_get_error(m);
++        if (e) {
+                 BusWaitForUnits *d = item->parent;
+ 
+                 d->has_failed = true;
+ 
+-                log_debug_errno(sd_bus_error_get_errno(error), "GetAll() failed for %s: %s",
+-                                item->bus_path, error->message);
++                r = sd_bus_error_get_errno(e);
++                log_debug_errno(r, "GetAll() failed for %s: %s",
++                                item->bus_path, bus_error_message(e, r));
+ 
+                 call_unit_callback_and_wait(d, item, false);
+                 bus_wait_for_units_check_ready(d);
+-- 
+2.33.0
+

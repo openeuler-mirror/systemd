@@ -1,0 +1,50 @@
+From d18f1ad555a0b0b03fe8eb176f763b50a1aab215 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 19 Jul 2021 15:18:37 +0900
+Subject: [PATCH] network: configure address with requested lifetime
+
+When assigning the same address provided by a dynamic addressing
+protocol, the new lifetime is stored on Request::Address, but not
+Address object in Link object, which can be obtained by address_get().
+So, we need to configure address with Address object in Request.
+
+Fixes #20245.
+
+(cherry picked from commit 2d302d88e4dfd48b18486c5ce2c7dfeb229a1b0a)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/d18f1ad555a0b0b03fe8eb176f763b50a1aab215
+---
+ src/network/networkd-address.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/src/network/networkd-address.c b/src/network/networkd-address.c
+index 6b2230b725..7b221516d7 100644
+--- a/src/network/networkd-address.c
++++ b/src/network/networkd-address.c
+@@ -1272,17 +1272,17 @@ int request_process_address(Request *req) {
+         if (r <= 0)
+                 return r;
+ 
+-        r = address_get(link, req->address, &a);
+-        if (r < 0)
+-                return r;
+-
+-        r = address_configure(a, link, req->netlink_handler);
++        r = address_configure(req->address, link, req->netlink_handler);
+         if (r < 0)
+                 return r;
+ 
+         /* To prevent a double decrement on failure in after_configure(). */
+         req->message_counter = NULL;
+ 
++        r = address_get(link, req->address, &a);
++        if (r < 0)
++                return r;
++
+         if (req->after_configure) {
+                 r = req->after_configure(req, a);
+                 if (r < 0)
+-- 
+2.33.0
+

@@ -1,0 +1,42 @@
+From 82b2135bf0512c11f7f21f9d0689e8ea5b4a2529 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 13 Oct 2021 12:57:40 +0900
+Subject: [PATCH] sd-device-monitor: update log message to clarify the error
+ will be ignored
+
+(cherry picked from commit 6b652c03a47aa28898dffd408543c06670e3450d)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/82b2135bf0512c11f7f21f9d0689e8ea5b4a2529
+---
+ src/libsystemd/sd-device/device-monitor.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/libsystemd/sd-device/device-monitor.c b/src/libsystemd/sd-device/device-monitor.c
+index b485e3e2b6..2cb35951de 100644
+--- a/src/libsystemd/sd-device/device-monitor.c
++++ b/src/libsystemd/sd-device/device-monitor.c
+@@ -178,7 +178,7 @@ int device_monitor_new_full(sd_device_monitor **ret, MonitorNetlinkGroup group,
+ 
+                 netns = ioctl(m->sock, SIOCGSKNS);
+                 if (netns < 0)
+-                        log_debug_errno(errno, "sd-device-monitor: Unable to get network namespace of udev netlink socket, unable to determine if we are in host netns: %m");
++                        log_debug_errno(errno, "sd-device-monitor: Unable to get network namespace of udev netlink socket, unable to determine if we are in host netns, ignoring: %m");
+                 else {
+                         struct stat a, b;
+ 
+@@ -191,9 +191,9 @@ int device_monitor_new_full(sd_device_monitor **ret, MonitorNetlinkGroup group,
+                                 if (ERRNO_IS_PRIVILEGE(errno))
+                                         /* If we can't access PID1's netns info due to permissions, it's fine, this is a
+                                          * safety check only after all. */
+-                                        log_debug_errno(errno, "sd-device-monitor: No permission to stat PID1's netns, unable to determine if we are in host netns: %m");
++                                        log_debug_errno(errno, "sd-device-monitor: No permission to stat PID1's netns, unable to determine if we are in host netns, ignoring: %m");
+                                 else
+-                                        log_debug_errno(errno, "sd-device-monitor: Failed to stat PID1's netns: %m");
++                                        log_debug_errno(errno, "sd-device-monitor: Failed to stat PID1's netns, ignoring: %m");
+ 
+                         } else if (a.st_dev != b.st_dev || a.st_ino != b.st_ino)
+                                 log_debug("sd-device-monitor: Netlink socket we listen on is not from host netns, we won't see device events.");
+-- 
+2.33.0
+

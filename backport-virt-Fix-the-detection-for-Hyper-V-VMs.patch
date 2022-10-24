@@ -1,0 +1,45 @@
+From ba22ee4985c6ca690b84fdca36cf012b200a3c4e Mon Sep 17 00:00:00 2001
+From: Boqun Feng <boqun.feng@gmail.com>
+Date: Tue, 23 Nov 2021 15:09:26 +0800
+Subject: [PATCH] virt: Fix the detection for Hyper-V VMs
+
+Use product_version instead of product_name in DMI table and the string
+"Hyper-V" to avoid misdetection.
+
+Fixes: #21468
+
+Signed-off-by: Boqun Feng <boqun.feng@gmail.com>
+(cherry picked from commit 76eec0649936d9ae2f9087769f463feaf0cf5cb4)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/ba22ee4985c6ca690b84fdca36cf012b200a3c4e
+---
+ src/basic/virt.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/basic/virt.c b/src/basic/virt.c
+index cc123a286f..bbc583ae52 100644
+--- a/src/basic/virt.c
++++ b/src/basic/virt.c
+@@ -146,7 +146,8 @@ static int detect_vm_dmi_vendor(void) {
+                 "/sys/class/dmi/id/product_name", /* Test this before sys_vendor to detect KVM over QEMU */
+                 "/sys/class/dmi/id/sys_vendor",
+                 "/sys/class/dmi/id/board_vendor",
+-                "/sys/class/dmi/id/bios_vendor"
++                "/sys/class/dmi/id/bios_vendor",
++                "/sys/class/dmi/id/product_version" /* For Hyper-V VMs test */
+         };
+ 
+         static const struct {
+@@ -165,7 +166,7 @@ static int detect_vm_dmi_vendor(void) {
+                 { "Parallels",           VIRTUALIZATION_PARALLELS },
+                 /* https://wiki.freebsd.org/bhyve */
+                 { "BHYVE",               VIRTUALIZATION_BHYVE     },
+-                { "Microsoft",           VIRTUALIZATION_MICROSOFT },
++                { "Hyper-V",             VIRTUALIZATION_MICROSOFT },
+         };
+         int r;
+ 
+-- 
+2.33.0
+

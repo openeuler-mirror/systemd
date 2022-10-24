@@ -1,0 +1,29 @@
+From e05915315fdf21ee51ec1501e02d04ba1e9af045 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 24 Nov 2021 18:36:00 +0100
+Subject: [PATCH] homework: fix a bad error propagation
+
+(cherry picked from commit b05f4495bd374dc28d39ea43ac7cec3f0fea4071)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e05915315fdf21ee51ec1501e02d04ba1e9af045
+---
+ src/home/homework.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/home/homework.c b/src/home/homework.c
+index b20b4bdf3e..32a42c5d09 100644
+--- a/src/home/homework.c
++++ b/src/home/homework.c
+@@ -485,7 +485,7 @@ static int write_identity_file(int root_fd, JsonVariant *v, uid_t uid) {
+         }
+ 
+         if (fchown(fileno(identity_file), uid, uid) < 0) {
+-                log_error_errno(r, "Failed to change ownership of identity file: %m");
++                r = log_error_errno(errno, "Failed to change ownership of identity file: %m");
+                 goto fail;
+         }
+ 
+-- 
+2.33.0
+

@@ -1,0 +1,42 @@
+From b57a0605dd294c00ed34d7bad08a9c33f9810a2d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Thu, 3 Mar 2022 18:56:06 +0100
+Subject: [PATCH] portablectl: reorder if branches to match previous
+ conditional in the same function
+
+One is a ternary op, the other an normal conditional, but they should still use
+the same order of branches.
+
+(cherry picked from commit 573e33de078956ded078653ef3f90f93469b4dbf)
+(cherry picked from commit 7856dc310906cb8b09d27b7175b322129bd619b6)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/b57a0605dd294c00ed34d7bad08a9c33f9810a2d
+---
+ src/portable/portablectl.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/portable/portablectl.c b/src/portable/portablectl.c
+index af5e78c998..827d7a7b4a 100644
+--- a/src/portable/portablectl.c
++++ b/src/portable/portablectl.c
+@@ -927,12 +927,13 @@ static int detach_image(int argc, char *argv[], void *userdata) {
+         if (r < 0)
+                 return r;
+ 
+-        if (!strv_isempty(arg_extension_images)) {
++        if (strv_isempty(arg_extension_images))
++                r = sd_bus_message_append(m, "b", arg_runtime);
++        else {
+                 uint64_t flags = arg_runtime ? PORTABLE_RUNTIME : 0;
+ 
+                 r = sd_bus_message_append(m, "t", flags);
+-        } else
+-                r = sd_bus_message_append(m, "b", arg_runtime);
++        }
+         if (r < 0)
+                 return bus_log_create_error(r);
+ 
+-- 
+2.33.0
+

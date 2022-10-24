@@ -1,0 +1,53 @@
+From eeb50421761e3ac562e96c47fb5f0f6ed622cfe1 Mon Sep 17 00:00:00 2001
+From: Christian Brauner <brauner@kernel.org>
+Date: Fri, 21 Jan 2022 13:08:19 +0100
+Subject: [PATCH] core/namespace: allow using ProtectSubset=pid and
+ ProtectHostname=true together
+
+If a service requests both ProtectSubset=pid and ProtectHostname=true
+then it will currently fail to start. The ProcSubset=pid option
+instructs systemd to mount procfs for the service with subset=pid which
+hides all entries other than /proc/<pid>. Consequently trying to
+interact with the two files /proc/sys/kernel/{hostname,domainname}
+covered by ProtectHostname=true will fail.
+
+Fix this by only performing this check when ProtectSubset=pid is not
+requested. Essentially ProtectSubset=pid implies/provides
+ProtectHostname=true.
+
+(cherry picked from commit 1361f015773e3b4d74e382edf1565f3315a3396b)
+(cherry picked from commit a727941affa7821592d503c8a5033c92d615f64c)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/eeb50421761e3ac562e96c47fb5f0f6ed622cfe1
+---
+ src/core/namespace.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/core/namespace.c b/src/core/namespace.c
+index e3aebe8b5e..5961b14f98 100644
+--- a/src/core/namespace.c
++++ b/src/core/namespace.c
+@@ -2115,14 +2115,19 @@ int setup_namespace(
+                                 goto finish;
+                 }
+ 
++                /* Note, if proc is mounted with subset=pid then neither of the
++                 * two paths will exist, i.e. they are implicitly protected by
++                 * the mount option. */
+                 if (ns_info->protect_hostname) {
+                         *(m++) = (MountEntry) {
+                                 .path_const = "/proc/sys/kernel/hostname",
+                                 .mode = READONLY,
++                                .ignore = ignore_protect_proc,
+                         };
+                         *(m++) = (MountEntry) {
+                                 .path_const = "/proc/sys/kernel/domainname",
+                                 .mode = READONLY,
++                                .ignore = ignore_protect_proc,
+                         };
+                 }
+ 
+-- 
+2.33.0
+

@@ -1,0 +1,35 @@
+From 034a23c640c74856df76b3af5fdc4af5cb48256b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Christian=20G=C3=B6ttsche?= <cgzones@googlemail.com>
+Date: Mon, 6 Dec 2021 16:57:42 +0100
+Subject: [PATCH] core: use correct level for CPU time log message
+
+raise_level() takes the info condition as second argument and the notice
+one as third. For the consumed CPU time these conditions are swapped.
+
+Fixes: 37109b856aeb ("pid1: use LOG_DEBUG/INFO/NOTICE for unit resource consumption message")
+(cherry picked from commit ef6bb4dd3e3bb9c210c310026b4d827a46acc762)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/034a23c640c74856df76b3af5fdc4af5cb48256b
+---
+ src/core/unit.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/unit.c b/src/core/unit.c
+index c792bd8e82..dfe200ee20 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -2296,8 +2296,8 @@ static int unit_log_resources(Unit *u) {
+                 message_parts[n_message_parts++] = t;
+ 
+                 log_level = raise_level(log_level,
+-                                        nsec > NOTICEWORTHY_CPU_NSEC,
+-                                        nsec > MENTIONWORTHY_CPU_NSEC);
++                                        nsec > MENTIONWORTHY_CPU_NSEC,
++                                        nsec > NOTICEWORTHY_CPU_NSEC);
+         }
+ 
+         for (CGroupIOAccountingMetric k = 0; k < _CGROUP_IO_ACCOUNTING_METRIC_MAX; k++) {
+-- 
+2.33.0
+

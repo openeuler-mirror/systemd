@@ -1,0 +1,48 @@
+From 27028ef0f0bc128d14f41e233ad256687fd7e379 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 1 Dec 2021 21:07:22 +0900
+Subject: [PATCH] core/bpf-firewall: make bpf_firewall_supported() always set
+ unsupported reason when BPF_FIREWALL_UNSUPPORTED is returned
+
+Otherwise, log_unit_full_errno() in emit_bpf_firewall_warning() will
+trigger an assertion.
+
+(cherry picked from commit 8751bb6f5e89562d438566c374b9c3a1059c9211)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/27028ef0f0bc128d14f41e233ad256687fd7e379
+---
+ src/core/bpf-firewall.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/src/core/bpf-firewall.c b/src/core/bpf-firewall.c
+index 9317edeb4c..4a92052925 100644
+--- a/src/core/bpf-firewall.c
++++ b/src/core/bpf-firewall.c
+@@ -869,7 +869,10 @@ int bpf_firewall_supported(void) {
+ 
+                 /* YAY! */
+         } else {
+-                log_debug("Wut? Kernel accepted our invalid BPF_PROG_DETACH call? Something is weird, assuming BPF firewalling is broken and hence not supported.");
++                bpf_firewall_unsupported_reason =
++                        log_debug_errno(SYNTHETIC_ERRNO(EBADE),
++                                        "Wut? Kernel accepted our invalid BPF_PROG_DETACH call? "
++                                        "Something is weird, assuming BPF firewalling is broken and hence not supported.");
+                 return supported = BPF_FIREWALL_UNSUPPORTED;
+         }
+ 
+@@ -897,7 +900,10 @@ int bpf_firewall_supported(void) {
+ 
+                 return supported = BPF_FIREWALL_SUPPORTED;
+         } else {
+-                log_debug("Wut? Kernel accepted our invalid BPF_PROG_ATTACH+BPF_F_ALLOW_MULTI call? Something is weird, assuming BPF firewalling is broken and hence not supported.");
++                bpf_firewall_unsupported_reason =
++                        log_debug_errno(SYNTHETIC_ERRNO(EBADE),
++                                        "Wut? Kernel accepted our invalid BPF_PROG_ATTACH+BPF_F_ALLOW_MULTI call? "
++                                        "Something is weird, assuming BPF firewalling is broken and hence not supported.");
+                 return supported = BPF_FIREWALL_UNSUPPORTED;
+         }
+ }
+-- 
+2.33.0
+

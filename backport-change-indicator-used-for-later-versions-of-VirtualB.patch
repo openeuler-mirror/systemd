@@ -1,0 +1,54 @@
+From 7459b7f4a63de87a6e76e9187893c65291b7931f Mon Sep 17 00:00:00 2001
+From: Greg Zuro <gregzuro@users.noreply.github.com>
+Date: Tue, 26 Oct 2021 21:02:37 -0700
+Subject: [PATCH] change indicator used for later versions of VirtualBox
+ (#21127)
+
+Detection of VirtualBox is accomplished in the existing code by *either* `innotek GmbH`
+or `Oracle Corporation` existing in any of:
+
+- /sys/class/dmi/id/product_name
+- /sys/class/dmi/id/sys_vendor
+- /sys/class/dmi/id/board_vendor
+- /sys/class/dmi/id/bios_vendor
+
+With Oracle's physical servers, both `/sys/class/dmi/id/sys_vendor` and
+`/sys/class/dmi/id/board_vendor` contain `Oracle Corporation`, so those
+servers are detected as `oracle` (VirtualBox).
+
+VirtualBox has the following values in the latest versions:
+
+- /sys/class/dmi/id/product_name: `VirtualBox`
+- /sys/class/dmi/id/sys_vendor: `innotek GmbH`
+- /sys/class/dmi/id/board_vendor: `Oracle Corporation`
+- /sys/class/dmi/id/bios_vendor: `innotek GmbH`
+
+Presumably the existing check for `innotek GmbH` is meant to detect
+older versions of VirtualBox, while changing the second checked value
+from `Oracle Corporation` to `VirtualBox` will reliably detect later and future
+versions.
+
+(cherry picked from commit cfee6b955154c30be31ffcf0e3b7b89374a52fff)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7459b7f4a63de87a6e76e9187893c65291b7931f
+---
+ src/basic/virt.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/basic/virt.c b/src/basic/virt.c
+index 0243b2d2a8..cc123a286f 100644
+--- a/src/basic/virt.c
++++ b/src/basic/virt.c
+@@ -159,7 +159,7 @@ static int detect_vm_dmi_vendor(void) {
+                 { "VMware",              VIRTUALIZATION_VMWARE    }, /* https://kb.vmware.com/s/article/1009458 */
+                 { "VMW",                 VIRTUALIZATION_VMWARE    },
+                 { "innotek GmbH",        VIRTUALIZATION_ORACLE    },
+-                { "Oracle Corporation",  VIRTUALIZATION_ORACLE    },
++                { "VirtualBox",          VIRTUALIZATION_ORACLE    },
+                 { "Xen",                 VIRTUALIZATION_XEN       },
+                 { "Bochs",               VIRTUALIZATION_BOCHS     },
+                 { "Parallels",           VIRTUALIZATION_PARALLELS },
+-- 
+2.33.0
+

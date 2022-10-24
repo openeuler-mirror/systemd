@@ -1,0 +1,28 @@
+From 74af5a3696cd3747fa814a21eb1b3d7cae3dea56 Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Thu, 4 Nov 2021 20:29:43 +0000
+Subject: [PATCH] basic/mountpoint-util: detect erofs as a read-only FS
+
+(cherry picked from commit fac2c3e97d80fb356eb50abb429bdb5ed36afcf1)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/74af5a3696cd3747fa814a21eb1b3d7cae3dea56
+---
+ src/basic/mountpoint-util.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/basic/mountpoint-util.c b/src/basic/mountpoint-util.c
+index e7a5a99551..7e57d9a226 100644
+--- a/src/basic/mountpoint-util.c
++++ b/src/basic/mountpoint-util.c
+@@ -424,6 +424,7 @@ bool fstype_is_ro(const char *fstype) {
+         return STR_IN_SET(fstype,
+                           "DM_verity_hash",
+                           "iso9660",
++                          "erofs",
+                           "squashfs");
+ }
+ 
+-- 
+2.33.0
+

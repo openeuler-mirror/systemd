@@ -1,13 +1,17 @@
-From 6178e2f88956e1900f445908ed053865cc22e879 Mon Sep 17 00:00:00 2001
+From 24a40953d3d6ad8b1429d19da2f66399ae3f7e0b Mon Sep 17 00:00:00 2001
 From: Yu Watanabe <watanabe.yu+github@gmail.com>
 Date: Thu, 5 Aug 2021 03:14:41 +0900
-Subject: [PATCH 2/2] core: wrap cgroup path with empty_to_root() in log
- messages
+Subject: [PATCH] core: wrap cgroup path with empty_to_root() in log messages
 
 This fixes e.g. the following log message:
 ---
 systemd[1]: -.slice: Failed to migrate controller cgroups from , ignoring: Read-only file system
 ---
+
+(cherry picked from commit 6178e2f88956e1900f445908ed053865cc22e879)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/24a40953d3d6ad8b1429d19da2f66399ae3f7e0b
 ---
  src/core/bpf-devices.c |  3 ++-
  src/core/cgroup.c      | 46 +++++++++++++++++++++---------------------
@@ -36,7 +40,7 @@ index 8a345a4498..4daa7f76b0 100644
   finish:
          /* Unref the old BPF program (which will implicitly detach it) right before attaching the new program. */
 diff --git a/src/core/cgroup.c b/src/core/cgroup.c
-index 83bd97327d..da821465da 100644
+index eab0929dc5..3a6f768c60 100644
 --- a/src/core/cgroup.c
 +++ b/src/core/cgroup.c
 @@ -84,7 +84,7 @@ static int set_attribute_and_warn(Unit *u, const char *controller, const char *a
@@ -48,7 +52,7 @@ index 83bd97327d..da821465da 100644
  
          return r;
  }
-@@ -706,25 +706,25 @@ void cgroup_oomd_xattr_apply(Unit *u, const char *cgroup_path) {
+@@ -713,25 +713,25 @@ void cgroup_oomd_xattr_apply(Unit *u, const char *cgroup_path) {
          if (c->moom_preference == MANAGED_OOM_PREFERENCE_OMIT) {
                  r = cg_set_xattr(SYSTEMD_CGROUP_CONTROLLER, cgroup_path, "user.oomd_omit", "1", 1, 0);
                  if (r < 0)
@@ -78,7 +82,7 @@ index 83bd97327d..da821465da 100644
          }
  }
  
-@@ -743,7 +743,7 @@ static void cgroup_xattr_apply(Unit *u) {
+@@ -750,7 +750,7 @@ static void cgroup_xattr_apply(Unit *u) {
                                   sd_id128_to_string(u->invocation_id, ids), 32,
                                   0);
                  if (r < 0)
@@ -87,7 +91,7 @@ index 83bd97327d..da821465da 100644
          }
  
          if (unit_cgroup_delegate(u)) {
-@@ -752,11 +752,11 @@ static void cgroup_xattr_apply(Unit *u) {
+@@ -759,11 +759,11 @@ static void cgroup_xattr_apply(Unit *u) {
                                   "1", 1,
                                   0);
                  if (r < 0)
@@ -101,7 +105,7 @@ index 83bd97327d..da821465da 100644
          }
  
          cgroup_oomd_xattr_apply(u, u->cgroup_path);
-@@ -1913,12 +1913,12 @@ int unit_watch_cgroup(Unit *u) {
+@@ -1921,12 +1921,12 @@ int unit_watch_cgroup(Unit *u) {
                                        * is not an error */
                          return 0;
  
@@ -116,7 +120,7 @@ index 83bd97327d..da821465da 100644
  
          return 0;
  }
-@@ -1976,12 +1976,12 @@ int unit_watch_cgroup_memory(Unit *u) {
+@@ -1984,12 +1984,12 @@ int unit_watch_cgroup_memory(Unit *u) {
                                        * is not an error */
                          return 0;
  
@@ -131,7 +135,7 @@ index 83bd97327d..da821465da 100644
  
          return 0;
  }
-@@ -2004,9 +2004,9 @@ int unit_pick_cgroup_path(Unit *u) {
+@@ -2012,9 +2012,9 @@ int unit_pick_cgroup_path(Unit *u) {
  
          r = unit_set_cgroup_path(u, path);
          if (r == -EEXIST)
@@ -143,7 +147,7 @@ index 83bd97327d..da821465da 100644
  
          return 0;
  }
-@@ -2034,7 +2034,7 @@ static int unit_update_cgroup(
+@@ -2042,7 +2042,7 @@ static int unit_update_cgroup(
          /* First, create our own group */
          r = cg_create_everywhere(u->manager->cgroup_supported, target_mask, u->cgroup_path);
          if (r < 0)
@@ -152,7 +156,7 @@ index 83bd97327d..da821465da 100644
          created = r;
  
          /* Start watching it */
-@@ -2050,7 +2050,7 @@ static int unit_update_cgroup(
+@@ -2058,7 +2058,7 @@ static int unit_update_cgroup(
                  /* Enable all controllers we need */
                  r = cg_enable_everywhere(u->manager->cgroup_supported, enable_mask, u->cgroup_path, &result_mask);
                  if (r < 0)
@@ -161,7 +165,7 @@ index 83bd97327d..da821465da 100644
  
                  /* Remember what's actually enabled now */
                  u->cgroup_enabled_mask = result_mask;
-@@ -2072,12 +2072,12 @@ static int unit_update_cgroup(
+@@ -2080,12 +2080,12 @@ static int unit_update_cgroup(
          if (cg_all_unified() == 0) {
                  r = cg_migrate_v1_controllers(u->manager->cgroup_supported, migrate_mask, u->cgroup_path, migrate_callback, u);
                  if (r < 0)
@@ -176,7 +180,7 @@ index 83bd97327d..da821465da 100644
          }
  
          /* Set attributes */
-@@ -2167,7 +2167,7 @@ int unit_attach_pids_to_cgroup(Unit *u, Set *pids, const char *suffix_path) {
+@@ -2175,7 +2175,7 @@ int unit_attach_pids_to_cgroup(Unit *u, Set *pids, const char *suffix_path) {
  
                          log_unit_full_errno(u, again ? LOG_DEBUG : LOG_INFO,  q,
                                              "Couldn't move process "PID_FMT" to%s requested cgroup '%s': %m",
@@ -185,7 +189,7 @@ index 83bd97327d..da821465da 100644
  
                          if (again) {
                                  int z;
-@@ -2179,7 +2179,7 @@ int unit_attach_pids_to_cgroup(Unit *u, Set *pids, const char *suffix_path) {
+@@ -2187,7 +2187,7 @@ int unit_attach_pids_to_cgroup(Unit *u, Set *pids, const char *suffix_path) {
  
                                  z = unit_attach_pid_to_cgroup_via_bus(u, pid, suffix_path);
                                  if (z < 0)
@@ -194,7 +198,7 @@ index 83bd97327d..da821465da 100644
                                  else
                                          continue; /* When the bus thing worked via the bus we are fully done for this PID. */
                          }
-@@ -2213,7 +2213,7 @@ int unit_attach_pids_to_cgroup(Unit *u, Set *pids, const char *suffix_path) {
+@@ -2221,7 +2221,7 @@ int unit_attach_pids_to_cgroup(Unit *u, Set *pids, const char *suffix_path) {
                                          continue; /* Success! */
  
                                  log_unit_debug_errno(u, q, "Failed to attach PID " PID_FMT " to requested cgroup %s in controller %s, falling back to unit's cgroup: %m",
@@ -203,7 +207,7 @@ index 83bd97327d..da821465da 100644
                          }
  
                          /* So this controller is either not delegate or realized, or something else weird happened. In
-@@ -2648,7 +2648,7 @@ void unit_prune_cgroup(Unit *u) {
+@@ -2656,7 +2656,7 @@ void unit_prune_cgroup(Unit *u) {
                   * the containing slice is stopped. So even if we failed now, this unit shouldn't assume
                   * that the cgroup is still realized the next time it is started. Do not return early
                   * on error, continue cleanup. */
@@ -212,7 +216,7 @@ index 83bd97327d..da821465da 100644
  
          if (is_root_slice)
                  return;
-@@ -2861,7 +2861,7 @@ void unit_add_to_cgroup_empty_queue(Unit *u) {
+@@ -2869,7 +2869,7 @@ void unit_add_to_cgroup_empty_queue(Unit *u) {
  
          r = cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, u->cgroup_path);
          if (r < 0) {
@@ -222,7 +226,7 @@ index 83bd97327d..da821465da 100644
          }
          if (r == 0)
 diff --git a/src/core/unit.c b/src/core/unit.c
-index 6273926013..8ce94ccb75 100644
+index 30afd5a776..47966bcf0d 100644
 --- a/src/core/unit.c
 +++ b/src/core/unit.c
 @@ -427,7 +427,7 @@ bool unit_may_gc(Unit *u) {
@@ -234,7 +238,7 @@ index 6273926013..8ce94ccb75 100644
                  if (r <= 0)
                          return false;
          }
-@@ -4548,7 +4548,7 @@ int unit_kill_context(
+@@ -4553,7 +4553,7 @@ int unit_kill_context(
                                        log_func, u);
                  if (r < 0) {
                          if (!IN_SET(r, -EAGAIN, -ESRCH, -ENOENT))
@@ -243,7 +247,7 @@ index 6273926013..8ce94ccb75 100644
  
                  } else if (r > 0) {
  
-@@ -5006,7 +5006,7 @@ int unit_fork_helper_process(Unit *u, const char *name, pid_t *ret) {
+@@ -5011,7 +5011,7 @@ int unit_fork_helper_process(Unit *u, const char *name, pid_t *ret) {
          if (u->cgroup_path) {
                  r = cg_attach_everywhere(u->manager->cgroup_supported, u->cgroup_path, 0, NULL, NULL);
                  if (r < 0) {
@@ -253,5 +257,5 @@ index 6273926013..8ce94ccb75 100644
                  }
          }
 -- 
-2.27.0
+2.33.0
 

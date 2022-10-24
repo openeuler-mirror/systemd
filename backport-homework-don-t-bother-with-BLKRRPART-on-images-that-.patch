@@ -1,0 +1,43 @@
+From 7b3ff9a957630535ec58aeca7e41e6c63fa99114 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 15 Oct 2021 11:23:00 +0200
+Subject: [PATCH] homework: don't bother with BLKRRPART on images that aren't
+ block devices
+
+We currently call this ioctl even if we are backed by a regular file,
+which is actually the common case. While this doesn't really hurt, it
+does result in very confusing logs.
+
+(cherry picked from commit 6a1301d8c97dc650e4355bb7c193f5821b3383a8)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/7b3ff9a957630535ec58aeca7e41e6c63fa99114
+---
+ src/home/homework-luks.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/home/homework-luks.c b/src/home/homework-luks.c
+index 64bbfe3c77..38d7d7cc70 100644
+--- a/src/home/homework-luks.c
++++ b/src/home/homework-luks.c
+@@ -2813,7 +2813,7 @@ int home_resize_luks(
+                 if (r > 0)
+                         log_info("Growing of partition completed.");
+ 
+-                if (ioctl(image_fd, BLKRRPART, 0) < 0)
++                if (S_ISBLK(st.st_mode) && ioctl(image_fd, BLKRRPART, 0) < 0)
+                         log_debug_errno(errno, "BLKRRPART failed on block device, ignoring: %m");
+ 
+                 /* Tell LUKS about the new bigger size too */
+@@ -2887,7 +2887,7 @@ int home_resize_luks(
+                 if (r > 0)
+                         log_info("Shrinking of partition completed.");
+ 
+-                if (ioctl(image_fd, BLKRRPART, 0) < 0)
++                if (S_ISBLK(st.st_mode) && ioctl(image_fd, BLKRRPART, 0) < 0)
+                         log_debug_errno(errno, "BLKRRPART failed on block device, ignoring: %m");
+         } else {
+                 r = home_store_embedded_identity(new_home, setup->root_fd, h->uid, embedded_home);
+-- 
+2.33.0
+

@@ -1,0 +1,38 @@
+From 2b2804757c8520b5cc133d9a3078f6fbec4a69cb Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Mon, 27 Sep 2021 14:28:16 +0200
+Subject: [PATCH] resolved: suppress writing DNS server info into
+ /etc/resolv.conf for non-standard UDP ports
+
+glibc doesn't support this, hence don#t generate it.
+
+Fixes: #20836
+(cherry picked from commit a50dadf2fd7413bbfc26af7e2ad2900b3e06af82)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/2b2804757c8520b5cc133d9a3078f6fbec4a69cb
+---
+ src/resolve/resolved-resolv-conf.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/resolve/resolved-resolv-conf.c b/src/resolve/resolved-resolv-conf.c
+index dd02d368e9..d5a77605a8 100644
+--- a/src/resolve/resolved-resolv-conf.c
++++ b/src/resolve/resolved-resolv-conf.c
+@@ -216,6 +216,13 @@ static void write_resolv_conf_server(DnsServer *s, FILE *f, unsigned *count) {
+                 return;
+         }
+ 
++        /* resolv.conf simply doesn't support any other ports than 53, hence there's nothing much we can
++         * do — we have to suppress these entries */
++        if (dns_server_port(s) != 53) {
++                log_debug("DNS server %s with non-standard UDP port number, suppressing from generated resolv.conf.", dns_server_string(s));
++                return;
++        }
++
+         /* Check if the scope this DNS server belongs to is suitable as 'default' route for lookups; resolv.conf does
+          * not have a syntax to express that, so it must not appear as a global name server to avoid routing unrelated
+          * domains to it (which is a privacy violation, will most probably fail anyway, and adds unnecessary load) */
+-- 
+2.33.0
+

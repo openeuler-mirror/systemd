@@ -1,0 +1,116 @@
+From 8cc818cdc726c8185387b413e8a2f31e00d7c185 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Wed, 23 Feb 2022 07:50:30 +0900
+Subject: [PATCH] resolve: make dns_scope_good_domain() take DnsQuery*
+
+(cherry picked from commit 176a9a2cca47f7c1553d96f7dd51c2193a269dbc)
+(cherry picked from commit 54ab65f5f3da22985126dc3ae846a777d6b555a9)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/8cc818cdc726c8185387b413e8a2f31e00d7c185
+---
+ src/resolve/resolved-dns-query.c | 14 ++------------
+ src/resolve/resolved-dns-scope.c | 21 +++++++++++++++++----
+ src/resolve/resolved-dns-scope.h |  4 ++--
+ 3 files changed, 21 insertions(+), 18 deletions(-)
+
+diff --git a/src/resolve/resolved-dns-query.c b/src/resolve/resolved-dns-query.c
+index 4d15240e25..24cd7cddf5 100644
+--- a/src/resolve/resolved-dns-query.c
++++ b/src/resolve/resolved-dns-query.c
+@@ -736,13 +736,8 @@ int dns_query_go(DnsQuery *q) {
+ 
+         LIST_FOREACH(scopes, s, q->manager->dns_scopes) {
+                 DnsScopeMatch match;
+-                const char *name;
+ 
+-                name = dns_question_first_name(dns_query_question_for_protocol(q, s->protocol));
+-                if (!name)
+-                        continue;
+-
+-                match = dns_scope_good_domain(s, q->ifindex, q->flags, name);
++                match = dns_scope_good_domain(s, q);
+                 assert(match >= 0);
+                 if (match > found) { /* Does this match better? If so, remember how well it matched, and the first one
+                                       * that matches this well */
+@@ -768,13 +763,8 @@ int dns_query_go(DnsQuery *q) {
+ 
+         LIST_FOREACH(scopes, s, first->scopes_next) {
+                 DnsScopeMatch match;
+-                const char *name;
+-
+-                name = dns_question_first_name(dns_query_question_for_protocol(q, s->protocol));
+-                if (!name)
+-                        continue;
+ 
+-                match = dns_scope_good_domain(s, q->ifindex, q->flags, name);
++                match = dns_scope_good_domain(s, q);
+                 assert(match >= 0);
+                 if (match < found)
+                         continue;
+diff --git a/src/resolve/resolved-dns-scope.c b/src/resolve/resolved-dns-scope.c
+index 2546d0d4da..47edba6bc3 100644
+--- a/src/resolve/resolved-dns-scope.c
++++ b/src/resolve/resolved-dns-scope.c
+@@ -584,11 +584,13 @@ static DnsScopeMatch match_subnet_reverse_lookups(
+ 
+ DnsScopeMatch dns_scope_good_domain(
+                 DnsScope *s,
+-                int ifindex,
+-                uint64_t flags,
+-                const char *domain) {
++                DnsQuery *q) {
+ 
++        DnsQuestion *question;
+         DnsSearchDomain *d;
++        const char *domain;
++        uint64_t flags;
++        int ifindex;
+ 
+         /* This returns the following return values:
+          *
+@@ -602,7 +604,18 @@ DnsScopeMatch dns_scope_good_domain(
+          */
+ 
+         assert(s);
+-        assert(domain);
++        assert(q);
++
++        question = dns_query_question_for_protocol(q, s->protocol);
++        if (!question)
++                return DNS_SCOPE_NO;
++
++        domain = dns_question_first_name(question);
++        if (!domain)
++                return DNS_SCOPE_NO;
++
++        ifindex = q->ifindex;
++        flags = q->flags;
+ 
+         /* Checks if the specified domain is something to look up on this scope. Note that this accepts
+          * non-qualified hostnames, i.e. those without any search path suffixed. */
+diff --git a/src/resolve/resolved-dns-scope.h b/src/resolve/resolved-dns-scope.h
+index a2b9546b38..1f9d22b7d1 100644
+--- a/src/resolve/resolved-dns-scope.h
++++ b/src/resolve/resolved-dns-scope.h
+@@ -10,7 +10,7 @@ typedef struct DnsScope DnsScope;
+ #include "resolved-dns-cache.h"
+ #include "resolved-dns-dnssec.h"
+ #include "resolved-dns-packet.h"
+-
++#include "resolved-dns-query.h"
+ #include "resolved-dns-search-domain.h"
+ #include "resolved-dns-server.h"
+ #include "resolved-dns-stream.h"
+@@ -76,7 +76,7 @@ int dns_scope_emit_udp(DnsScope *s, int fd, int af, DnsPacket *p);
+ int dns_scope_socket_tcp(DnsScope *s, int family, const union in_addr_union *address, DnsServer *server, uint16_t port, union sockaddr_union *ret_socket_address);
+ int dns_scope_socket_udp(DnsScope *s, DnsServer *server);
+ 
+-DnsScopeMatch dns_scope_good_domain(DnsScope *s, int ifindex, uint64_t flags, const char *domain);
++DnsScopeMatch dns_scope_good_domain(DnsScope *s, DnsQuery *q);
+ bool dns_scope_good_key(DnsScope *s, const DnsResourceKey *key);
+ 
+ DnsServer *dns_scope_get_dns_server(DnsScope *s);
+-- 
+2.33.0
+

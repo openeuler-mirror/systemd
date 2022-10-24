@@ -1,0 +1,29 @@
+From 4e9f1d0a28cc29d1f010b05d74898f222d757cc8 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 29 Aug 2021 20:55:44 +0900
+Subject: [PATCH] timesync: check cmsg length
+
+(cherry picked from commit 37df6d9b8d3a8b34bec5346766ab8093c0f0fc26)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/4e9f1d0a28cc29d1f010b05d74898f222d757cc8
+---
+ src/timesync/timesyncd-manager.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/timesync/timesyncd-manager.c b/src/timesync/timesyncd-manager.c
+index eae14e8fb2..648e804105 100644
+--- a/src/timesync/timesyncd-manager.c
++++ b/src/timesync/timesyncd-manager.c
+@@ -467,6 +467,8 @@ static int manager_receive_response(sd_event_source *source, int fd, uint32_t re
+ 
+                 switch (cmsg->cmsg_type) {
+                 case SCM_TIMESTAMPNS:
++                        assert(cmsg->cmsg_len == CMSG_LEN(sizeof(struct timespec)));
++
+                         recv_time = (struct timespec *) CMSG_DATA(cmsg);
+                         break;
+                 }
+-- 
+2.33.0
+

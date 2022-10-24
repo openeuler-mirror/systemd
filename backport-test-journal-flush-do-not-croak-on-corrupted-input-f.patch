@@ -1,0 +1,44 @@
+From 0d98afa9548873669531fb3f8aa0f1ab56455411 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Fri, 26 Nov 2021 09:46:02 +0100
+Subject: [PATCH] test-journal-flush: do not croak on corrupted input files
+
+We would fail if the input file was corrupted:
+build/test-journal-flush ./system@0005b7dac334f805-0021aca076ae5c5e.journal\~
+journal_file_copy_entry failed: Bad message
+Assertion 'r >= 0' failed at src/libsystemd/sd-journal/test-journal-flush.c:55, function main(). Aborting.
+[1]    619472 IOT instruction (core dumped)  build/test-journal-flush ./system@0005b7dac334f805-0021aca076ae5c5e.journal\~
+
+Let's skip some "reasonable" errors.
+
+Fixes #17963.
+
+(cherry picked from commit b4046d55570ff0e23d16f7e2912e7ef0a55b25d8)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/0d98afa9548873669531fb3f8aa0f1ab56455411
+---
+ src/libsystemd/sd-journal/test-journal-flush.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/src/libsystemd/sd-journal/test-journal-flush.c b/src/libsystemd/sd-journal/test-journal-flush.c
+index aa814225dd..c6fb65791e 100644
+--- a/src/libsystemd/sd-journal/test-journal-flush.c
++++ b/src/libsystemd/sd-journal/test-journal-flush.c
+@@ -51,8 +51,11 @@ int main(int argc, char *argv[]) {
+ 
+                 r = journal_file_copy_entry(f, new_journal, o, f->current_offset);
+                 if (r < 0)
+-                        log_error_errno(r, "journal_file_copy_entry failed: %m");
+-                assert_se(r >= 0);
++                        log_warning_errno(r, "journal_file_copy_entry failed: %m");
++                assert_se(r >= 0 ||
++                          IN_SET(r, -EBADMSG,         /* corrupted file */
++                                    -EPROTONOSUPPORT, /* unsupported compression */
++                                    -EIO));           /* file rotated */
+ 
+                 if (++n >= 10000)
+                         break;
+-- 
+2.33.0
+

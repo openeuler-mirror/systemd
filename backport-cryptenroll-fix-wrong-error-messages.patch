@@ -1,0 +1,40 @@
+From a9149ef71dbfafd964b4e509690418be602c6eb6 Mon Sep 17 00:00:00 2001
+From: Gibeom Gwon <gb.gwon@stackframe.dev>
+Date: Fri, 3 Dec 2021 15:10:50 +0900
+Subject: [PATCH] cryptenroll: fix wrong error messages
+
+PKCS#11 -> FIDO2 in cryptenroll-fido2.c
+
+(cherry picked from commit 4b9aa29bc9ded35147f9fa77f77e13c3c6fa7fcf)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/a9149ef71dbfafd964b4e509690418be602c6eb6
+---
+ src/cryptenroll/cryptenroll-fido2.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/cryptenroll/cryptenroll-fido2.c b/src/cryptenroll/cryptenroll-fido2.c
+index fbf76ee586..9e1d94bd16 100644
+--- a/src/cryptenroll/cryptenroll-fido2.c
++++ b/src/cryptenroll/cryptenroll-fido2.c
+@@ -67,7 +67,7 @@ int enroll_fido2(
+                         base64_encoded,
+                         strlen(base64_encoded));
+         if (keyslot < 0)
+-                return log_error_errno(keyslot, "Failed to add new PKCS#11 key to %s: %m", node);
++                return log_error_errno(keyslot, "Failed to add new FIDO2 key to %s: %m", node);
+ 
+         if (asprintf(&keyslot_as_string, "%i", keyslot) < 0)
+                 return log_oom();
+@@ -83,7 +83,7 @@ int enroll_fido2(
+                                        JSON_BUILD_PAIR("fido2-up-required", JSON_BUILD_BOOLEAN(FLAGS_SET(lock_with, FIDO2ENROLL_UP))),
+                                        JSON_BUILD_PAIR("fido2-uv-required", JSON_BUILD_BOOLEAN(FLAGS_SET(lock_with, FIDO2ENROLL_UV)))));
+         if (r < 0)
+-                return log_error_errno(r, "Failed to prepare PKCS#11 JSON token object: %m");
++                return log_error_errno(r, "Failed to prepare FIDO2 JSON token object: %m");
+ 
+         r = cryptsetup_add_token_json(cd, v);
+         if (r < 0)
+-- 
+2.33.0
+

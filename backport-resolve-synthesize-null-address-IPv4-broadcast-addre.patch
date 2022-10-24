@@ -1,0 +1,41 @@
+From a3d2c2b669149fe7e1bfdfa0c72c39653bef2e4c Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 24 Jan 2022 06:36:53 +0900
+Subject: [PATCH] resolve: synthesize null address, IPv4 broadcast address, or
+ invalid domain
+
+These are filtered in `dns_scope_good_domain()`, but not synthesized.
+
+Fixes #22229.
+
+(cherry picked from commit 46b53e8035fb60c9a7f26dd32d6689ab3b7da97c)
+(cherry picked from commit 89b439ee00e3fbee47cda3f790cbf320538cae7f)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/a3d2c2b669149fe7e1bfdfa0c72c39653bef2e4c
+---
+ src/resolve/resolved-dns-synthesize.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/resolve/resolved-dns-synthesize.c b/src/resolve/resolved-dns-synthesize.c
+index ea239e686d..0914515fdf 100644
+--- a/src/resolve/resolved-dns-synthesize.c
++++ b/src/resolve/resolved-dns-synthesize.c
+@@ -397,6 +397,14 @@ int dns_synthesize_answer(
+                 if (dns_name_is_empty(name)) {
+                         /* Do nothing. */
+ 
++                } else if (dns_name_endswith(name, "0.in-addr.arpa") > 0 ||
++                           dns_name_equal(name, "255.255.255.255.in-addr.arpa") > 0 ||
++                           dns_name_equal(name, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa") > 0 ||
++                           dns_name_endswith(name, "invalid") > 0) {
++
++                        nxdomain = true;
++                        continue;
++
+                 } else if (is_localhost(name)) {
+ 
+                         r = synthesize_localhost_rr(m, key, ifindex, &answer);
+-- 
+2.33.0
+

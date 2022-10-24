@@ -1,0 +1,46 @@
+From 9370cf015e54e2201227c27271506e63ad8c3e1d Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Wed, 19 Jan 2022 00:27:45 +0000
+Subject: [PATCH] sysext: use LO_FLAGS_PARTSCAN when opening image
+
+Jan 17 12:34:59 myguest1 (sd-sysext)[486]: Device '/var/lib/extensions/myext.raw' is loopback block device with partition scanning turned off, please turn it on.
+
+Fixes https://github.com/systemd/systemd/issues/22146
+
+(cherry picked from commit 70a5c6dce0872b3bb0a39be250adde86a0c8f35c)
+(cherry picked from commit 4ef7122f3c3328aa01e1ed187a793e7b1595ee87)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9370cf015e54e2201227c27271506e63ad8c3e1d
+---
+ src/sysext/sysext.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/sysext/sysext.c b/src/sysext/sysext.c
+index 572e4007fe..bcd87ab152 100644
+--- a/src/sysext/sysext.c
++++ b/src/sysext/sysext.c
+@@ -2,6 +2,7 @@
+ 
+ #include <fcntl.h>
+ #include <getopt.h>
++#include <linux/loop.h>
+ #include <sys/mount.h>
+ #include <unistd.h>
+ 
+@@ -523,7 +524,11 @@ static int merge_subprocess(Hashmap *images, const char *workspace) {
+                         if (verity_settings.data_path)
+                                 flags |= DISSECT_IMAGE_NO_PARTITION_TABLE;
+ 
+-                        r = loop_device_make_by_path(img->path, O_RDONLY, 0, &d);
++                        r = loop_device_make_by_path(
++                                        img->path,
++                                        O_RDONLY,
++                                        FLAGS_SET(flags, DISSECT_IMAGE_NO_PARTITION_TABLE) ? 0 : LO_FLAGS_PARTSCAN,
++                                        &d);
+                         if (r < 0)
+                                 return log_error_errno(r, "Failed to set up loopback device for %s: %m", img->path);
+ 
+-- 
+2.33.0
+

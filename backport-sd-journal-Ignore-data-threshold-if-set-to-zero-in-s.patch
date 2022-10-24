@@ -1,0 +1,35 @@
+From 99ae9b83b42abbe54c059ae964b737b64ae17df9 Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Wed, 15 Sep 2021 13:05:46 +0100
+Subject: [PATCH] sd-journal: Ignore data threshold if set to zero in
+ sd_journal_enumerate_fields()
+
+According to the documentation, Setting the data threshold to zero disables the
+data threshold alltogether. Let's make sure we actually implement this behaviour
+in sd_journal_enumerate_fields() by only applying the data threshold if it exceeds
+zero.
+
+(cherry picked from commit adbd80f51088058d55e703abe0ac11476cfe0ba4)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/99ae9b83b42abbe54c059ae964b737b64ae17df9
+---
+ src/libsystemd/sd-journal/sd-journal.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/libsystemd/sd-journal/sd-journal.c b/src/libsystemd/sd-journal/sd-journal.c
+index a2fbc1b037..b3240177cb 100644
+--- a/src/libsystemd/sd-journal/sd-journal.c
++++ b/src/libsystemd/sd-journal/sd-journal.c
+@@ -3178,7 +3178,7 @@ _public_ int sd_journal_enumerate_fields(sd_journal *j, const char **field) {
+                 if (memchr(o->field.payload, 0, sz))
+                         return -EBADMSG;
+ 
+-                if (sz > j->data_threshold)
++                if (j->data_threshold > 0 && sz > j->data_threshold)
+                         sz = j->data_threshold;
+ 
+                 if (!GREEDY_REALLOC(j->fields_buffer, sz + 1))
+-- 
+2.33.0
+

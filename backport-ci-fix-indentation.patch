@@ -1,0 +1,82 @@
+From 6db77b2c9f31c8246ec920a189fe44873111566f Mon Sep 17 00:00:00 2001
+From: Frantisek Sumsal <frantisek@sumsal.cz>
+Date: Wed, 10 Nov 2021 16:42:07 +0100
+Subject: [PATCH] ci: fix indentation
+
+(cherry picked from commit 46573ee1319ee8ae5b292a0a737740eca1a68184)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/6db77b2c9f31c8246ec920a189fe44873111566f
+---
+ .github/workflows/cifuzz.yml | 58 ++++++++++++++++++------------------
+ 1 file changed, 29 insertions(+), 29 deletions(-)
+
+diff --git a/.github/workflows/cifuzz.yml b/.github/workflows/cifuzz.yml
+index 14d81a67ff..5296dc7069 100644
+--- a/.github/workflows/cifuzz.yml
++++ b/.github/workflows/cifuzz.yml
+@@ -16,32 +16,32 @@ on:
+     branches:
+       - main
+ jobs:
+- Fuzzing:
+-   runs-on: ubuntu-latest
+-   if: github.repository == 'systemd/systemd'
+-   strategy:
+-     fail-fast: false
+-     matrix:
+-       sanitizer: [address, undefined, memory]
+-   steps:
+-   - name: Build Fuzzers (${{ matrix.sanitizer }})
+-     id: build
+-     uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
+-     with:
+-       oss-fuzz-project-name: 'systemd'
+-       dry-run: false
+-       allowed-broken-targets-percentage: 0
+-       sanitizer: ${{ matrix.sanitizer }}
+-   - name: Run Fuzzers (${{ matrix.sanitizer }})
+-     uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
+-     with:
+-       oss-fuzz-project-name: 'systemd'
+-       fuzz-seconds: 600
+-       dry-run: false
+-       sanitizer: ${{ matrix.sanitizer }}
+-   - name: Upload Crash
+-     uses: actions/upload-artifact@v1
+-     if: failure() && steps.build.outcome == 'success'
+-     with:
+-       name: ${{ matrix.sanitizer }}-artifacts
+-       path: ./out/artifacts
++  Fuzzing:
++    runs-on: ubuntu-latest
++    if: github.repository == 'systemd/systemd'
++    strategy:
++      fail-fast: false
++      matrix:
++        sanitizer: [address, undefined, memory]
++    steps:
++      - name: Build Fuzzers (${{ matrix.sanitizer }})
++        id: build
++        uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
++        with:
++          oss-fuzz-project-name: 'systemd'
++          dry-run: false
++          allowed-broken-targets-percentage: 0
++          sanitizer: ${{ matrix.sanitizer }}
++      - name: Run Fuzzers (${{ matrix.sanitizer }})
++        uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
++        with:
++          oss-fuzz-project-name: 'systemd'
++          fuzz-seconds: 600
++          dry-run: false
++          sanitizer: ${{ matrix.sanitizer }}
++      - name: Upload Crash
++        uses: actions/upload-artifact@v1
++        if: failure() && steps.build.outcome == 'success'
++        with:
++          name: ${{ matrix.sanitizer }}-artifacts
++          path: ./out/artifacts
+-- 
+2.33.0
+

@@ -1,0 +1,139 @@
+From 494652d95c620f0191f5c7c8f30956e9e98dd62b Mon Sep 17 00:00:00 2001
+From: Luca Boccassi <luca.boccassi@microsoft.com>
+Date: Fri, 26 Nov 2021 17:50:34 +0000
+Subject: [PATCH] portable: move profile search helper to path-lookup
+
+Will be used in systemd-analyze later
+
+(cherry picked from commit 13c02e7bd54e4420c392bd76c0fcf1846c10f99c)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/494652d95c620f0191f5c7c8f30956e9e98dd62b
+---
+ src/basic/path-lookup.c | 28 ++++++++++++++++++++++++++++
+ src/basic/path-lookup.h |  3 +++
+ src/portable/portable.c | 33 ++-------------------------------
+ 3 files changed, 33 insertions(+), 31 deletions(-)
+
+diff --git a/src/basic/path-lookup.c b/src/basic/path-lookup.c
+index 05eb17d66c..83adf4767e 100644
+--- a/src/basic/path-lookup.c
++++ b/src/basic/path-lookup.c
+@@ -8,6 +8,7 @@
+ #include "fs-util.h"
+ #include "log.h"
+ #include "macro.h"
++#include "nulstr-util.h"
+ #include "path-lookup.h"
+ #include "path-util.h"
+ #include "stat-util.h"
+@@ -864,3 +865,30 @@ char **env_generator_binary_paths(bool is_system) {
+ 
+         return TAKE_PTR(paths);
+ }
++
++int find_portable_profile(const char *name, const char *unit, char **ret_path) {
++        const char *p, *dot;
++
++        assert(name);
++        assert(ret_path);
++
++        assert_se(dot = strrchr(unit, '.'));
++
++        NULSTR_FOREACH(p, PORTABLE_PROFILE_DIRS) {
++                _cleanup_free_ char *joined = NULL;
++
++                joined = strjoin(p, "/", name, "/", dot + 1, ".conf");
++                if (!joined)
++                        return -ENOMEM;
++
++                if (laccess(joined, F_OK) >= 0) {
++                        *ret_path = TAKE_PTR(joined);
++                        return 0;
++                }
++
++                if (errno != ENOENT)
++                        return -errno;
++        }
++
++        return -ENOENT;
++}
+diff --git a/src/basic/path-lookup.h b/src/basic/path-lookup.h
+index 088bb9b57c..af85dc7b4f 100644
+--- a/src/basic/path-lookup.h
++++ b/src/basic/path-lookup.h
+@@ -72,3 +72,6 @@ char **env_generator_binary_paths(bool is_system);
+ 
+ #define NETWORK_DIRS ((const char* const*) CONF_PATHS_STRV("systemd/network"))
+ #define NETWORK_DIRS_NULSTR CONF_PATHS_NULSTR("systemd/network")
++
++#define PORTABLE_PROFILE_DIRS CONF_PATHS_NULSTR("systemd/portable/profile")
++int find_portable_profile(const char *name, const char *unit, char **ret_path);
+diff --git a/src/portable/portable.c b/src/portable/portable.c
+index 02f4a692b0..8c5e5b6821 100644
+--- a/src/portable/portable.c
++++ b/src/portable/portable.c
+@@ -37,8 +37,6 @@
+ #include "tmpfile-util.h"
+ #include "user-util.h"
+ 
+-static const char profile_dirs[] = CONF_PATHS_NULSTR("systemd/portable/profile");
+-
+ /* Markers used in the first line of our 20-portable.conf unit file drop-in to determine, that a) the unit file was
+  * dropped there by the portable service logic and b) for which image it was dropped there. */
+ #define PORTABLE_DROPIN_MARKER_BEGIN "# Drop-in created for image '"
+@@ -967,33 +965,6 @@ static int install_chroot_dropin(
+         return 0;
+ }
+ 
+-static int find_profile(const char *name, const char *unit, char **ret) {
+-        const char *p, *dot;
+-
+-        assert(name);
+-        assert(ret);
+-
+-        assert_se(dot = strrchr(unit, '.'));
+-
+-        NULSTR_FOREACH(p, profile_dirs) {
+-                _cleanup_free_ char *joined = NULL;
+-
+-                joined = strjoin(p, "/", name, "/", dot + 1, ".conf");
+-                if (!joined)
+-                        return -ENOMEM;
+-
+-                if (laccess(joined, F_OK) >= 0) {
+-                        *ret = TAKE_PTR(joined);
+-                        return 0;
+-                }
+-
+-                if (errno != ENOENT)
+-                        return -errno;
+-        }
+-
+-        return -ENOENT;
+-}
+-
+ static int install_profile_dropin(
+                 const char *image_path,
+                 const PortableMetadata *m,
+@@ -1014,7 +985,7 @@ static int install_profile_dropin(
+         if (!profile)
+                 return 0;
+ 
+-        r = find_profile(profile, m->name, &from);
++        r = find_portable_profile(profile, m->name, &from);
+         if (r < 0) {
+                 if (r != -ENOENT)
+                         return log_debug_errno(errno, "Profile '%s' is not accessible: %m", profile);
+@@ -1731,7 +1702,7 @@ int portable_get_state(
+ int portable_get_profiles(char ***ret) {
+         assert(ret);
+ 
+-        return conf_files_list_nulstr(ret, NULL, NULL, CONF_FILES_DIRECTORY|CONF_FILES_BASENAME|CONF_FILES_FILTER_MASKED, profile_dirs);
++        return conf_files_list_nulstr(ret, NULL, NULL, CONF_FILES_DIRECTORY|CONF_FILES_BASENAME|CONF_FILES_FILTER_MASKED, PORTABLE_PROFILE_DIRS);
+ }
+ 
+ static const char* const portable_change_type_table[_PORTABLE_CHANGE_TYPE_MAX] = {
+-- 
+2.33.0
+

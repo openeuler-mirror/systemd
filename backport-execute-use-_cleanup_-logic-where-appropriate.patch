@@ -1,0 +1,44 @@
+From 1fa6abd4ae2445b08e3c3fc3d4eade1e833f43da Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 1 Feb 2022 13:49:56 +0100
+Subject: [PATCH] execute: use _cleanup_ logic where appropriate
+
+(cherry picked from commit 46e5bbab5895b7137b03453dee08bd1c89c710e9)
+(cherry picked from commit 9b2954b79435eaf54be208acdce8026b83bdc249)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/1fa6abd4ae2445b08e3c3fc3d4eade1e833f43da
+---
+ src/core/execute.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/execute.c b/src/core/execute.c
+index 04c0513453..b6c54493d3 100644
+--- a/src/core/execute.c
++++ b/src/core/execute.c
+@@ -1163,10 +1163,11 @@ static int setup_pam(
+         };
+ 
+         _cleanup_(barrier_destroy) Barrier barrier = BARRIER_NULL;
++        _cleanup_strv_free_ char **e = NULL;
+         pam_handle_t *handle = NULL;
+         sigset_t old_ss;
+         int pam_code = PAM_SUCCESS, r;
+-        char **nv, **e = NULL;
++        char **nv;
+         bool close_session = false;
+         pid_t pam_pid = 0, parent_pid;
+         int flags = 0;
+@@ -1363,9 +1364,7 @@ fail:
+                 (void) pam_end(handle, pam_code | flags);
+         }
+ 
+-        strv_free(e);
+         closelog();
+-
+         return r;
+ #else
+         return 0;
+-- 
+2.33.0
+

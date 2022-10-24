@@ -1,0 +1,61 @@
+From da98ffd65aa29ee968a4f4379f5c8e06bf2d58f4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Tue, 11 Jan 2022 13:23:27 +0100
+Subject: [PATCH] nss: drop dummy setup_logging() helpers
+
+log_parse_environment() stopped being a macro in 9fdee66f2d9.
+As reported by @bauen1 in https://github.com/systemd/systemd/issues/22020,
+the comment was out of date.
+
+(cherry picked from commit 56a5f4969b96529c82ec8cc08db4fa8e9c61e7b9)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/da98ffd65aa29ee968a4f4379f5c8e06bf2d58f4
+---
+ src/nss-mymachines/nss-mymachines.c | 7 +------
+ src/nss-systemd/nss-systemd.c       | 7 +------
+ 2 files changed, 2 insertions(+), 12 deletions(-)
+
+diff --git a/src/nss-mymachines/nss-mymachines.c b/src/nss-mymachines/nss-mymachines.c
+index 44715bb3e5..781fd48d72 100644
+--- a/src/nss-mymachines/nss-mymachines.c
++++ b/src/nss-mymachines/nss-mymachines.c
+@@ -22,14 +22,9 @@
+ #include "signal-util.h"
+ #include "string-util.h"
+ 
+-static void setup_logging(void) {
+-        /* We need a dummy function because log_parse_environment is a macro. */
+-        log_parse_environment();
+-}
+-
+ static void setup_logging_once(void) {
+         static pthread_once_t once = PTHREAD_ONCE_INIT;
+-        assert_se(pthread_once(&once, setup_logging) == 0);
++        assert_se(pthread_once(&once, log_parse_environment) == 0);
+ }
+ 
+ #define NSS_ENTRYPOINT_BEGIN                    \
+diff --git a/src/nss-systemd/nss-systemd.c b/src/nss-systemd/nss-systemd.c
+index 36486b96e3..c6c00c40e6 100644
+--- a/src/nss-systemd/nss-systemd.c
++++ b/src/nss-systemd/nss-systemd.c
+@@ -116,14 +116,9 @@ static GetentData getsgent_data = {
+         .mutex = PTHREAD_MUTEX_INITIALIZER,
+ };
+ 
+-static void setup_logging(void) {
+-        /* We need a dummy function because log_parse_environment is a macro. */
+-        log_parse_environment();
+-}
+-
+ static void setup_logging_once(void) {
+         static pthread_once_t once = PTHREAD_ONCE_INIT;
+-        assert_se(pthread_once(&once, setup_logging) == 0);
++        assert_se(pthread_once(&once, log_parse_environment) == 0);
+ }
+ 
+ #define NSS_ENTRYPOINT_BEGIN                    \
+-- 
+2.33.0
+

@@ -1,0 +1,71 @@
+From feb68f6aad36930f0b0c6c70164287c5bc46b64c Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 14 Sep 2021 23:03:37 +0200
+Subject: [PATCH] fileio: lower maximum virtual file buffer size by one byte
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When reading virtual files (i.e. procfs, sysfs, …) we currently put a
+limit of 4M-1 on that. We have to pick something, and we have to read
+these files in a single read() (since the kernel generally doesn't
+support continuation read()s for them). 4M-1 is actually the maximum
+size the kernel allows for reads from files in /proc/sys/, all larger
+reads will result in an ENOMEM error (which is really weird, but the
+kernel does what the kernel does). Hence 4M-1 sounds like a smart
+choice.
+
+However, we made one mistake here: in order to be able to detect EOFs
+properly we actually read one byte more than we actually intend to
+return: if that extra byte can be read, then we know the file is
+actually larger than our limit and we can generate an EFBIG error from
+that. However, if it cannot be read then we know EOF was hit, and we are
+good. So ultimately after all we issued a single 4M read, which the
+kernel then responds with ENOMEM to.  And that means read_virtual_file()
+actually doesn't work properly right now on /proc/sys/. Let's fix that.
+
+The fix is simple, lower the limit of the the buffer we intend to return
+by one, i.e. 4M-2. That way, the read() we'll issue is exactly as large
+as the limit the kernel allows, and we still get safely detect EOF from
+it.
+
+(cherry picked from commit 7ab7547a40d456d34120b2f44b26385ac1338ebd)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/feb68f6aad36930f0b0c6c70164287c5bc46b64c
+---
+ src/basic/fileio.c | 18 ++++++++++--------
+ 1 file changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/src/basic/fileio.c b/src/basic/fileio.c
+index 99a44fdea2..ba0ca98d72 100644
+--- a/src/basic/fileio.c
++++ b/src/basic/fileio.c
+@@ -30,14 +30,16 @@
+ /* The maximum size of the file we'll read in one go in read_full_file() (64M). */
+ #define READ_FULL_BYTES_MAX (64U*1024U*1024U - 1U)
+ 
+-/* The maximum size of virtual files we'll read in one go in read_virtual_file() (4M). Note that this limit
+- * is different (and much lower) than the READ_FULL_BYTES_MAX limit. This reflects the fact that we use
+- * different strategies for reading virtual and regular files: virtual files are generally size constrained:
+- * there we allocate the full buffer size in advance. Regular files OTOH can be much larger, and here we grow
+- * the allocations exponentially in a loop. In glibc large allocations are immediately backed by mmap()
+- * making them relatively slow (measurably so). Thus, when allocating the full buffer in advance the large
+- * limit is a problem. When allocating piecemeal it's not. Hence pick two distinct limits. */
+-#define READ_VIRTUAL_BYTES_MAX (4U*1024U*1024U - 1U)
++/* The maximum size of virtual files (i.e. procfs, sysfs, and other virtual "API" files) we'll read in one go
++ * in read_virtual_file(). Note that this limit is different (and much lower) than the READ_FULL_BYTES_MAX
++ * limit. This reflects the fact that we use different strategies for reading virtual and regular files:
++ * virtual files we generally have to read in a single read() syscall since the kernel doesn't support
++ * continuation read()s for them. Thankfully they are somewhat size constrained. Thus we can allocate the
++ * full potential buffer in advance. Regular files OTOH can be much larger, and there we grow the allocations
++ * exponentially in a loop. We use a size limit of 4M-2 because 4M-1 is the maximum buffer that /proc/sys/
++ * allows us to read() (larger reads will fail with ENOMEM), and we want to read one extra byte so that we
++ * can detect EOFs. */
++#define READ_VIRTUAL_BYTES_MAX (4U*1024U*1024U - 2U)
+ 
+ int fopen_unlocked(const char *path, const char *options, FILE **ret) {
+         assert(ret);
+-- 
+2.33.0
+
