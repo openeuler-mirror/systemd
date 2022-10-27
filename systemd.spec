@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        38
+Release:        39
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -442,6 +442,7 @@ Patch9028:      revert-rpm-restart-services-in-posttrans.patch
 Patch9029:      Don-t-set-AlternativeNamesPolicy-by-default.patch
 Patch9030:      change-NTP-server-to-x.pool.ntp.org.patch
 Patch9031:      keep-weight-consistent-with-the-set-value.patch
+Patch9032:      Systemd-Add-sw64-architecture.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -624,6 +625,9 @@ Systemd PAM module registers the session with systemd-logind.
 
 %prep
 %autosetup -n %{name}-%{version} -p1 -Sgit
+%ifnarch sw_64
+%patch9032 -R -p1
+%endif
 
 %build
 
@@ -1679,7 +1683,9 @@ fi
 /usr/lib/udev/mtd_probe
 /usr/lib/udev/scsi_id
 /usr/lib/udev/fido_id
+%ifnarch sw_64
 /usr/lib/udev/dmi_memory_id
+%endif
 
 %dir /usr/lib/udev/hwdb.d
 %{_udevhwdbdir}/20-bluetooth-vendor-product.hwdb
@@ -1744,7 +1750,9 @@ fi
 %{_udevrulesdir}/50-udev-default.rules
 %{_udevrulesdir}/60-fido-id.rules
 %{_udevrulesdir}/81-net-dhcp.rules
+%ifnarch sw_64
 %{_udevrulesdir}/70-memory.rules
+%endif
 %{_udevrulesdir}/README
 
 /usr/lib/modprobe.d/systemd.conf
@@ -1844,6 +1852,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Thu Oct 27 2022 wuzx<wuzx1226@qq.com> - 249-39
+- Add sw64 architecture
+
 * Mon Oct 10 2022 wangyuhang <wangyuhang27@huawei.com> -249-38
 - backport: sync systemd-stable-249 patches from systemd community
 
