@@ -1,0 +1,872 @@
+From b9043cf1d074497cf77272dd9bf24c2098e56265 Mon Sep 17 00:00:00 2001
+From: rpm-build <rpm-build>
+Date: Tue, 25 Oct 2022 15:26:32 +0800
+Subject: [PATCH] Systemd Add sw64 architecture
+
+Signed-off-by: rpm-build <rpm-build>
+---
+ src/basic/architecture.c        |   3 +
+ src/basic/architecture.h        |   4 +
+ src/basic/meson.build           |   1 +
+ src/basic/missing_fcntl.h       |   2 +
+ src/basic/missing_syscall_def.h |  35 ++
+ src/basic/missing_syscalls.py   |   2 +
+ src/basic/syscalls-sw_64.txt    | 600 ++++++++++++++++++++++++++++++++
+ 7 files changed, 647 insertions(+)
+ create mode 100644 src/basic/syscalls-sw_64.txt
+
+diff --git a/src/basic/architecture.c b/src/basic/architecture.c
+index 409632c..8314aa5 100644
+--- a/src/basic/architecture.c
++++ b/src/basic/architecture.c
+@@ -54,6 +54,8 @@ int uname_architecture(void) {
+                 { "mips",       ARCHITECTURE_MIPS     },
+ #elif defined(__alpha__)
+                 { "alpha" ,     ARCHITECTURE_ALPHA    },
++#elif defined(__sw_64__)
++                { "sw_64" ,     ARCHITECTURE_SW_64    },
+ #elif defined(__arm__) || defined(__aarch64__)
+                 { "aarch64",    ARCHITECTURE_ARM64    },
+                 { "aarch64_be", ARCHITECTURE_ARM64_BE },
+@@ -159,6 +161,7 @@ static const char *const architecture_table[_ARCHITECTURE_MAX] = {
+         [ARCHITECTURE_MIPS64] = "mips64",
+         [ARCHITECTURE_MIPS64_LE] = "mips64-le",
+         [ARCHITECTURE_ALPHA] = "alpha",
++        [ARCHITECTURE_SW_64] = "sw_64",
+         [ARCHITECTURE_ARM] = "arm",
+         [ARCHITECTURE_ARM_BE] = "arm-be",
+         [ARCHITECTURE_ARM64] = "arm64",
+diff --git a/src/basic/architecture.h b/src/basic/architecture.h
+index 9abc183..3361eaf 100644
+--- a/src/basic/architecture.h
++++ b/src/basic/architecture.h
+@@ -30,6 +30,7 @@ enum {
+         ARCHITECTURE_MIPS64,
+         ARCHITECTURE_MIPS64_LE,
+         ARCHITECTURE_ALPHA,
++        ARCHITECTURE_SW_64,
+         ARCHITECTURE_ARM,
+         ARCHITECTURE_ARM_BE,
+         ARCHITECTURE_ARM64,
+@@ -143,6 +144,9 @@ int uname_architecture(void);
+ #elif defined(__alpha__)
+ #  define native_architecture() ARCHITECTURE_ALPHA
+ #  define LIB_ARCH_TUPLE "alpha-linux-gnu"
++#elif defined(__sw_64__)
++#  define native_architecture() ARCHITECTURE_SW_64
++#  define LIB_ARCH_TUPLE "sw_64-linux-gnu"
+ #elif defined(__aarch64__)
+ #  if __BYTE_ORDER == __BIG_ENDIAN
+ #    define native_architecture() ARCHITECTURE_ARM64_BE
+diff --git a/src/basic/meson.build b/src/basic/meson.build
+index 452b965..80dab1b 100644
+--- a/src/basic/meson.build
++++ b/src/basic/meson.build
+@@ -325,6 +325,7 @@ basic_sources += generated_gperf_headers
+ 
+ arch_list = [
+         'alpha',
++        'sw_64',
+         'arc',
+         'arm',
+         'arm64',
+diff --git a/src/basic/missing_fcntl.h b/src/basic/missing_fcntl.h
+index 00937d2..fff662b 100644
+--- a/src/basic/missing_fcntl.h
++++ b/src/basic/missing_fcntl.h
+@@ -45,6 +45,8 @@
+ #ifndef __O_TMPFILE
+ #if defined(__alpha__)
+ #define __O_TMPFILE     0100000000
++#elif defined(__sw_64__)
++#define __O_TMPFILE     0100000000
+ #elif defined(__parisc__) || defined(__hppa__)
+ #define __O_TMPFILE     0400000000
+ #elif defined(__sparc__) || defined(__sparc64__)
+diff --git a/src/basic/missing_syscall_def.h b/src/basic/missing_syscall_def.h
+index 29dfd2e..10a585b 100644
+--- a/src/basic/missing_syscall_def.h
++++ b/src/basic/missing_syscall_def.h
+@@ -9,6 +9,7 @@
+  * template as the per-syscall blocks below. */
+ #  if defined(__aarch64__)
+ #  elif defined(__alpha__)
++#  elif defined(__sw_64__)
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #  elif defined(__arm__)
+ #  elif defined(__i386__)
+@@ -44,6 +45,8 @@
+ #    define systemd_NR_bpf 280
+ #  elif defined(__alpha__)
+ #    define systemd_NR_bpf 515
++#  elif defined(__sw_64__)
++#    define systemd_NR_bpf 170
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_bpf 280
+ #  elif defined(__arm__)
+@@ -108,6 +111,8 @@ assert_cc(__NR_bpf == systemd_NR_bpf);
+ #    define systemd_NR_close_range 436
+ #  elif defined(__alpha__)
+ #    define systemd_NR_close_range 546
++#  elif defined(__sw_64__)
++#    define systemd_NR_close_range 283
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_close_range 436
+ #  elif defined(__arm__)
+@@ -172,6 +177,8 @@ assert_cc(__NR_close_range == systemd_NR_close_range);
+ #    define systemd_NR_copy_file_range 285
+ #  elif defined(__alpha__)
+ #    define systemd_NR_copy_file_range 519
++#  elif defined(__sw_64__)
++#    define systemd_NR_copy_file_range 515
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_copy_file_range 285
+ #  elif defined(__arm__)
+@@ -236,6 +243,8 @@ assert_cc(__NR_copy_file_range == systemd_NR_copy_file_range);
+ #    define systemd_NR_epoll_pwait2 441
+ #  elif defined(__alpha__)
+ #    define systemd_NR_epoll_pwait2 551
++#  elif defined(__sw_64__)
++#    define systemd_NR_epoll_pwait2 551
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_epoll_pwait2 441
+ #  elif defined(__arm__)
+@@ -300,6 +309,8 @@ assert_cc(__NR_epoll_pwait2 == systemd_NR_epoll_pwait2);
+ #    define systemd_NR_getrandom 278
+ #  elif defined(__alpha__)
+ #    define systemd_NR_getrandom 511
++#  elif defined(__sw_64__)
++#    define systemd_NR_getrandom 511
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_getrandom 278
+ #  elif defined(__arm__)
+@@ -364,6 +375,8 @@ assert_cc(__NR_getrandom == systemd_NR_getrandom);
+ #    define systemd_NR_memfd_create 279
+ #  elif defined(__alpha__)
+ #    define systemd_NR_memfd_create 512
++#  elif defined(__sw_64__)
++#    define systemd_NR_memfd_create 512
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_memfd_create 279
+ #  elif defined(__arm__)
+@@ -428,6 +441,8 @@ assert_cc(__NR_memfd_create == systemd_NR_memfd_create);
+ #    define systemd_NR_mount_setattr 442
+ #  elif defined(__alpha__)
+ #    define systemd_NR_mount_setattr 552
++#  elif defined(__sw_64__)
++#    define systemd_NR_mount_setattr 552
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_mount_setattr 442
+ #  elif defined(__arm__)
+@@ -492,6 +507,8 @@ assert_cc(__NR_mount_setattr == systemd_NR_mount_setattr);
+ #    define systemd_NR_move_mount 429
+ #  elif defined(__alpha__)
+ #    define systemd_NR_move_mount 539
++#  elif defined(__sw_64__)
++#    define systemd_NR_move_mount 276
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_move_mount 429
+ #  elif defined(__arm__)
+@@ -556,6 +573,8 @@ assert_cc(__NR_move_mount == systemd_NR_move_mount);
+ #    define systemd_NR_name_to_handle_at 264
+ #  elif defined(__alpha__)
+ #    define systemd_NR_name_to_handle_at 497
++#  elif defined(__sw_64__)
++#    define systemd_NR_name_to_handle_at 497
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_name_to_handle_at 264
+ #  elif defined(__arm__)
+@@ -620,6 +639,8 @@ assert_cc(__NR_name_to_handle_at == systemd_NR_name_to_handle_at);
+ #    define systemd_NR_open_tree 428
+ #  elif defined(__alpha__)
+ #    define systemd_NR_open_tree 538
++#  elif defined(__sw_64__)
++#    define systemd_NR_open_tree 275
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_open_tree 428
+ #  elif defined(__arm__)
+@@ -684,6 +705,8 @@ assert_cc(__NR_open_tree == systemd_NR_open_tree);
+ #    define systemd_NR_openat2 437
+ #  elif defined(__alpha__)
+ #    define systemd_NR_openat2 547
++#  elif defined(__sw_64__)
++#    define systemd_NR_openat2 284
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_openat2 437
+ #  elif defined(__arm__)
+@@ -750,6 +773,8 @@ assert_cc(__NR_openat2 == systemd_NR_openat2);
+ #    define systemd_NR_pidfd_open 434
+ #  elif defined(__alpha__)
+ #    define systemd_NR_pidfd_open 544
++#  elif defined(__sw_64__)
++#    define systemd_NR_pidfd_open 281
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_pidfd_open 434
+ #  elif defined(__arm__)
+@@ -814,6 +839,8 @@ assert_cc(__NR_pidfd_open == systemd_NR_pidfd_open);
+ #    define systemd_NR_pidfd_send_signal 424
+ #  elif defined(__alpha__)
+ #    define systemd_NR_pidfd_send_signal 534
++#  elif defined(__sw_64__)
++#    define systemd_NR_pidfd_send_signal 271
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_pidfd_send_signal 424
+ #  elif defined(__arm__)
+@@ -878,6 +905,8 @@ assert_cc(__NR_pidfd_send_signal == systemd_NR_pidfd_send_signal);
+ #    define systemd_NR_pkey_mprotect 288
+ #  elif defined(__alpha__)
+ #    define systemd_NR_pkey_mprotect 524
++#  elif defined(__sw_64__)
++#    define systemd_NR_pkey_mprotect 288
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_pkey_mprotect 288
+ #  elif defined(__arm__)
+@@ -942,6 +971,8 @@ assert_cc(__NR_pkey_mprotect == systemd_NR_pkey_mprotect);
+ #    define systemd_NR_renameat2 276
+ #  elif defined(__alpha__)
+ #    define systemd_NR_renameat2 510
++#  elif defined(__sw_64__)
++#    define systemd_NR_renameat2 510
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_renameat2 276
+ #  elif defined(__arm__)
+@@ -1006,6 +1037,8 @@ assert_cc(__NR_renameat2 == systemd_NR_renameat2);
+ #    define systemd_NR_setns 268
+ #  elif defined(__alpha__)
+ #    define systemd_NR_setns 501
++#  elif defined(__sw_64__)
++#    define systemd_NR_setns 501
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_setns 268
+ #  elif defined(__arm__)
+@@ -1070,6 +1103,8 @@ assert_cc(__NR_setns == systemd_NR_setns);
+ #    define systemd_NR_statx 291
+ #  elif defined(__alpha__)
+ #    define systemd_NR_statx 522
++#  elif defined(__sw_64__)
++#    define systemd_NR_statx 518
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_statx 291
+ #  elif defined(__arm__)
+diff --git a/src/basic/missing_syscalls.py b/src/basic/missing_syscalls.py
+index dd45899..cf448cc 100644
+--- a/src/basic/missing_syscalls.py
++++ b/src/basic/missing_syscalls.py
+@@ -52,6 +52,8 @@ DEF_TEMPLATE_B = '''\
+ #    define systemd_NR_{syscall} {nr_arm64}
+ #  elif defined(__alpha__)
+ #    define systemd_NR_{syscall} {nr_alpha}
++#  elif defined(__sw_64__)
++#    define systemd_NR_{syscall} {nr_sw_64}
+ #  elif defined(__arc__) || defined(__tilegx__)
+ #    define systemd_NR_{syscall} {nr_arc}
+ #  elif defined(__arm__)
+diff --git a/src/basic/syscalls-sw_64.txt b/src/basic/syscalls-sw_64.txt
+new file mode 100644
+index 0000000..5aef86b
+--- /dev/null
++++ b/src/basic/syscalls-sw_64.txt
+@@ -0,0 +1,600 @@
++_llseek
++_newselect
++_sysctl	319
++accept	99
++accept4	502
++access	33
++acct	51
++add_key	439
++adjtimex	366
++alarm
++arc_gettls
++arc_settls
++arc_usr_cmpxchg
++arch_prctl
++arm_fadvise64_64
++atomic_barrier
++atomic_cmpxchg_32
++bdflush	300
++bind	104
++bpf	515
++brk	17
++cachectl
++cacheflush
++capget	368
++capset	369
++chdir	12
++chmod	15
++chown	16
++chown32
++chroot	61
++clock_adjtime	499
++clock_adjtime64
++clock_getres	421
++clock_getres_time64
++clock_gettime	420
++clock_gettime64
++clock_nanosleep	422
++clock_nanosleep_time64
++clock_settime	419
++clock_settime64
++clone	312
++clone2
++clone3
++close	6
++close_range	546
++connect	98
++copy_file_range	519
++creat
++create_module	306
++delete_module	308
++dipc	373
++dup	41
++dup2	90
++dup3	487
++epoll_create	407
++epoll_create1	486
++epoll_ctl	408
++epoll_ctl_old
++epoll_pwait	474
++epoll_pwait2	551
++epoll_wait	409
++epoll_wait_old
++eventfd	478
++eventfd2	485
++exec_with_loader	25
++execv
++execve	59
++execveat	513
++exit	1
++exit_group	405
++faccessat	462
++faccessat2	549
++fadvise64	413
++fadvise64_64
++fallocate	480
++fanotify_init	494
++fanotify_mark	495
++fchdir	13
++fchmod	124
++fchmodat	461
++fchown	123
++fchown32
++fchownat	453
++fcntl	92
++fcntl64
++fdatasync	447
++fgetxattr	387
++finit_module	507
++flistxattr	390
++flock	131
++fork	2
++fp_udfiex_crtl
++fremovexattr	393
++fsconfig	541
++fsetxattr	384
++fsmount	542
++fsopen	540
++fspick	543
++fstat	91
++fstat64	427
++fstatat64	455
++fstatfs	329
++fstatfs64	529
++fsync	95
++ftruncate	130
++ftruncate64
++futex	394
++futex_time64
++futex_waitv	559
++futimesat	454
++get_kernel_syms	309
++get_mempolicy	430
++get_robust_list	467
++get_thread_area
++getcpu	473
++getcwd	367
++getdents	305
++getdents64	377
++getdomainname
++getdtablesize	89
++getegid	530
++getegid32
++geteuid	531
++geteuid32
++getgid	47
++getgid32
++getgroups	79
++getgroups32
++gethostname	87
++getitimer	361
++getpagesize	64
++getpeername	141
++getpgid	233
++getpgrp	63
++getpid	20
++getpmsg
++getppid	532
++getpriority	100
++getrandom	511
++getresgid	372
++getresgid32
++getresuid	344
++getresuid32
++getrlimit	144
++getrusage	364
++getsid	234
++getsockname	150
++getsockopt	118
++gettid	378
++gettimeofday	359
++getuid	24
++getuid32
++getunwind
++getxattr	385
++getxgid	47
++getxpid	20
++getxuid	24
++idle
++init_module	307
++inotify_add_watch	445
++inotify_init	444
++inotify_init1	489
++inotify_rm_watch	446
++io_cancel	402
++io_destroy	399
++io_getevents	400
++io_pgetevents	523
++io_pgetevents_time64
++io_setup	398
++io_submit	401
++io_uring_enter	536
++io_uring_register	537
++io_uring_setup	535
++ioctl	54
++ioperm
++iopl
++ioprio_get	443
++ioprio_set	442
++ipc
++kcmp	506
++kern_features
++kexec_file_load
++kexec_load	448
++keyctl	441
++kill	37
++landlock_add_rule	555
++landlock_create_ruleset	554
++landlock_restrict_self	556
++lchown	208
++lchown32
++lgetxattr	386
++link	9
++linkat	458
++listen	106
++listxattr	388
++llistxattr	389
++lookup_dcookie	406
++lremovexattr	392
++lseek	19
++lsetxattr	383
++lstat	68
++lstat64	426
++madvise	75
++mbind	429
++membarrier	517
++memfd_create	512
++memfd_secret
++memory_ordering
++migrate_pages	449
++mincore	375
++mkdir	136
++mkdirat	451
++mknod	14
++mknodat	452
++mlock	314
++mlock2	518
++mlockall	316
++mmap	71
++mmap2
++modify_ldt
++mount	302
++mount_setattr	552
++move_mount	539
++move_pages	472
++mprotect	74
++mq_getsetattr	437
++mq_notify	436
++mq_open	432
++mq_timedreceive	435
++mq_timedreceive_time64
++mq_timedsend	434
++mq_timedsend_time64
++mq_unlink	433
++mremap	341
++msgctl	200
++msgget	201
++msgrcv	202
++msgsnd	203
++msync	217
++multiplexer
++munlock	315
++munlockall	317
++munmap	73
++name_to_handle_at	497
++nanosleep	340
++newfstatat
++nfsservctl	342
++nice
++old_adjtimex	303
++old_getpagesize
++oldfstat
++oldlstat
++oldolduname
++oldstat
++oldumount	321
++olduname
++open	45
++open_by_handle_at	498
++open_tree	538
++openat	450
++openat2	547
++or1k_atomic
++osf_adjtime	140
++osf_afs_syscall	258
++osf_alt_plock	181
++osf_alt_setsid	188
++osf_alt_sigpending	187
++osf_asynch_daemon	163
++osf_audcntl	252
++osf_audgen	253
++osf_chflags	34
++osf_execve	11
++osf_exportfs	169
++osf_fchflags	35
++osf_fdatasync	261
++osf_fpathconf	248
++osf_fstat	226
++osf_fstatfs	161
++osf_fstatfs64	228
++osf_fuser	243
++osf_getaddressconf	214
++osf_getdirentries	159
++osf_getdomainname	165
++osf_getfh	164
++osf_getfsstat	18
++osf_gethostid	142
++osf_getitimer	86
++osf_getlogin	49
++osf_getmnt	184
++osf_getrusage	117
++osf_getsysinfo	256
++osf_gettimeofday	116
++osf_kloadcall	223
++osf_kmodcall	77
++osf_lstat	225
++osf_memcntl	260
++osf_mincore	78
++osf_mount	21
++osf_mremap	65
++osf_msfs_syscall	240
++osf_msleep	215
++osf_mvalid	213
++osf_mwakeup	216
++osf_naccept	30
++osf_nfssvc	158
++osf_ngetpeername	31
++osf_ngetsockname	32
++osf_nrecvfrom	29
++osf_nrecvmsg	27
++osf_nsendmsg	28
++osf_ntp_adjtime	245
++osf_ntp_gettime	246
++osf_old_creat	8
++osf_old_fstat	62
++osf_old_getpgrp	81
++osf_old_killpg	146
++osf_old_lstat	40
++osf_old_open	5
++osf_old_sigaction	46
++osf_old_sigblock	109
++osf_old_sigreturn	139
++osf_old_sigsetmask	110
++osf_old_sigvec	108
++osf_old_stat	38
++osf_old_vadvise	72
++osf_old_vtrace	115
++osf_old_wait	84
++osf_oldquota	149
++osf_pathconf	247
++osf_pid_block	153
++osf_pid_unblock	154
++osf_plock	107
++osf_priocntlset	237
++osf_profil	44
++osf_proplist_syscall	244
++osf_reboot	55
++osf_revoke	56
++osf_sbrk	69
++osf_security	222
++osf_select	93
++osf_set_program_attributes	43
++osf_set_speculative	239
++osf_sethostid	143
++osf_setitimer	83
++osf_setlogin	50
++osf_setsysinfo	257
++osf_settimeofday	122
++osf_shmat	209
++osf_signal	218
++osf_sigprocmask	48
++osf_sigsendset	238
++osf_sigstack	112
++osf_sigwaitprim	157
++osf_sstk	70
++osf_stat	224
++osf_statfs	160
++osf_statfs64	227
++osf_subsys_info	255
++osf_swapctl	259
++osf_swapon	199
++osf_syscall	0
++osf_sysinfo	241
++osf_table	85
++osf_uadmin	242
++osf_usleep_thread	251
++osf_uswitch	250
++osf_utc_adjtime	220
++osf_utc_gettime	219
++osf_utimes	138
++osf_utsname	207
++osf_wait4	7
++osf_waitid	236
++pause
++pciconfig_iobase	376
++pciconfig_read	345
++pciconfig_write	346
++perf_event_open	493
++perfctr
++personality	324
++pidfd_getfd	548
++pidfd_open	544
++pidfd_send_signal	534
++pipe	42
++pipe2	488
++pivot_root	374
++pkey_alloc	525
++pkey_free	526
++pkey_mprotect	524
++poll	94
++ppoll	464
++ppoll_time64
++prctl	348
++pread64	349
++preadv	490
++preadv2	520
++prlimit64	496
++process_madvise	550
++process_mrelease	558
++process_vm_readv	504
++process_vm_writev	505
++pselect6	463
++pselect6_time64
++ptrace	26
++pwrite64	350
++pwritev	491
++pwritev2	521
++query_module	347
++quotactl	148
++quotactl_fd	553
++read	3
++readahead	379
++readdir
++readlink	58
++readlinkat	460
++readv	120
++reboot	311
++recv	102
++recvfrom	125
++recvmmsg	479
++recvmmsg_time64
++recvmsg	113
++remap_file_pages	410
++removexattr	391
++rename	128
++renameat	457
++renameat2	510
++request_key	440
++restart_syscall	412
++riscv_flush_icache
++rmdir	137
++rseq	527
++rt_sigaction	352
++rt_sigpending	354
++rt_sigprocmask	353
++rt_sigqueueinfo	356
++rt_sigreturn	351
++rt_sigsuspend	357
++rt_sigtimedwait	355
++rt_sigtimedwait_time64
++rt_tgsigqueueinfo	492
++rtas
++s390_guarded_storage
++s390_pci_mmio_read
++s390_pci_mmio_write
++s390_runtime_instr
++s390_sthyi
++sched_get_affinity
++sched_get_priority_max	335
++sched_get_priority_min	336
++sched_getaffinity	396
++sched_getattr	509
++sched_getparam	331
++sched_getscheduler	333
++sched_rr_get_interval	337
++sched_rr_get_interval_time64
++sched_set_affinity
++sched_setaffinity	395
++sched_setattr	508
++sched_setparam	330
++sched_setscheduler	332
++sched_yield	334
++seccomp	514
++select	358
++semctl	204
++semget	205
++semop	206
++semtimedop	423
++semtimedop_time64
++send	101
++sendfile	370
++sendfile64
++sendmmsg	503
++sendmsg	114
++sendto	133
++set_mempolicy	431
++set_robust_list	466
++set_thread_area
++set_tid_address	411
++setdomainname	166
++setfsgid	326
++setfsgid32
++setfsuid	325
++setfsuid32
++setgid	132
++setgid32
++setgroups	80
++setgroups32
++sethae	301
++sethostname	88
++setitimer	362
++setns	501
++setpgid	39
++setpgrp	82
++setpriority	96
++setregid	127
++setregid32
++setresgid	371
++setresgid32
++setresuid	343
++setresuid32
++setreuid	126
++setreuid32
++setrlimit	145
++setsid	147
++setsockopt	105
++settimeofday	360
++setuid	23
++setuid32
++setxattr	382
++sgetmask
++shmat	209
++shmctl	210
++shmdt	211
++shmget	212
++shutdown	134
++sigaction	156
++sigaltstack	235
++signal
++signalfd	476
++signalfd4	484
++sigpending	52
++sigprocmask
++sigreturn	103
++sigsuspend	111
++socket	97
++socketcall
++socketpair	135
++splice	468
++spu_create
++spu_run
++ssetmask
++stat	67
++stat64	425
++statfs	328
++statfs64	528
++statx	522
++stime
++subpage_prot
++swapcontext
++swapoff	304
++swapon	322
++switch_endian
++symlink	57
++symlinkat	459
++sync	36
++sync_file_range	469
++sync_file_range2
++syncfs	500
++sys_debug_setcontext
++syscall
++sysfs	254
++sysinfo	318
++syslog	310
++sysmips
++tee	470
++tgkill	424
++time
++timer_create	414
++timer_delete	418
++timer_getoverrun	417
++timer_gettime	416
++timer_gettime64
++timer_settime	415
++timer_settime64
++timerfd	477
++timerfd_create	481
++timerfd_gettime	483
++timerfd_gettime64
++timerfd_settime	482
++timerfd_settime64
++times	323
++tkill	381
++truncate	129
++truncate64
++ugetrlimit
++umask	60
++umount	22
++umount2	22
++uname	339
++unlink	10
++unlinkat	456
++unshare	465
++uselib	313
++userfaultfd	516
++ustat	327
++utime
++utimensat	475
++utimensat_time64
++utimes	363
++utrap_install
++vfork	66
++vhangup	76
++vm86
++vm86old
++vmsplice	471
++wait4	365
++waitid	438
++waitpid
++write	4
++writev	121
+-- 
+2.33.0
+
