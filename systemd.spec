@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        39
+Release:        40
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -411,6 +411,7 @@ Patch6362:      backport-meson.build-change-operator-combining-bools-from-to-.pa
 Patch6363:      backport-core-replace-slice-dependencies-as-they-get-added.patch
 Patch6364:      backport-scsi_id-retry-inquiry-ioctl-if-host_byte-is-DID_TRAN.patch
 Patch6365:      backport-revert-units-add-ProtectClock-yes.patch
+Patch6366:      backport-fix-CVE-2022-3821.patch
 
 Patch9001:      update-rtc-with-system-clock-when-shutdown.patch
 Patch9002:      udev-add-actions-while-rename-netif-failed.patch
@@ -1852,6 +1853,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Mon Nov 7 2022 yangmingtai <yangmingtai@huawei.com> -249-40
+- fix CVE-2022-3821
+
 * Thu Oct 27 2022 wuzx<wuzx1226@qq.com> - 249-39
 - Add sw64 architecture
 
