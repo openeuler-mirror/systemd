@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        57
+Release:        58
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -173,6 +173,9 @@ Patch0123:      backport-core-do-not-serialize-mounts-and-automounts-for-swit.pa
 Patch0124:      backport-journal-add-some-careful-overflow-checking.patch
 Patch0125:      backport-network-fix-an-infinite-loop.patch
 Patch0126:      backport-sd-device-use-right-type-for-usec_initialized.patch
+Patch0127:      backport-fix-CVE-2022-3821.patch
+Patch0128:      backport-cap-list-parse-numerical-capabilities.patch
+Patch0129:      backport-test-use-cap_last_cap-for-max-supported.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1678,6 +1681,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Mon Nov 7 2022 yangmingtai <yangmingtai@huawei.com> - 243-58
+- fix CVE-2022-3821 and backport patch to fix ci failed
+
 * Tue Oct 18 2022 yangmingtai <yangmingtai@huawei.com> - 243-57
 - DESC:sync community patches
 
