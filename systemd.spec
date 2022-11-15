@@ -20,7 +20,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        40
+Release:        41
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -444,6 +444,10 @@ Patch9029:      Don-t-set-AlternativeNamesPolicy-by-default.patch
 Patch9030:      change-NTP-server-to-x.pool.ntp.org.patch
 Patch9031:      keep-weight-consistent-with-the-set-value.patch
 Patch9032:      Systemd-Add-sw64-architecture.patch
+%ifarch loongarch64
+Patch9033:	0029-Add-support-for-the-LoongArch-architecture.patch
+Patch9034:	0030-Add-LoongArch-dmi-virt-detection-and-testcase.patch
+%endif
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -458,7 +462,9 @@ BuildRequires:  python3-devel, python3-lxml, firewalld-filesystem, libseccomp-de
 BuildRequires:  python3-jinja2
 
 %ifarch %{valgrind_arches}
+%ifnarch loongarch64
 BuildRequires:  valgrind-devel
+%endif
 %endif
 BuildRequires:  util-linux
 BuildRequires:  chrpath
@@ -824,7 +830,9 @@ mkdir -p %{buildroot}%{_sysconfdir}/ld.so.conf.d
 echo "/usr/lib/systemd" > %{buildroot}%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arch}.conf
 
 %check
+%ifnarch loongarch64
 %ninja_test -C %{_vpath_builddir}
+%endif
 
 #############################################################################################
 #  -*- Mode: rpm-spec; indent-tabs-mode: nil -*- */
@@ -1853,6 +1861,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Tue Nov 15 2022 huajingyun<huajingyun@loongson.cn> - 249-41
+- Add loongarch64 architecture
+
 * Mon Nov 7 2022 yangmingtai <yangmingtai@huawei.com> -249-40
 - fix CVE-2022-3821
 
