@@ -1,0 +1,65 @@
+diff --git a/src/basic/virt.c b/src/basic/virt.c
+index 7e88f09..de1acf1 100644
+--- a/src/basic/virt.c
++++ b/src/basic/virt.c
+@@ -140,7 +140,7 @@ static int detect_vm_device_tree(void) {
+ #endif
+ }
+ 
+-#if defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
++#if defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__) || defined(__loongarch64)
+ static int detect_vm_dmi_vendor(void) {
+         static const char *const dmi_vendors[] = {
+                 "/sys/class/dmi/id/product_name", /* Test this before sys_vendor to detect KVM over QEMU */
+@@ -225,10 +225,10 @@ static int detect_vm_smbios(void) {
+         log_debug("DMI BIOS Extension table does not indicate virtualization.");
+         return SMBIOS_VM_BIT_UNSET;
+ }
+-#endif /* defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__) */
++#endif /* defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__) || defined(__loongarch64) */
+ 
+ static int detect_vm_dmi(void) {
+-#if defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)
++#if defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__) || defined(__loongarch64)
+ 
+         int r;
+         r = detect_vm_dmi_vendor();
+diff --git a/src/test/test-execute.c b/src/test/test-execute.c
+index 125e0bb..6e168d3 100644
+--- a/src/test/test-execute.c
++++ b/src/test/test-execute.c
+@@ -284,6 +284,8 @@ static void test_exec_personality(Manager *m) {
+ 
+ #elif defined(__i386__)
+         test(m, "exec-personality-x86.service", 0, CLD_EXITED);
++#elif defined(__loongarch64)
++        test(m, "exec-personality-loongarch64.service", 0, CLD_EXITED);
+ #else
+         log_notice("Unknown personality, skipping %s", __func__);
+ #endif
+diff --git a/src/udev/meson.build b/src/udev/meson.build
+index 4e80f9b..f2eb0b2 100644
+--- a/src/udev/meson.build
++++ b/src/udev/meson.build
+@@ -129,7 +129,7 @@ udev_id_progs = [['ata_id/ata_id.c'],
+                   'mtd_probe/mtd_probe.h',
+                   'mtd_probe/probe_smartmedia.c']]
+ 
+-dmi_arches = ['x86', 'x86_64', 'aarch64', 'arm', 'ia64', 'mips']
++dmi_arches = ['x86', 'x86_64', 'aarch64', 'arm', 'ia64', 'loongarch64', 'mips']
+ if dmi_arches.contains(host_machine.cpu_family())
+         udev_id_progs += [['dmi_memory_id/dmi_memory_id.c']]
+ endif
+diff --git a/test/test-execute/exec-personality-loongarch64.service b/test/test-execute/exec-personality-loongarch64.service
+new file mode 100644
+index 0000000..0531ad1
+--- /dev/null
++++ b/test/test-execute/exec-personality-loongarch64.service
+@@ -0,0 +1,7 @@
++[Unit]
++Description=Test for Personality=loongarch64
++
++[Service]
++ExecStart=/bin/sh -c 'echo $(uname -m); exit $(test $(uname -m) = "loongarch64")'
++Type=oneshot
++Personality=loongarch64
