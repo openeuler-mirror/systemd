@@ -1,0 +1,24 @@
+From a80954ddf69d90d3b02ab62fb025534862069dc3 Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Wed, 24 Jun 2020 17:23:03 +0800
+Subject: [PATCH] core-update-arg_default_rlimit-in-bump_rlimit
+
+---
+ src/core/system.conf.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/core/system.conf.in b/src/core/system.conf.in
+index a58f65a..4762669 100644
+--- a/src/core/system.conf.in
++++ b/src/core/system.conf.in
+@@ -61,7 +61,7 @@
+ #DefaultLimitNOFILE=1024:{{HIGH_RLIMIT_NOFILE}}
+ #DefaultLimitAS=
+ #DefaultLimitNPROC=
+-#DefaultLimitMEMLOCK=
++DefaultLimitMEMLOCK=64M
+ #DefaultLimitLOCKS=
+ #DefaultLimitSIGPENDING=
+ #DefaultLimitMSGQUEUE=
+-- 
+2.23.0
