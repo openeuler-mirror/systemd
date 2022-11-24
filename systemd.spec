@@ -1,3 +1,4 @@
+%global vendor %{?_vendor:%{_vendor}}%{!?_vendor:openEuler}
 %global __requires_exclude pkg-config
 %global pkgdir %{_prefix}/lib/systemd
 %global system_unit_dir %{pkgdir}/system
@@ -20,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        41
+Release:        42
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -37,10 +38,9 @@ Source11:       20-grubby.install
 Source12:       systemd-user
 Source13:       rc.local
 
-Source100:      udev-40-openEuler.rules
+Source100:      udev-40-generic.rules
 Source101:      udev-55-persistent-net-generator.rules
 Source102:      udev-56-net-sriov-names.rules
-Source103:      udev-61-openeuler-persistent-storage.rules
 Source104:      net-set-sriov-names
 Source105:      rule_generator.functions
 Source106:      write_net_rules
@@ -448,6 +448,8 @@ Patch9032:      Systemd-Add-sw64-architecture.patch
 Patch9033:	0029-Add-support-for-the-LoongArch-architecture.patch
 Patch9034:	0030-Add-LoongArch-dmi-virt-detection-and-testcase.patch
 %endif
+Patch9035:      core-update-arg_default_rlimit-in-bump_rlimit.patch
+Patch9036:      set-forwardtowall-no-to-avoid-emerg-log-shown-on-she.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -814,7 +816,7 @@ mkdir -p %{buildroot}%{_sysconfdir}/rc.d/
 install -m 0644 %{SOURCE13} %{buildroot}%{_sysconfdir}/rc.d/rc.local
 ln -s rc.d/rc.local %{buildroot}%{_sysconfdir}/rc.local
 
-install -m 0644 %{SOURCE100} %{buildroot}/%{_udevrulesdir}/40-openEuler.rules
+install -m 0644 %{SOURCE100} %{buildroot}/%{_udevrulesdir}/40-%{vendor}.rules
 
 # remove rpath info
 for file in $(find %{buildroot}/ -executable -type f -exec file {} ';' | grep "\<ELF\>" | awk -F ':' '{print $1}')
@@ -1726,7 +1728,7 @@ fi
 
 %dir /usr/lib/udev/rules.d
 %{_udevrulesdir}/60-autosuspend.rules
-%{_udevrulesdir}/40-openEuler.rules
+%{_udevrulesdir}/40-%{vendor}.rules
 %{_udevrulesdir}/40-elevator.rules
 %{_udevrulesdir}/73-idrac.rules
 %{_udevrulesdir}/60-block.rules
@@ -1861,6 +1863,12 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Wed Nov 23 2022 yangmingtai <yangmingtai@huawei.com> -249-42
+- 1.change /etc/systemd/journald.conf ForwardToWall to no
+  2.change DefaultLimitMEMLOCK to 64M
+  3.replace openEuler to vendor
+  4.delete useless file udev-61-openeuler-persistent-storage.rules
+
 * Tue Nov 15 2022 huajingyun<huajingyun@loongson.cn> - 249-41
 - Add loongarch64 architecture
 

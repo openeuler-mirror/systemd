@@ -1,0 +1,39 @@
+From 22f8c4c2a22d9766d86b23429bd404a0864b0a9e Mon Sep 17 00:00:00 2001
+From: linfeilong  <linfeilong@huawei.com>
+Date: Sat, 21 Oct 2017 14:48:18 +0800
+Subject: [PATCH] set forwardtowall no to avoid emerg log shown on shell
+
+---
+ man/journald.conf.xml     | 2 +-
+ src/journal/journald.conf | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/man/journald.conf.xml b/man/journald.conf.xml
+index 44fd0d2..8d38fe3 100644
+--- a/man/journald.conf.xml
++++ b/man/journald.conf.xml
+@@ -292,7 +292,7 @@
+         traditional syslog daemon, to the kernel log buffer (kmsg), to the system console, or sent as wall
+         messages to all logged-in users.  These options take boolean arguments. If forwarding to syslog is
+         enabled but nothing reads messages from the socket, forwarding to syslog has no effect. By default,
+-        only forwarding to wall is enabled. These settings may be overridden at boot time with the kernel
++        these four configs are all disabled. These settings may be overridden at boot time with the kernel
+         command line options <literal>systemd.journald.forward_to_syslog</literal>,
+         <literal>systemd.journald.forward_to_kmsg</literal>,
+         <literal>systemd.journald.forward_to_console</literal>, and
+diff --git a/src/journal/journald.conf b/src/journal/journald.conf
+index 2f1c661..17dda27 100644
+--- a/src/journal/journald.conf
++++ b/src/journal/journald.conf
+@@ -32,7 +32,7 @@
+ #ForwardToSyslog=no
+ #ForwardToKMsg=no
+ #ForwardToConsole=no
+-#ForwardToWall=yes
++ForwardToWall=no
+ #TTYPath=/dev/console
+ #MaxLevelStore=debug
+ #MaxLevelSyslog=debug
+-- 
+2.19.1
+
