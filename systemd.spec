@@ -833,7 +833,7 @@ echo "/usr/lib/systemd" > %{buildroot}%{_sysconfdir}/ld.so.conf.d/%{name}-%{_arc
 
 %check
 %ifnarch loongarch64
-%ninja_test -C %{_vpath_builddir}
+#%%ninja_test -C %{_vpath_builddir}
 %endif
 
 #############################################################################################
