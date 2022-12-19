@@ -447,10 +447,10 @@ Patch9032:      Systemd-Add-sw64-architecture.patch
 %ifarch loongarch64
 Patch9033:	0029-Add-support-for-the-LoongArch-architecture.patch
 Patch9034:	0030-Add-LoongArch-dmi-virt-detection-and-testcase.patch
-Patch9037:	add-loongarch-for-missing_syscall_def.patch
+Patch9035:	add-loongarch-for-missing_syscall_def.patch
 %endif
-Patch9035:      core-update-arg_default_rlimit-in-bump_rlimit.patch
-Patch9036:      set-forwardtowall-no-to-avoid-emerg-log-shown-on-she.patch
+Patch9036:      core-update-arg_default_rlimit-in-bump_rlimit.patch
+Patch9037:      set-forwardtowall-no-to-avoid-emerg-log-shown-on-she.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
