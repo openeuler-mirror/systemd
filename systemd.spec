@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        42
+Release:        43
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -447,6 +447,7 @@ Patch9032:      Systemd-Add-sw64-architecture.patch
 %ifarch loongarch64
 Patch9033:	0029-Add-support-for-the-LoongArch-architecture.patch
 Patch9034:	0030-Add-LoongArch-dmi-virt-detection-and-testcase.patch
+Patch9037:	add-loongarch-for-missing_syscall_def.patch
 %endif
 Patch9035:      core-update-arg_default_rlimit-in-bump_rlimit.patch
 Patch9036:      set-forwardtowall-no-to-avoid-emerg-log-shown-on-she.patch
@@ -1863,6 +1864,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Mon Dec 12 2022 huajingyun<huajingyun@loongson.cn> - 249-43
+- Add loongarch for missing_syscall_def.h
+
 * Wed Nov 23 2022 yangmingtai <yangmingtai@huawei.com> -249-42
 - 1.change /etc/systemd/journald.conf ForwardToWall to no
   2.change DefaultLimitMEMLOCK to 64M
