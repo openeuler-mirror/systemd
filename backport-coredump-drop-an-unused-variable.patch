@@ -1,0 +1,35 @@
+From 9abe4cfc39579037937c63602ce8fe4f51746d38 Mon Sep 17 00:00:00 2001
+From: Frantisek Sumsal <frantisek@sumsal.cz>
+Date: Sat, 20 Aug 2022 21:04:24 +0200
+Subject: [PATCH] coredump: drop an unused variable
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9abe4cfc39579037937c63602ce8fe4f51746d38
+
+---
+ src/coredump/coredump.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/src/coredump/coredump.c b/src/coredump/coredump.c
+index 3ec41a32c3..98e7492811 100644
+--- a/src/coredump/coredump.c
++++ b/src/coredump/coredump.c
+@@ -931,7 +931,6 @@ log:
+ }
+ 
+ static int save_context(Context *context, const struct iovec_wrapper *iovw) {
+-        unsigned count = 0;
+         const char *unit;
+         int r;
+ 
+@@ -955,7 +954,6 @@ static int save_context(Context *context, const struct iovec_wrapper *iovw) {
+                         p = startswith(iovec->iov_base, meta_field_names[i]);
+                         if (p) {
+                                 context->meta[i] = p;
+-                                count++;
+                                 break;
+                         }
+                 }
+-- 
+2.33.0
+
