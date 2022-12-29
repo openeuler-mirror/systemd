@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        43
+Release:        44
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -412,6 +412,16 @@ Patch6363:      backport-core-replace-slice-dependencies-as-they-get-added.patch
 Patch6364:      backport-scsi_id-retry-inquiry-ioctl-if-host_byte-is-DID_TRAN.patch
 Patch6365:      backport-revert-units-add-ProtectClock-yes.patch
 Patch6366:      backport-fix-CVE-2022-3821.patch
+Patch6367:      backport-CVE-2022-4415-test-Create-convenience-macros-to-declare-tests.patch
+Patch6368:      backport-CVE-2022-4415-test-Slightly-rework-DEFINE_TEST_MAIN-macros.patch
+Patch6369:      backport-CVE-2022-4415-test-Add-TEST_RET-macro.patch
+Patch6370:      backport-CVE-2022-4415-test-Add-sd_booted-condition-test-to-TEST-macro.patch
+Patch6371:      backport-CVE-2022-4415-basic-add-STRERROR-wrapper-for-strerror_r.patch
+Patch6372:      backport-CVE-2022-4415-tree-wide-define-and-use-STRERROR_OR_EOF.patch
+Patch6373:      backport-coredump-Fix-format-string-type-mismatch.patch
+Patch6374:      backport-coredump-drop-an-unused-variable.patch
+Patch6375:      backport-CVE-2022-4415-coredump-adjust-whitespace.patch
+Patch6376:      backport-CVE-2022-4415-dont-allow-user-access-coredumps-with-changed-uid.patch
 
 Patch9001:      update-rtc-with-system-clock-when-shutdown.patch
 Patch9002:      udev-add-actions-while-rename-netif-failed.patch
@@ -1864,6 +1874,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Wed Dec 28 2022 huyubiao<huyubiao@huawei.com> - 249-44
+- fix CVE-2022-4415
+
 * Mon Dec 12 2022 huajingyun<huajingyun@loongson.cn> - 249-43
 - Add loongarch for missing_syscall_def.h
 
