@@ -1,0 +1,117 @@
+From d56b3978bbcd28246b3e3ce3f8c958ac95785dd7 Mon Sep 17 00:00:00 2001
+From: fangxiuning <fangxiuning@huawei.com>
+Date: Wed, 22 Apr 2020 11:55:18 +0800
+Subject: 
+  After systemd 239 version, a new feature is added to cgroups. 
+The processes started by users default to the cgroup group belonging
+to user.slice, and the processes started by the system default to
+system.slice. This is the direction of github systemd evolution.
+However, there are still a large number of operations downstream
+that systemd does not perceive to modify the cgroup group,
+such as directly echo the process number to system.slice.
+
+For example:
+1. sleep 1000 &
+2. echo sleep pid > /sys/fs/cgroup/memory/system.slice/task
+3. systemctl daemon-reload
+4. cat /proc/sleep pid/cgroup
+this kind of operation, systemd is not aware of it.
+When systemctl disable service or systemctl daemon-reload operation
+is executed, systemd will re-attach each process to its original
+Under the group(user.slice).
+
+---
+ src/core/main.c           | 4 ++++
+ src/core/manager.c        | 1 +
+ src/core/manager.h        | 1 +
+ src/core/system.conf.in   | 1 +
+ src/core/unit-serialize.c | 2 +-
+ 5 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/main.c b/src/core/main.c
+index 09075ef..a39d7d3 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -154,6 +154,7 @@ static bool arg_default_cpuset_accounting;
+ static bool arg_default_freezer_accounting;
+ static bool arg_default_tasks_accounting;
+ static TasksMax arg_default_tasks_max;
++static bool arg_default_invalidate_cgroup;
+ static sd_id128_t arg_machine_id;
+ static EmergencyAction arg_cad_burst_action;
+ static OOMPolicy arg_default_oom_policy;
+@@ -704,6 +705,7 @@ static int parse_config_file(void) {
+                 { "Manager", "DefaultFreezerAccounting",     config_parse_bool,                  0, &arg_default_freezer_accounting        },
+                 { "Manager", "DefaultTasksAccounting",       config_parse_bool,                  0, &arg_default_tasks_accounting          },
+                 { "Manager", "DefaultTasksMax",              config_parse_tasks_max,             0, &arg_default_tasks_max                 },
++                { "Manager", "DefaultInvalidateCgroup",      config_parse_bool,                  0, &arg_default_invalidate_cgroup         },
+                 { "Manager", "CtrlAltDelBurstAction",        config_parse_emergency_action,      0, &arg_cad_burst_action                  },
+                 { "Manager", "DefaultOOMPolicy",             config_parse_oom_policy,            0, &arg_default_oom_policy                },
+                 { "Manager", "DefaultUnitSlice",             config_parse_string,                0, &arg_default_unit_slice                },
+@@ -780,6 +782,7 @@ static void set_manager_defaults(Manager *m) {
+         m->default_freezer_accounting = arg_default_freezer_accounting;
+         m->default_tasks_accounting = arg_default_tasks_accounting;
+         m->default_tasks_max = arg_default_tasks_max;
++        m->default_invalidate_cgroup = arg_default_invalidate_cgroup;
+         m->default_oom_policy = arg_default_oom_policy;
+ 
+         (void) manager_set_default_rlimits(m, arg_default_rlimit);
+@@ -2401,6 +2404,7 @@ static void reset_arguments(void) {
+         arg_default_freezer_accounting = false;
+         arg_default_tasks_accounting = true;
+         arg_default_tasks_max = DEFAULT_TASKS_MAX;
++        arg_default_invalidate_cgroup = true;
+         arg_machine_id = (sd_id128_t) {};
+         arg_cad_burst_action = EMERGENCY_ACTION_REBOOT_FORCE;
+         arg_default_oom_policy = OOM_STOP;
+diff --git a/src/core/manager.c b/src/core/manager.c
+index 29ef96b..740bad5 100644
+--- a/src/core/manager.c
++++ b/src/core/manager.c
+@@ -780,6 +780,7 @@ int manager_new(UnitFileScope scope, ManagerTestRunFlags test_run_flags, Manager
+                 .default_cpuset_accounting = false,
+                 .default_tasks_accounting = true,
+                 .default_tasks_max = TASKS_MAX_UNSET,
++                .default_invalidate_cgroup = true,
+                 .default_timeout_start_usec = DEFAULT_TIMEOUT_USEC,
+                 .default_timeout_stop_usec = DEFAULT_TIMEOUT_USEC,
+                 .default_restart_usec = DEFAULT_RESTART_USEC,
+diff --git a/src/core/manager.h b/src/core/manager.h
+index 9a38737..485bab1 100644
+--- a/src/core/manager.h
++++ b/src/core/manager.h
+@@ -371,6 +371,7 @@ struct Manager {
+ 
+         TasksMax default_tasks_max;
+         usec_t default_timer_accuracy_usec;
++        bool default_invalidate_cgroup;
+ 
+         OOMPolicy default_oom_policy;
+ 
+diff --git a/src/core/system.conf.in b/src/core/system.conf.in
+index f521f3e..c1fd308 100644
+--- a/src/core/system.conf.in
++++ b/src/core/system.conf.in
+@@ -74,5 +74,6 @@ DefaultLimitMEMLOCK=64M
+ #DefaultLimitNICE=
+ #DefaultLimitRTPRIO=
+ #DefaultLimitRTTIME=
++#DefaultInvalidateCgroup=yes
+ #DefaultOOMPolicy=stop
+ DefaultDFXReboot=yes
+diff --git a/src/core/unit-serialize.c b/src/core/unit-serialize.c
+index 689a536..f3b3e70 100644
+--- a/src/core/unit-serialize.c
++++ b/src/core/unit-serialize.c
+@@ -526,7 +526,7 @@ int unit_deserialize(Unit *u, FILE *f, FDSet *fds) {
+         /* Let's make sure that everything that is deserialized also gets any potential new cgroup settings
+          * applied after we are done. For that we invalidate anything already realized, so that we can
+          * realize it again. */
+-        if (u->cgroup_realized) {
++        if (u->cgroup_realized && u->manager->default_invalidate_cgroup) {
+                 unit_invalidate_cgroup(u, _CGROUP_MASK_ALL);
+                 unit_invalidate_cgroup_bpf(u);
+         }
+-- 
+2.27.0
+

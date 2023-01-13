@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        44
+Release:        45
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -314,7 +314,6 @@ Patch6264:      backport-execute-use-_cleanup_-logic-where-appropriate.patch
 Patch6265:      backport-execute-line-break-comments-a-bit-less-aggressively.patch
 Patch6266:      backport-execute-document-that-the-env-param-is-input-and-out.patch
 Patch6267:      backport-sd-dhcp-lease-fix-memleak.patch
-Patch6268:      backport-core-mount-fail-early-if-directory-cannot-be-created.patch
 Patch6269:      backport-util-another-set-of-CVE-2021-4034-assert-s.patch
 Patch6270:      backport-resolve-fix-potential-memleak-and-use-after-free.patch
 Patch6271:      backport-resolve-fix-possible-memleak.patch
@@ -422,6 +421,25 @@ Patch6373:      backport-coredump-Fix-format-string-type-mismatch.patch
 Patch6374:      backport-coredump-drop-an-unused-variable.patch
 Patch6375:      backport-CVE-2022-4415-coredump-adjust-whitespace.patch
 Patch6376:      backport-CVE-2022-4415-dont-allow-user-access-coredumps-with-changed-uid.patch
+Patch6377:      backport-dns-domain-make-each-label-nul-terminated.patch
+Patch6378:      backport-resolve-fix-heap-buffer-overflow-reported-by-ASAN-wi.patch
+Patch6379:      backport-sd-bus-do-not-pass-NULL-when-received-message-with-i.patch
+Patch6380:      backport-growfs-don-t-actually-resize-on-dry-run.patch
+Patch6381:      backport-stat-util-replace-is_dir-is_dir_fd-by-single-is_dir_.patch
+Patch6382:      backport-tmpfiles-check-the-directory-we-were-supposed-to-cre.patch
+Patch6383:      backport-coredump-Connect-stdout-stderr-to-dev-null-before-do.patch
+Patch6384:      backport-cgroups-agent-connect-stdin-stdout-stderr-to-dev-nul.patch
+Patch6385:      backport-unit-file-avoid-null-in-debugging-logs.patch
+Patch6386:      backport-resolve-mdns_packet_extract_matching_rrs-may-return-.patch
+Patch6387:      backport-dhcp-fix-potential-buffer-overflow.patch
+Patch6388:      backport-sd-device-monitor-actually-refuse-to-send-invalid-de.patch
+Patch6389:      backport-sysusers-add-fsync-for-passwd-24324.patch
+Patch6390:      backport-condition-fix-device-tree-firmware-path.patch
+Patch6391:      backport-log-don-t-attempt-to-duplicate-closed-fd.patch
+Patch6392:      backport-mount-util-fix-error-code.patch
+Patch6393:      backport-analyze-add-forgotten-return-statement.patch
+Patch6394:      backport-shared-condition-avoid-nss-lookup-in-PID1.patch
+Patch6395:      backport-logind-fix-getting-property-OnExternalPower-via-D-Bu.patch
 
 Patch9001:      update-rtc-with-system-clock-when-shutdown.patch
 Patch9002:      udev-add-actions-while-rename-netif-failed.patch
@@ -461,6 +479,25 @@ Patch9035:	add-loongarch-for-missing_syscall_def.patch
 %endif
 Patch9036:      core-update-arg_default_rlimit-in-bump_rlimit.patch
 Patch9037:      set-forwardtowall-no-to-avoid-emerg-log-shown-on-she.patch
+Patch9038:      core-cgroup-support-cpuset.patch
+Patch9039:      core-cgroup-support-freezer.patch
+Patch9040:      core-cgroup-support-memorysw.patch
+Patch9041:      systemd-core-Add-new-rules-for-lower-priority-events.patch
+Patch9042:      bugfix-also-stop-machine-when-a-machine-un.patch
+Patch9043:      print-the-process-status-to-console-when-shutdown.patch
+Patch9044:      Retry-to-handle-the-uevent-when-worker-is-terminated.patch
+Patch9045:      treat-hyphen-as-valid-hostname-char.patch
+Patch9046:      process-util-log-more-information-when-runnin.patch
+Patch9047:      fuser-print-umount-message-to-reboot-umount-msg.patch
+Patch9048:      shutdown-reboot-when-recieve-crash-signal.patch
+Patch9049:      core-add-OptionalLog-to-allow-users-change-log-level.patch
+Patch9050:      core-cgroup-support-default-slice-for-all-uni.patch
+Patch9051:      core-add-invalidate-cgroup-config.patch
+Patch9052:      let-the-child-of-one-unit-don-t-affect-each-other.patch
+Patch9053:      support-disable-cgroup-controllers-we-don-t-want.patch
+Patch9054:      fix-mount-failed-while-daemon-reexec.patch
+Patch9055:      bugfix-for-cgroup-Swap-cgroup-v1-deletion-and-migration.patch
+Patch9056:      delete-journal-files-except-system.journal-when-jour.patch
 
 BuildRequires:  gcc, gcc-c++
 BuildRequires:  libcap-devel, libmount-devel, pam-devel, libselinux-devel
@@ -503,7 +540,6 @@ Obsoletes:      systemd-sysv < 206
 Obsoletes:      %{name} < 229-5
 Provides:       systemd-sysv = 206
 Conflicts:      initscripts < 9.56.1
-Recommends:     %{name}-help
 
 Provides:       %{name}-rpm-config
 Obsoletes:      %{name}-rpm-config < 243
@@ -1874,6 +1910,10 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Fri Jan 13 2023 yangmingtai <yangmingtai@huawei.com> -249-45
+- backport patches from upstream and add patchs to enhance compatibility
+  and features
+
 * Wed Dec 28 2022 huyubiao<huyubiao@huawei.com> - 249-44
 - fix CVE-2022-4415
 

@@ -1,0 +1,37 @@
+From 3982142116871b3eead4d5833d898f077e7942d4 Mon Sep 17 00:00:00 2001
+From: Avram Lubkin <avylove@rockhopper.net>
+Date: Tue, 16 Aug 2022 08:51:21 -0400
+Subject: [PATCH] sysusers: add fsync for passwd (#24324)
+
+https://github.com/systemd/systemd/pull/6636 added `fsync()` when
+temporary shadow, group, and gshadow files are created, but it was
+not added for passwd. As far as I can tell, this seems to have been
+an oversight. I'm seeing real world issues where a blank /etc/passwd
+file is being created if a machine loses power early in the boot process.
+
+(cherry picked from commit 19193b489841a7bcccda7122ac0849cf6efe59fd)
+(cherry picked from commit 9f2f3911539c453037aecd51f875dfd75ed04113)
+(cherry picked from commit 7ca021b87e92a4e775af22c04a2ab2bf404ae313)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/3982142116871b3eead4d5833d898f077e7942d4
+---
+ src/sysusers/sysusers.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/sysusers/sysusers.c b/src/sysusers/sysusers.c
+index 669efe4a1d..055eb6775e 100644
+--- a/src/sysusers/sysusers.c
++++ b/src/sysusers/sysusers.c
+@@ -487,7 +487,7 @@ static int write_temporary_passwd(const char *passwd_path, FILE **tmpfile, char
+                         break;
+         }
+ 
+-        r = fflush_and_check(passwd);
++        r = fflush_sync_and_check(passwd);
+         if (r < 0)
+                 return log_debug_errno(r, "Failed to flush %s: %m", passwd_tmp);
+ 
+-- 
+2.27.0
+

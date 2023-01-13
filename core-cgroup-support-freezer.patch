@@ -1,0 +1,589 @@
+From 05a0f33b0d0a650b25ce7955a171d725f9c3f5f6 Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Thu, 6 May 2021 09:38:54 +0800
+Subject: [PATCH] core-cgroup: support freezer.
+
+This patch add support for freezer subsystem.
+---
+ src/basic/cgroup-util.c                       |  1 +
+ src/basic/cgroup-util.h                       |  4 +-
+ src/core/cgroup.c                             | 16 +++++++
+ src/core/cgroup.h                             |  4 ++
+ src/core/dbus-cgroup.c                        | 29 +++++++++++++
+ src/core/dbus-manager.c                       |  1 +
+ src/core/load-fragment-gperf.gperf.in         |  2 +
+ src/core/load-fragment.c                      | 33 ++++++++++++++
+ src/core/load-fragment.h                      |  1 +
+ src/core/main.c                               |  4 ++
+ src/core/manager.h                            |  1 +
+ src/core/system.conf.in                       |  1 +
+ src/core/unit.c                               |  1 +
+ src/shared/bus-unit-util.c                    | 11 +++++
+ src/test/meson.build                          |  6 +++
+ src/test/test-cgroup-freezer.c                | 43 +++++++++++++++++++
+ src/test/test-cgroup-mask.c                   |  3 +-
+ .../fuzz-unit-file/directives-all.service     |  2 +
+ test/fuzz/fuzz-unit-file/directives.mount     |  2 +
+ test/fuzz/fuzz-unit-file/directives.scope     |  2 +
+ test/fuzz/fuzz-unit-file/directives.service   |  2 +
+ test/fuzz/fuzz-unit-file/directives.slice     |  2 +
+ test/fuzz/fuzz-unit-file/directives.socket    |  2 +
+ test/fuzz/fuzz-unit-file/directives.swap      |  2 +
+ 24 files changed, 173 insertions(+), 2 deletions(-)
+ create mode 100644 src/test/test-cgroup-freezer.c
+
+diff --git a/src/basic/cgroup-util.c b/src/basic/cgroup-util.c
+index 01a4181..f912b65 100644
+--- a/src/basic/cgroup-util.c
++++ b/src/basic/cgroup-util.c
+@@ -2162,6 +2162,7 @@ static const char *const cgroup_controller_table[_CGROUP_CONTROLLER_MAX] = {
+         [CGROUP_CONTROLLER_DEVICES] = "devices",
+         [CGROUP_CONTROLLER_PIDS] = "pids",
+         [CGROUP_CONTROLLER_CPUSET] = "cpuset",
++        [CGROUP_CONTROLLER_FREEZER] = "freezer",
+         [CGROUP_CONTROLLER_BPF_FIREWALL] = "bpf-firewall",
+         [CGROUP_CONTROLLER_BPF_DEVICES] = "bpf-devices",
+         [CGROUP_CONTROLLER_BPF_FOREIGN] = "bpf-foreign",
+diff --git a/src/basic/cgroup-util.h b/src/basic/cgroup-util.h
+index 06a23ff..a491eca 100644
+--- a/src/basic/cgroup-util.h
++++ b/src/basic/cgroup-util.h
+@@ -27,6 +27,7 @@ typedef enum CGroupController {
+         CGROUP_CONTROLLER_DEVICES,    /* v1 only */
+         CGROUP_CONTROLLER_PIDS,
+         CGROUP_CONTROLLER_CPUSET,
++        CGROUP_CONTROLLER_FREEZER,
+ 
+         /* BPF-based pseudo-controllers, v2 only */
+         CGROUP_CONTROLLER_BPF_FIREWALL,
+@@ -51,13 +52,14 @@ typedef enum CGroupMask {
+         CGROUP_MASK_DEVICES = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_DEVICES),
+         CGROUP_MASK_PIDS = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_PIDS),
+         CGROUP_MASK_CPUSET = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_CPUSET),
++        CGROUP_MASK_FREEZER = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_FREEZER),
+         CGROUP_MASK_BPF_FIREWALL = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_BPF_FIREWALL),
+         CGROUP_MASK_BPF_DEVICES = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_BPF_DEVICES),
+         CGROUP_MASK_BPF_FOREIGN = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_BPF_FOREIGN),
+         CGROUP_MASK_BPF_SOCKET_BIND = CGROUP_CONTROLLER_TO_MASK(CGROUP_CONTROLLER_BPF_SOCKET_BIND),
+ 
+         /* All real cgroup v1 controllers */
+-        CGROUP_MASK_V1 = CGROUP_MASK_CPU|CGROUP_MASK_CPUACCT|CGROUP_MASK_BLKIO|CGROUP_MASK_MEMORY|CGROUP_MASK_CPUSET|CGROUP_MASK_DEVICES|CGROUP_MASK_PIDS,
++        CGROUP_MASK_V1 = CGROUP_MASK_CPU|CGROUP_MASK_CPUACCT|CGROUP_MASK_BLKIO|CGROUP_MASK_MEMORY|CGROUP_MASK_CPUSET|CGROUP_MASK_FREEZER|CGROUP_MASK_DEVICES|CGROUP_MASK_PIDS,
+ 
+         /* All real cgroup v2 controllers */
+         CGROUP_MASK_V2 = CGROUP_MASK_CPU|CGROUP_MASK_CPUSET2|CGROUP_MASK_IO|CGROUP_MASK_MEMORY|CGROUP_MASK_PIDS,
+diff --git a/src/core/cgroup.c b/src/core/cgroup.c
+index 83e94c7..f811a8b 100644
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -139,6 +139,7 @@ void cgroup_context_init(CGroupContext *c) {
+                 .startup_blockio_weight = CGROUP_BLKIO_WEIGHT_INVALID,
+ 
+                 .tasks_max = TASKS_MAX_UNSET,
++                .freezer_state = NULL,
+ 
+                 .moom_swap = MANAGED_OOM_AUTO,
+                 .moom_mem_pressure = MANAGED_OOM_AUTO,
+@@ -260,6 +261,9 @@ void cgroup_context_done(CGroupContext *c) {
+ 
+         cpu_set_reset(&c->cpuset_cpus2);
+         cpu_set_reset(&c->cpuset_mems2);
++
++        if (c->freezer_state)
++                c->freezer_state = mfree(c->freezer_state);
+ }
+ 
+ static int unit_get_kernel_memory_limit(Unit *u, const char *file, uint64_t *ret) {
+@@ -433,6 +437,7 @@ void cgroup_context_dump(Unit *u, FILE* f, const char *prefix) {
+                 "%sBlockIOAccounting: %s\n"
+                 "%sMemoryAccounting: %s\n"
+                 "%sCPUSetAccounting: %s\n"
++                "%sFreezerAccounting=%s\n"
+                 "%sTasksAccounting: %s\n"
+                 "%sIPAccounting: %s\n"
+                 "%sCPUWeight: %" PRIu64 "\n"
+@@ -460,6 +465,7 @@ void cgroup_context_dump(Unit *u, FILE* f, const char *prefix) {
+                 "%sCPUSetCloneChildren=%s\n"
+                 "%sCPUSetMemMigrate=%s\n"
+                 "%sTasksMax: %" PRIu64 "\n"
++                "%sFreezerState=%s\n"
+                 "%sDevicePolicy: %s\n"
+                 "%sDisableControllers: %s\n"
+                 "%sDelegate: %s\n"
+@@ -472,6 +478,7 @@ void cgroup_context_dump(Unit *u, FILE* f, const char *prefix) {
+                 prefix, yes_no(c->blockio_accounting),
+                 prefix, yes_no(c->memory_accounting),
+                 prefix, yes_no(c->cpuset_accounting),
++                prefix, yes_no(c->freezer_accounting),
+                 prefix, yes_no(c->tasks_accounting),
+                 prefix, yes_no(c->ip_accounting),
+                 prefix, c->cpu_weight,
+@@ -499,6 +506,7 @@ void cgroup_context_dump(Unit *u, FILE* f, const char *prefix) {
+                 prefix, yes_no(c->cpuset_clone_children),
+                 prefix, yes_no(c->cpuset_memory_migrate),
+                 prefix, tasks_max_resolve(&c->tasks_max),
++                prefix, c->freezer_state,
+                 prefix, cgroup_device_policy_to_string(c->device_policy),
+                 prefix, strempty(disable_controllers_str),
+                 prefix, yes_no(c->delegate),
+@@ -1566,6 +1574,11 @@ static void cgroup_context_apply(
+                 }
+         }
+ 
++        if ((apply_mask & CGROUP_MASK_FREEZER) && !is_local_root) {
++                if (c->freezer_state)
++                        (void) set_attribute_and_warn(u, "freezer", "freezer.state", c->freezer_state);
++        }
++
+         /* On cgroup v2 we can apply BPF everywhere. On cgroup v1 we apply it everywhere except for the root of
+          * containers, where we leave this to the manager */
+         if ((apply_mask & (CGROUP_MASK_DEVICES | CGROUP_MASK_BPF_DEVICES)) &&
+@@ -1708,6 +1721,9 @@ static CGroupMask unit_get_cgroup_mask(Unit *u) {
+             c->cpuset_mems)
+                 mask |= CGROUP_MASK_CPUSET;
+ 
++        if (c->freezer_accounting || c->freezer_state)
++                mask |= CGROUP_MASK_FREEZER;
++
+         if (c->device_allow ||
+             c->device_policy != CGROUP_DEVICE_POLICY_AUTO)
+                 mask |= CGROUP_MASK_DEVICES | CGROUP_MASK_BPF_DEVICES;
+diff --git a/src/core/cgroup.h b/src/core/cgroup.h
+index 1e27104..6833d5b 100644
+--- a/src/core/cgroup.h
++++ b/src/core/cgroup.h
+@@ -116,6 +116,7 @@ struct CGroupContext {
+         bool blockio_accounting;
+         bool memory_accounting;
+         bool cpuset_accounting;
++        bool freezer_accounting;
+         bool tasks_accounting;
+         bool ip_accounting;
+ 
+@@ -186,6 +187,9 @@ struct CGroupContext {
+         /* Common */
+         TasksMax tasks_max;
+ 
++        /* Freezer */
++        char *freezer_state;
++
+         /* Settings for systemd-oomd */
+         ManagedOOMMode moom_swap;
+         ManagedOOMMode moom_mem_pressure;
+diff --git a/src/core/dbus-cgroup.c b/src/core/dbus-cgroup.c
+index 0cdc98c..8527a1a 100644
+--- a/src/core/dbus-cgroup.c
++++ b/src/core/dbus-cgroup.c
+@@ -445,6 +445,8 @@ const sd_bus_vtable bus_cgroup_vtable[] = {
+         SD_BUS_PROPERTY("CPUSetMems", "s", NULL, offsetof(CGroupContext, cpuset_mems), 0),
+         SD_BUS_PROPERTY("CPUSetCloneChildren", "b", bus_property_get_bool, offsetof(CGroupContext, cpuset_clone_children), 0),
+         SD_BUS_PROPERTY("CPUSetMemMigrate", "b", bus_property_get_bool, offsetof(CGroupContext, cpuset_memory_migrate), 0),
++        SD_BUS_PROPERTY("FreezerAccounting", "b", bus_property_get_bool, offsetof(CGroupContext, freezer_accounting), 0),
++        SD_BUS_PROPERTY("FreezerState", "s", NULL, offsetof(CGroupContext, freezer_state), 0),
+         SD_BUS_PROPERTY("DevicePolicy", "s", property_get_cgroup_device_policy, offsetof(CGroupContext, device_policy), 0),
+         SD_BUS_PROPERTY("DeviceAllow", "a(ss)", property_get_device_allow, 0, 0),
+         SD_BUS_PROPERTY("TasksAccounting", "b", bus_property_get_bool, offsetof(CGroupContext, tasks_accounting), 0),
+@@ -1073,6 +1075,9 @@ int bus_cgroup_set_property(
+         if (streq(name, "CPUSetAccounting"))
+                 return bus_cgroup_set_boolean(u, name, &c->cpuset_accounting, CGROUP_MASK_CPUSET, message, flags, error);
+ 
++        if (streq(name, "FreezerAccounting"))
++                return bus_cgroup_set_boolean(u, name, &c->freezer_accounting, CGROUP_MASK_FREEZER, message, flags, error);
++
+         if (STR_IN_SET(name, "CPUSetCpus", "CPUSetMems")) {
+                 const char *cpuset_str = NULL;
+ 
+@@ -1107,6 +1112,30 @@ int bus_cgroup_set_property(
+         if (streq(name, "CPUSetMemMigrate"))
+                 return bus_cgroup_set_boolean(u, name, &c->cpuset_memory_migrate, CGROUP_MASK_CPUSET, message, flags, error);
+ 
++        if (streq(name, "FreezerState")) {
++                const char *state = NULL;
++
++                r = sd_bus_message_read(message, "s", &state);
++                if (r < 0)
++                        return r;
++
++                if (!UNIT_WRITE_FLAGS_NOOP(flags)) {
++                        unit_invalidate_cgroup(u, CGROUP_MASK_FREEZER);
++
++                        if (c->freezer_state) {
++                                free(c->freezer_state);
++                                c->freezer_state = NULL;
++                        }
++
++                        c->freezer_state = strdup(state);
++                        if (!c->freezer_state)
++                                return -ENOMEM;
++
++                        unit_write_settingf(u, flags, name, "FreezerState=%s", state);
++                }
++                return 1;
++        }
++
+         if (streq(name, "TasksAccounting"))
+                 return bus_cgroup_set_boolean(u, name, &c->tasks_accounting, CGROUP_MASK_PIDS, message, flags, error);
+ 
+diff --git a/src/core/dbus-manager.c b/src/core/dbus-manager.c
+index 82896af..184df9d 100644
+--- a/src/core/dbus-manager.c
++++ b/src/core/dbus-manager.c
+@@ -2691,6 +2691,7 @@ const sd_bus_vtable bus_manager_vtable[] = {
+         SD_BUS_PROPERTY("DefaultBlockIOAccounting", "b", bus_property_get_bool, offsetof(Manager, default_blockio_accounting), SD_BUS_VTABLE_PROPERTY_CONST),
+         SD_BUS_PROPERTY("DefaultMemoryAccounting", "b", bus_property_get_bool, offsetof(Manager, default_memory_accounting), SD_BUS_VTABLE_PROPERTY_CONST),
+         SD_BUS_PROPERTY("DefaultCpusetAccounting", "b", bus_property_get_bool, offsetof(Manager, default_cpuset_accounting), SD_BUS_VTABLE_PROPERTY_CONST),
++        SD_BUS_PROPERTY("DefaultFreezerAccounting", "b", bus_property_get_bool, offsetof(Manager, default_freezer_accounting), SD_BUS_VTABLE_PROPERTY_CONST),
+         SD_BUS_PROPERTY("DefaultTasksAccounting", "b", bus_property_get_bool, offsetof(Manager, default_tasks_accounting), SD_BUS_VTABLE_PROPERTY_CONST),
+         SD_BUS_PROPERTY("DefaultLimitCPU", "t", bus_property_get_rlimit, offsetof(Manager, rlimit[RLIMIT_CPU]), SD_BUS_VTABLE_PROPERTY_CONST),
+         SD_BUS_PROPERTY("DefaultLimitCPUSoft", "t", bus_property_get_rlimit, offsetof(Manager, rlimit[RLIMIT_CPU]), SD_BUS_VTABLE_PROPERTY_CONST),
+diff --git a/src/core/load-fragment-gperf.gperf.in b/src/core/load-fragment-gperf.gperf.in
+index 60c9dbc..5b7ecd2 100644
+--- a/src/core/load-fragment-gperf.gperf.in
++++ b/src/core/load-fragment-gperf.gperf.in
+@@ -202,6 +202,8 @@
+ {{type}}.CPUSetMems,                       config_parse_cpuset_cpumems,                 0,                                  offsetof({{type}}, cgroup_context.cpuset_mems)
+ {{type}}.CPUSetCloneChildren,              config_parse_bool,                           0,                                  offsetof({{type}}, cgroup_context.cpuset_clone_children)
+ {{type}}.CPUSetMemMigrate,                 config_parse_bool,                           0,                                  offsetof({{type}}, cgroup_context.cpuset_memory_migrate)
++{{type}}.FreezerAccounting,                config_parse_bool,                           0,                                  offsetof({{type}}, cgroup_context.freezer_accounting)
++{{type}}.FreezerState,                     config_parse_freezer_state,                  0,                                  offsetof({{type}}, cgroup_context.freezer_state)
+ {{type}}.DeviceAllow,                      config_parse_device_allow,                   0,                                  offsetof({{type}}, cgroup_context)
+ {{type}}.DevicePolicy,                     config_parse_device_policy,                  0,                                  offsetof({{type}}, cgroup_context.device_policy)
+ {{type}}.IOAccounting,                     config_parse_bool,                           0,                                  offsetof({{type}}, cgroup_context.io_accounting)
+diff --git a/src/core/load-fragment.c b/src/core/load-fragment.c
+index 5f6a703..d5eb932 100644
+--- a/src/core/load-fragment.c
++++ b/src/core/load-fragment.c
+@@ -3791,6 +3791,39 @@ int config_parse_cpuset_cpumems(
+      return 0;
+ }
+ 
++int config_parse_freezer_state(
++                const char *unit,
++                const char *filename,
++                unsigned line,
++                const char *section,
++                unsigned section_line,
++                const char *lvalue,
++                int ltype,
++                const char *rvalue,
++                void *data,
++                void *userdata) {
++
++        char **freezer_state = data;
++        char *pinstr = NULL;
++
++        assert(filename);
++        assert(lvalue);
++        assert(rvalue);
++
++        if (!STR_IN_SET(rvalue, "FROZEN", "THAWED")) {
++                log_syntax(unit, LOG_ERR, filename, line, EINVAL, "Freezer state '%s' is invalid, Ignoring.", rvalue);
++                return 0;
++        }
++
++        pinstr = strdup(rvalue);
++        if (!pinstr)
++                return log_oom();
++
++        free(*freezer_state);
++        *freezer_state = pinstr;
++        return 0;
++}
++
+ int config_parse_tasks_max(
+                 const char *unit,
+                 const char *filename,
+diff --git a/src/core/load-fragment.h b/src/core/load-fragment.h
+index 1ecad67..090776c 100644
+--- a/src/core/load-fragment.h
++++ b/src/core/load-fragment.h
+@@ -75,6 +75,7 @@ CONFIG_PARSER_PROTOTYPE(config_parse_cg_weight);
+ CONFIG_PARSER_PROTOTYPE(config_parse_cpu_shares);
+ CONFIG_PARSER_PROTOTYPE(config_parse_memory_limit);
+ CONFIG_PARSER_PROTOTYPE(config_parse_cpuset_cpumems);
++CONFIG_PARSER_PROTOTYPE(config_parse_freezer_state);
+ CONFIG_PARSER_PROTOTYPE(config_parse_tasks_max);
+ CONFIG_PARSER_PROTOTYPE(config_parse_delegate);
+ CONFIG_PARSER_PROTOTYPE(config_parse_managed_oom_mode);
+diff --git a/src/core/main.c b/src/core/main.c
+index 6309aab..9cc7fec 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -149,6 +149,7 @@ static bool arg_default_ip_accounting;
+ static bool arg_default_blockio_accounting;
+ static bool arg_default_memory_accounting;
+ static bool arg_default_cpuset_accounting;
++static bool arg_default_freezer_accounting;
+ static bool arg_default_tasks_accounting;
+ static TasksMax arg_default_tasks_max;
+ static sd_id128_t arg_machine_id;
+@@ -695,6 +696,7 @@ static int parse_config_file(void) {
+                 { "Manager", "DefaultBlockIOAccounting",     config_parse_bool,                  0, &arg_default_blockio_accounting        },
+                 { "Manager", "DefaultMemoryAccounting",      config_parse_bool,                  0, &arg_default_memory_accounting         },
+                 { "Manager", "DefaultCpusetAccounting",      config_parse_bool,                  0, &arg_default_cpuset_accounting         },
++                { "Manager", "DefaultFreezerAccounting",     config_parse_bool,                  0, &arg_default_freezer_accounting        },
+                 { "Manager", "DefaultTasksAccounting",       config_parse_bool,                  0, &arg_default_tasks_accounting          },
+                 { "Manager", "DefaultTasksMax",              config_parse_tasks_max,             0, &arg_default_tasks_max                 },
+                 { "Manager", "CtrlAltDelBurstAction",        config_parse_emergency_action,      0, &arg_cad_burst_action                  },
+@@ -767,6 +769,7 @@ static void set_manager_defaults(Manager *m) {
+         m->default_blockio_accounting = arg_default_blockio_accounting;
+         m->default_memory_accounting = arg_default_memory_accounting;
+         m->default_cpuset_accounting = arg_default_cpuset_accounting;
++        m->default_freezer_accounting = arg_default_freezer_accounting;
+         m->default_tasks_accounting = arg_default_tasks_accounting;
+         m->default_tasks_max = arg_default_tasks_max;
+         m->default_oom_policy = arg_default_oom_policy;
+@@ -2405,6 +2408,7 @@ static void reset_arguments(void) {
+         arg_default_blockio_accounting = false;
+         arg_default_memory_accounting = MEMORY_ACCOUNTING_DEFAULT;
+         arg_default_cpuset_accounting = false;
++        arg_default_freezer_accounting = false;
+         arg_default_tasks_accounting = true;
+         arg_default_tasks_max = DEFAULT_TASKS_MAX;
+         arg_machine_id = (sd_id128_t) {};
+diff --git a/src/core/manager.h b/src/core/manager.h
+index b7a51cf..72fd86e 100644
+--- a/src/core/manager.h
++++ b/src/core/manager.h
+@@ -361,6 +361,7 @@ struct Manager {
+         bool default_cpu_accounting;
+         bool default_memory_accounting;
+         bool default_cpuset_accounting;
++        bool default_freezer_accounting;
+         bool default_io_accounting;
+         bool default_blockio_accounting;
+         bool default_tasks_accounting;
+diff --git a/src/core/system.conf.in b/src/core/system.conf.in
+index fcc20d0..f97bd2f 100644
+--- a/src/core/system.conf.in
++++ b/src/core/system.conf.in
+@@ -54,6 +54,7 @@
+ #DefaultBlockIOAccounting=no
+ #DefaultMemoryAccounting={{ 'yes' if MEMORY_ACCOUNTING_DEFAULT else 'no' }}
+ #DefaultCpusetAccounting=
++#DefaultFreezerAccounting=no
+ #DefaultTasksAccounting=yes
+ #DefaultTasksMax=80%
+ #DefaultLimitCPU=
+diff --git a/src/core/unit.c b/src/core/unit.c
+index 2f20053..70849e4 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -177,6 +177,7 @@ static void unit_init(Unit *u) {
+                 cc->blockio_accounting = u->manager->default_blockio_accounting;
+                 cc->memory_accounting = u->manager->default_memory_accounting;
+                 cc->cpuset_accounting = u->manager->default_cpuset_accounting;
++                cc->freezer_accounting = u->manager->default_freezer_accounting;
+                 cc->tasks_accounting = u->manager->default_tasks_accounting;
+                 cc->ip_accounting = u->manager->default_ip_accounting;
+ 
+diff --git a/src/shared/bus-unit-util.c b/src/shared/bus-unit-util.c
+index caad3ab..f20fcbf 100644
+--- a/src/shared/bus-unit-util.c
++++ b/src/shared/bus-unit-util.c
+@@ -462,6 +462,7 @@ static int bus_append_cgroup_property(sd_bus_message *m, const char *field, cons
+                               "TasksAccounting",
+                               "IPAccounting",
+                               "CPUSetAccounting",
++                              "FreezerAccounting",
+                               "CPUSetCloneChildren",
+                               "CPUSetMemMigrate"))
+                 return bus_append_parse_boolean(m, field, eq);
+@@ -574,6 +575,16 @@ static int bus_append_cgroup_property(sd_bus_message *m, const char *field, cons
+                 return 1;
+         }
+ 
++        if (streq(field, "FreezerState")) {
++                if (STR_IN_SET(eq, "FROZEN", "THAWED"))
++                        r = sd_bus_message_append(m, "(sv)", field, "s", eq);
++                else
++                        r = -EINVAL;
++                if (r < 0)
++                        return bus_log_create_error(r);
++                return 1;
++        }
++
+         if (streq(field, "CPUQuota")) {
+                 if (isempty(eq))
+                         r = sd_bus_message_append(m, "(sv)", "CPUQuotaPerSecUSec", "t", USEC_INFINITY);
+diff --git a/src/test/meson.build b/src/test/meson.build
+index c0faeb4..fc891bb 100644
+--- a/src/test/meson.build
++++ b/src/test/meson.build
+@@ -450,6 +450,12 @@ tests += [
+          [],
+          core_includes],
+ 
++        [['src/test/test-cgroup-freezer.c'],
++         [libcore,
++          libshared],
++         [],
++         core_includes],
++
+         [['src/test/test-cgroup-unit-default.c'],
+          [libcore,
+           libshared],
+diff --git a/src/test/test-cgroup-freezer.c b/src/test/test-cgroup-freezer.c
+new file mode 100644
+index 0000000..a533d16
+--- /dev/null
++++ b/src/test/test-cgroup-freezer.c
+@@ -0,0 +1,43 @@
++/* SPDX-License-Identifier: LGPL-2.1+ */
++
++#include "load-fragment.h"
++#include "string-util.h"
++
++static void test_config_parse_freezer_state(void) {
++       /* int config_parse_freezer_state(
++                 const char *unit,
++                 const char *filename,
++                 unsigned line,
++                 const char *section,
++                 unsigned section_line,
++                 const char *lvalue,
++                 int ltype,
++                 const char *rvalue,
++                 void *data,
++                 void *userdata) */
++        int r;
++        _cleanup_free_ char *pstate = NULL;
++
++        r = config_parse_freezer_state(NULL, "fake", 1, "section", 1, "FreezerState", 0, "FROZEN", &pstate, NULL);
++        assert_se(r >= 0);
++        assert_se(streq(pstate, "FROZEN"));
++
++        pstate = mfree(pstate);
++        r = config_parse_freezer_state(NULL, "fake", 1, "section", 1, "FreezerState", 0, "THAWED", &pstate, NULL);
++        assert_se(r >= 0);
++        assert_se(streq(pstate, "THAWED"));
++
++        pstate = mfree(pstate);
++        r = config_parse_freezer_state(NULL, "fake", 1, "section", 1, "FreezerState", 0, "test", &pstate, NULL);
++        assert_se(r >= 0);
++        assert_se(!pstate);
++
++        r = config_parse_freezer_state(NULL, "fake", 1, "section", 1, "FreezerState", 0, "", &pstate, NULL);
++        assert_se(r >= 0);
++        assert_se(!pstate);
++}
++
++int main(int argc, char *argv[]){
++        test_config_parse_freezer_state();
++        return 0;
++}
+diff --git a/src/test/test-cgroup-mask.c b/src/test/test-cgroup-mask.c
+index 425fe19..31fd5d0 100644
+--- a/src/test/test-cgroup-mask.c
++++ b/src/test/test-cgroup-mask.c
+@@ -56,6 +56,7 @@ static int test_cgroup_mask(void) {
+         m->default_cpu_accounting =
+                 m->default_memory_accounting =
+                 m->default_cpuset_accounting =
++                m->default_freezer_accounting =
+                 m->default_blockio_accounting =
+                 m->default_io_accounting =
+                 m->default_tasks_accounting = false;
+@@ -141,7 +142,7 @@ static void test_cg_mask_to_string_one(CGroupMask mask, const char *t) {
+ 
+ static void test_cg_mask_to_string(void) {
+         test_cg_mask_to_string_one(0, NULL);
+-        test_cg_mask_to_string_one(_CGROUP_MASK_ALL, "cpu cpuacct cpuset2 io blkio memory devices pids cpuset bpf-firewall bpf-devices bpf-foreign bpf-socket-bind");
++        test_cg_mask_to_string_one(_CGROUP_MASK_ALL, "cpu cpuacct cpuset2 io blkio memory devices pids cpuset freezer bpf-firewall bpf-devices bpf-foreign bpf-socket-bind");
+         test_cg_mask_to_string_one(CGROUP_MASK_CPU, "cpu");
+         test_cg_mask_to_string_one(CGROUP_MASK_CPUACCT, "cpuacct");
+         test_cg_mask_to_string_one(CGROUP_MASK_CPUSET2, "cpuset2");
+diff --git a/test/fuzz/fuzz-unit-file/directives-all.service b/test/fuzz/fuzz-unit-file/directives-all.service
+index 5f8cdd8..1cd161d 100644
+--- a/test/fuzz/fuzz-unit-file/directives-all.service
++++ b/test/fuzz/fuzz-unit-file/directives-all.service
+@@ -107,6 +107,8 @@ FileDescriptorName=
+ FileDescriptorStoreMax=
+ ForceUnmount=
+ FreeBind=
++FreezerAccounting=
++FreezerState=
+ Group=
+ GuessMainPID=
+ IOAccounting=
+diff --git a/test/fuzz/fuzz-unit-file/directives.mount b/test/fuzz/fuzz-unit-file/directives.mount
+index 3adfd5b..53c035a 100644
+--- a/test/fuzz/fuzz-unit-file/directives.mount
++++ b/test/fuzz/fuzz-unit-file/directives.mount
+@@ -47,6 +47,8 @@ ExecPaths=
+ ExtensionImages=
+ FinalKillSignal=
+ ForceUnmount=
++FreezerAccounting=
++FreezerState=
+ Group=
+ IOAccounting=
+ IODeviceLatencyTargetSec=
+diff --git a/test/fuzz/fuzz-unit-file/directives.scope b/test/fuzz/fuzz-unit-file/directives.scope
+index c953f9c..1dd6c60 100644
+--- a/test/fuzz/fuzz-unit-file/directives.scope
++++ b/test/fuzz/fuzz-unit-file/directives.scope
+@@ -25,6 +25,8 @@ DeviceAllow=
+ DevicePolicy=
+ DisableControllers=
+ FinalKillSignal=
++FreezerAccounting=
++FreezerState=
+ IOAccounting=
+ IODeviceLatencyTargetSec=
+ IODeviceWeight=
+diff --git a/test/fuzz/fuzz-unit-file/directives.service b/test/fuzz/fuzz-unit-file/directives.service
+index aa5ad32..a5f7f07 100644
+--- a/test/fuzz/fuzz-unit-file/directives.service
++++ b/test/fuzz/fuzz-unit-file/directives.service
+@@ -73,6 +73,8 @@ Description=
+ Documentation=
+ FailureAction=
+ FailureActionExitStatus=
++FreezerAccounting=
++FreezerState=
+ IgnoreOnIsolate=
+ IgnoreOnSnapshot=
+ JobRunningTimeoutSec=
+diff --git a/test/fuzz/fuzz-unit-file/directives.slice b/test/fuzz/fuzz-unit-file/directives.slice
+index 54cb55d..2328a24 100644
+--- a/test/fuzz/fuzz-unit-file/directives.slice
++++ b/test/fuzz/fuzz-unit-file/directives.slice
+@@ -24,6 +24,8 @@ Delegate=
+ DeviceAllow=
+ DevicePolicy=
+ DisableControllers=
++FreezerAccounting=
++FreezerState=
+ IOAccounting=
+ IODeviceLatencyTargetSec=
+ IODeviceWeight=
+diff --git a/test/fuzz/fuzz-unit-file/directives.socket b/test/fuzz/fuzz-unit-file/directives.socket
+index aa9e758..6fb1e5f 100644
+--- a/test/fuzz/fuzz-unit-file/directives.socket
++++ b/test/fuzz/fuzz-unit-file/directives.socket
+@@ -59,6 +59,8 @@ FileDescriptorName=
+ FinalKillSignal=
+ FlushPending=
+ FreeBind=
++FreezerAccounting=
++FreezerState=
+ Group=
+ IOAccounting=
+ IODeviceLatencyTargetSec=
+diff --git a/test/fuzz/fuzz-unit-file/directives.swap b/test/fuzz/fuzz-unit-file/directives.swap
+index bc07775..6ca6198 100644
+--- a/test/fuzz/fuzz-unit-file/directives.swap
++++ b/test/fuzz/fuzz-unit-file/directives.swap
+@@ -45,6 +45,8 @@ EnvironmentFile=
+ ExecPaths=
+ ExtensionImages=
+ FinalKillSignal=
++FreezerAccounting=
++FreezerState=
+ Group=
+ IOAccounting=
+ IODeviceLatencyTargetSec=
+-- 
+2.23.0
+

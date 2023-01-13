@@ -1,0 +1,186 @@
+From 02d47bd2108d46cf9790500a7568a7523df485f9 Mon Sep 17 00:00:00 2001
+From: xujing <xujing125@huawei.com>
+Date: Fri, 26 Aug 2022 20:32:37 +0800
+Subject: [PATCH] delete journal files except system.journal when journal~
+ is generated
+
+In the case of time change and system panic, the function of invoking
+sd_journal_next to obtain logs may not meet expectations(rsyslog cannot obtain
+logs). Therefore, when the journal~ file is generated, delete all journal files
+except system.journal, to ensure that the sd_journal_next function meets user
+expectations.
+---
+ meson.build                              |  2 ++
+ src/basic/dirent-util.c                  | 24 ++++++++++++++++
+ src/basic/dirent-util.h                  |  2 ++
+ src/libsystemd/sd-journal/journal-file.c | 35 ++++++++++++++++++++++++
+ src/libsystemd/sd-journal/sd-journal.c   | 22 ---------------
+ 5 files changed, 63 insertions(+), 22 deletions(-)
+
+diff --git a/meson.build b/meson.build
+index 278e264..9ab40b6 100644
+--- a/meson.build
++++ b/meson.build
+@@ -1644,6 +1644,8 @@ basic_includes = include_directories(
+         'src/basic',
+         'src/fundamental',
+         'src/systemd',
++        'src/libsystemd/sd-id128',
++        'src/libsystemd/sd-journal',
+         '.')
+ 
+ libsystemd_includes = [basic_includes, include_directories(
+diff --git a/src/basic/dirent-util.c b/src/basic/dirent-util.c
+index f6213a3..b227cae 100644
+--- a/src/basic/dirent-util.c
++++ b/src/basic/dirent-util.c
+@@ -6,6 +6,8 @@
+ #include "dirent-util.h"
+ #include "path-util.h"
+ #include "string-util.h"
++#include "id128-util.h"
++#include "syslog-util.h"
+ 
+ static int dirent_ensure_type(DIR *d, struct dirent *de) {
+         struct stat st;
+@@ -59,6 +61,28 @@ bool dirent_is_file_with_suffix(const struct dirent *de, const char *suffix) {
+         return endswith(de->d_name, suffix);
+ }
+ 
++bool dirent_is_journal_subdir(const struct dirent *de) {
++        const char *e, *n;
++        assert(de);
++
++        /* returns true if the specified directory entry looks like a directory that might contain journal
++         * files we might be interested in, i.e. is either a 128bit ID or a 128bit ID suffixed by a
++         * namespace. */
++
++        if (!IN_SET(de->d_type, DT_DIR, DT_LNK, DT_UNKNOWN))
++                return false;
++
++        e = strchr(de->d_name, '.');
++        if (!e)
++                return id128_is_valid(de->d_name); /* No namespace */
++
++        n = strndupa(de->d_name, e - de->d_name);
++        if (!id128_is_valid(n))
++                return false;
++
++        return log_namespace_name_valid(e + 1);
++}
++
+ struct dirent *readdir_ensure_type(DIR *d) {
+         struct dirent *de;
+ 
+diff --git a/src/basic/dirent-util.h b/src/basic/dirent-util.h
+index c7956e7..f72a731 100644
+--- a/src/basic/dirent-util.h
++++ b/src/basic/dirent-util.h
+@@ -11,6 +11,8 @@
+ bool dirent_is_file(const struct dirent *de) _pure_;
+ bool dirent_is_file_with_suffix(const struct dirent *de, const char *suffix) _pure_;
+ 
++bool dirent_is_journal_subdir(const struct dirent *de);
++
+ struct dirent *readdir_ensure_type(DIR *d);
+ struct dirent *readdir_no_dot(DIR *dirp);
+ 
+diff --git a/src/libsystemd/sd-journal/journal-file.c b/src/libsystemd/sd-journal/journal-file.c
+index 6807c46..0abda23 100644
+--- a/src/libsystemd/sd-journal/journal-file.c
++++ b/src/libsystemd/sd-journal/journal-file.c
+@@ -33,6 +33,7 @@
+ #include "string-util.h"
+ #include "strv.h"
+ #include "xattr-util.h"
++#include "dirent-util.h"
+ 
+ #define DEFAULT_DATA_HASH_TABLE_SIZE (2047ULL*sizeof(HashItem))
+ #define DEFAULT_FIELD_HASH_TABLE_SIZE (333ULL*sizeof(HashItem))
+@@ -3781,9 +3782,37 @@ int journal_file_rotate(
+         return r;
+ }
+ 
++static void delete_dumped_journal_files(const char *path) {
++        _cleanup_closedir_ DIR *d = NULL;
++        struct dirent *de;
++
++        d = opendir(path);
++        if (!d)
++                return;
++
++        FOREACH_DIRENT_ALL(de, d, return) {
++                if (IN_SET(de->d_type, DT_REG, DT_LNK, DT_UNKNOWN) &&
++                           (endswith(de->d_name, ".journal") ||
++                            endswith(de->d_name, ".journal~")) &&
++                           strcmp(de->d_name, "system.journal") != 0)
++                        (void) unlinkat_deallocate(dirfd(d), de->d_name, 0);
++
++                if (dirent_is_journal_subdir(de)) {
++                        _cleanup_free_ char *sub_path = NULL;
++
++                        sub_path = path_join(path, de->d_name);
++                        if (!sub_path)
++                                continue;
++
++                        delete_dumped_journal_files(sub_path);
++                }
++        }
++}
++
+ int journal_file_dispose(int dir_fd, const char *fname) {
+         _cleanup_free_ char *p = NULL;
+         _cleanup_close_ int fd = -1;
++        dual_timestamp boot_timestamp;
+ 
+         assert(fname);
+ 
+@@ -3804,6 +3833,12 @@ int journal_file_dispose(int dir_fd, const char *fname) {
+         if (renameat(dir_fd, fname, dir_fd, p) < 0)
+                 return -errno;
+ 
++        dual_timestamp_get(&boot_timestamp);
++        if (boot_timestamp.monotonic < 10*USEC_PER_MINUTE) {
++                delete_dumped_journal_files("/var/log/journal");
++                return 0;
++        }
++
+         /* btrfs doesn't cope well with our write pattern and fragments heavily. Let's defrag all files we rotate */
+         fd = openat(dir_fd, p, O_RDONLY|O_CLOEXEC|O_NOCTTY|O_NOFOLLOW);
+         if (fd < 0)
+diff --git a/src/libsystemd/sd-journal/sd-journal.c b/src/libsystemd/sd-journal/sd-journal.c
+index 1a76bb6..56e1398 100644
+--- a/src/libsystemd/sd-journal/sd-journal.c
++++ b/src/libsystemd/sd-journal/sd-journal.c
+@@ -1523,28 +1523,6 @@ static bool dirent_is_journal_file(const struct dirent *de) {
+                 endswith(de->d_name, ".journal~");
+ }
+ 
+-static bool dirent_is_journal_subdir(const struct dirent *de) {
+-        const char *e, *n;
+-        assert(de);
+-
+-        /* returns true if the specified directory entry looks like a directory that might contain journal
+-         * files we might be interested in, i.e. is either a 128bit ID or a 128bit ID suffixed by a
+-         * namespace. */
+-
+-        if (!IN_SET(de->d_type, DT_DIR, DT_LNK, DT_UNKNOWN))
+-                return false;
+-
+-        e = strchr(de->d_name, '.');
+-        if (!e)
+-                return id128_is_valid(de->d_name); /* No namespace */
+-
+-        n = strndupa(de->d_name, e - de->d_name);
+-        if (!id128_is_valid(n))
+-                return false;
+-
+-        return log_namespace_name_valid(e + 1);
+-}
+-
+ static int directory_open(sd_journal *j, const char *path, DIR **ret) {
+         DIR *d;
+ 
+-- 
+2.23.0
+
