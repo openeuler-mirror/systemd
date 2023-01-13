@@ -1,0 +1,40 @@
+From c003873099e47dccf2e57816291bd6b7de4a5790 Mon Sep 17 00:00:00 2001
+From: jiangchuangang <jiangchuangang@huawei.com>
+Date: Wed, 13 Jul 2022 21:39:06 +0800
+Subject: [PATCH] bugfix for cpuset and Delegate
+ 
+---
+ src/core/cgroup.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+ 
+diff --git a/src/core/cgroup.c b/src/core/cgroup.c
+index 0e4c94d..e887d49 100644
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -1963,6 +1963,8 @@ static int unit_update_cgroup(
+                 u->cgroup_enabled_mask = result_mask;
+ 
+                 migrate_mask = u->cgroup_realized_mask ^ target_mask;
++                if (u->type != UNIT_SLICE && FLAGS_SET(target_mask, CGROUP_MASK_CPUSET))
++                        migrate_mask |= CGROUP_MASK_CPUSET;
+         }
+ 
+         /* Keep track that this is now realized */
+@@ -1977,9 +1979,11 @@ static int unit_update_cgroup(
+          * delegated units.
+          */
+         if (cg_all_unified() == 0) {
+-                r = cg_migrate_v1_controllers(u->manager->cgroup_supported, migrate_mask, u->cgroup_path, migrate_callback, u);
+-                if (r < 0)
+-                        log_unit_warning_errno(u, r, "Failed to migrate controller cgroups from %s, ignoring: %m", empty_to_root(u->cgroup_path));
++                if (!unit_cgroup_delegate(u)) {
++                        r = cg_migrate_v1_controllers(u->manager->cgroup_supported, migrate_mask, u->cgroup_path, migrate_callback, u);
++                        if (r < 0)
++                                log_unit_warning_errno(u, r, "Failed to migrate controller cgroups from %s, ignoring: %m", empty_to_root(u->cgroup_path));
++                }
+ 
+                 is_root_slice = unit_has_name(u, SPECIAL_ROOT_SLICE);
+                 r = cg_trim_v1_controllers(u->manager->cgroup_supported, ~target_mask, u->cgroup_path, !is_root_slice);
+-- 
+2.33.0
+ 

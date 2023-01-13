@@ -1,0 +1,263 @@
+From cfb8a3cf09d9a958388ca1181bb92d9f77ab100e Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Thu, 6 May 2021 09:38:54 +0800
+Subject: [PATCH] core-cgroup: support memorysw
+
+Upstream systemd dosen't support setting memory.memsw.limit_in_bytes.
+This patch enables setting memory.memsw.limit_in_bytes by MemoryMemswLimit.
+---
+ src/core/cgroup.c                               | 17 +++++++++++++++--
+ src/core/cgroup.h                               |  1 +
+ src/core/dbus-cgroup.c                          |  4 ++++
+ src/core/load-fragment-gperf.gperf.in           |  1 +
+ src/core/load-fragment.c                        |  2 ++
+ src/shared/bus-print-properties.c               |  2 +-
+ src/shared/bus-unit-util.c                      |  1 +
+ test/fuzz/fuzz-unit-file/directives-all.service |  1 +
+ test/fuzz/fuzz-unit-file/directives.mount       |  1 +
+ test/fuzz/fuzz-unit-file/directives.scope       |  1 +
+ test/fuzz/fuzz-unit-file/directives.service     |  1 +
+ test/fuzz/fuzz-unit-file/directives.slice       |  1 +
+ test/fuzz/fuzz-unit-file/directives.socket      |  1 +
+ test/fuzz/fuzz-unit-file/directives.swap        |  1 +
+ 14 files changed, 32 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/cgroup.c b/src/core/cgroup.c
+index d9b1d9b..4eedaf7 100644
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -125,6 +125,7 @@ void cgroup_context_init(CGroupContext *c) {
+                 .memory_swap_max = CGROUP_LIMIT_MAX,
+ 
+                 .memory_limit = CGROUP_LIMIT_MAX,
++                .memory_memsw_limit = CGROUP_LIMIT_MAX,
+ 
+                 .io_weight = CGROUP_WEIGHT_INVALID,
+                 .startup_io_weight = CGROUP_WEIGHT_INVALID,
+@@ -454,6 +455,7 @@ void cgroup_context_dump(Unit *u, FILE* f, const char *prefix) {
+                 "%sMemoryMax: %" PRIu64 "%s\n"
+                 "%sMemorySwapMax: %" PRIu64 "%s\n"
+                 "%sMemoryLimit: %" PRIu64 "\n"
++                "%sMemoryMemswLimit=%" PRIu64 "\n"
+                 "%sCPUSetCpus=%s\n"
+                 "%sCPUSetMems=%s\n"
+                 "%sCPUSetCloneChildren=%s\n"
+@@ -495,6 +497,7 @@ void cgroup_context_dump(Unit *u, FILE* f, const char *prefix) {
+                 prefix, c->memory_max, format_cgroup_memory_limit_comparison(cdd, sizeof(cdd), u, "MemoryMax"),
+                 prefix, c->memory_swap_max, format_cgroup_memory_limit_comparison(cde, sizeof(cde), u, "MemorySwapMax"),
+                 prefix, c->memory_limit,
++                prefix, c->memory_memsw_limit,
+                 prefix, c->cpuset_cpus,
+                 prefix, c->cpuset_mems,
+                 prefix, yes_no(c->cpuset_clone_children),
+@@ -1484,13 +1487,16 @@ static void cgroup_context_apply(
+ 
+                 } else {
+                         char buf[DECIMAL_STR_MAX(uint64_t) + 1];
+-                        uint64_t val;
++                        uint64_t val, sw_val;
+ 
+                         if (unit_has_unified_memory_config(u)) {
+                                 val = c->memory_max;
++                                sw_val = CGROUP_LIMIT_MAX;
+                                 log_cgroup_compat(u, "Applying MemoryMax=%" PRIi64 " as MemoryLimit=", val);
+-                        } else
++                        } else {
+                                 val = c->memory_limit;
++                                sw_val = c->memory_memsw_limit;
++                        }
+ 
+                         if (val == CGROUP_LIMIT_MAX)
+                                 strncpy(buf, "-1\n", sizeof(buf));
+@@ -1498,6 +1504,12 @@ static void cgroup_context_apply(
+                                 xsprintf(buf, "%" PRIu64 "\n", val);
+ 
+                         (void) set_attribute_and_warn(u, "memory", "memory.limit_in_bytes", buf);
++
++                        if (sw_val == CGROUP_LIMIT_MAX)
++                                strncpy(buf, "-1\n", sizeof(buf));
++                        else
++                                xsprintf(buf, "%" PRIu64 "\n", sw_val);
++                        (void) set_attribute_and_warn(u, "memory", "memory.memsw.limit_in_bytes", buf);
+                 }
+         }
+ 
+@@ -1679,6 +1691,7 @@ static CGroupMask unit_get_cgroup_mask(Unit *u) {
+ 
+         if (c->memory_accounting ||
+             c->memory_limit != CGROUP_LIMIT_MAX ||
++            c->memory_memsw_limit != CGROUP_LIMIT_MAX ||
+             unit_has_unified_memory_config(u))
+                 mask |= CGROUP_MASK_MEMORY;
+ 
+diff --git a/src/core/cgroup.h b/src/core/cgroup.h
+index 9177415..1a36c2d 100644
+--- a/src/core/cgroup.h
++++ b/src/core/cgroup.h
+@@ -177,6 +177,7 @@ struct CGroupContext {
+         LIST_HEAD(CGroupBlockIODeviceBandwidth, blockio_device_bandwidths);
+ 
+         uint64_t memory_limit;
++        uint64_t memory_memsw_limit;
+ 
+         CGroupDevicePolicy device_policy;
+         LIST_HEAD(CGroupDeviceAllow, device_allow);
+diff --git a/src/core/dbus-cgroup.c b/src/core/dbus-cgroup.c
+index 509ae4f..a200710 100644
+--- a/src/core/dbus-cgroup.c
++++ b/src/core/dbus-cgroup.c
+@@ -440,6 +440,7 @@ const sd_bus_vtable bus_cgroup_vtable[] = {
+         SD_BUS_PROPERTY("MemoryMax", "t", NULL, offsetof(CGroupContext, memory_max), 0),
+         SD_BUS_PROPERTY("MemorySwapMax", "t", NULL, offsetof(CGroupContext, memory_swap_max), 0),
+         SD_BUS_PROPERTY("MemoryLimit", "t", NULL, offsetof(CGroupContext, memory_limit), 0),
++        SD_BUS_PROPERTY("MemoryMemswLimit", "t", NULL, offsetof(CGroupContext, memory_memsw_limit), 0),
+         SD_BUS_PROPERTY("CPUSetAccounting", "b", bus_property_get_bool, offsetof(CGroupContext, cpuset_accounting), 0),
+         SD_BUS_PROPERTY("CPUSetCpus", "s", NULL, offsetof(CGroupContext, cpuset_cpus), 0),
+         SD_BUS_PROPERTY("CPUSetMems", "s", NULL, offsetof(CGroupContext, cpuset_mems), 0),
+@@ -1032,6 +1033,9 @@ int bus_cgroup_set_property(
+         if (streq(name, "MemoryLimit"))
+                 return bus_cgroup_set_memory(u, name, &c->memory_limit, message, flags, error);
+ 
++        if (streq(name, "MemoryMemswLimit"))
++                return bus_cgroup_set_memory(u, name, &c->memory_memsw_limit, message, flags, error);
++
+         if (streq(name, "MemoryMinScale")) {
+                 r = bus_cgroup_set_memory_protection_scale(u, name, &c->memory_min, message, flags, error);
+                 if (r > 0)
+diff --git a/src/core/load-fragment-gperf.gperf.in b/src/core/load-fragment-gperf.gperf.in
+index 5b7ecd2..0702aa0 100644
+--- a/src/core/load-fragment-gperf.gperf.in
++++ b/src/core/load-fragment-gperf.gperf.in
+@@ -197,6 +197,7 @@
+ {{type}}.MemoryMax,                        config_parse_memory_limit,                   0,                                  offsetof({{type}}, cgroup_context)
+ {{type}}.MemorySwapMax,                    config_parse_memory_limit,                   0,                                  offsetof({{type}}, cgroup_context)
+ {{type}}.MemoryLimit,                      config_parse_memory_limit,                   0,                                  offsetof({{type}}, cgroup_context)
++{{type}}.MemoryMemswLimit,                 config_parse_memory_limit,                   0,                                  offsetof({{type}}, cgroup_context)
+ {{type}}.CPUSetAccounting,                 config_parse_bool,                           0,                                  offsetof({{type}}, cgroup_context.cpuset_accounting)
+ {{type}}.CPUSetCpus,                       config_parse_cpuset_cpumems,                 0,                                  offsetof({{type}}, cgroup_context.cpuset_cpus)
+ {{type}}.CPUSetMems,                       config_parse_cpuset_cpumems,                 0,                                  offsetof({{type}}, cgroup_context.cpuset_mems)
+diff --git a/src/core/load-fragment.c b/src/core/load-fragment.c
+index 1fb097d..a2ad32b 100644
+--- a/src/core/load-fragment.c
++++ b/src/core/load-fragment.c
+@@ -3716,6 +3716,8 @@ int config_parse_memory_limit(
+                 c->memory_swap_max = bytes;
+         else if (streq(lvalue, "MemoryLimit"))
+                 c->memory_limit = bytes;
++        else if (streq(lvalue, "MemoryMemswLimit"))
++                c->memory_memsw_limit = bytes;
+         else
+                 return -EINVAL;
+ 
+diff --git a/src/shared/bus-print-properties.c b/src/shared/bus-print-properties.c
+index b459219..a16aca8 100644
+--- a/src/shared/bus-print-properties.c
++++ b/src/shared/bus-print-properties.c
+@@ -165,7 +165,7 @@ static int bus_print_property(const char *name, const char *expected_value, sd_b
+ 
+                         bus_print_property_value(name, expected_value, flags, "[not set]");
+ 
+-                else if ((STR_IN_SET(name, "DefaultMemoryLow", "DefaultMemoryMin", "MemoryLow", "MemoryHigh", "MemoryMax", "MemorySwapMax", "MemoryLimit", "MemoryAvailable") && u == CGROUP_LIMIT_MAX) ||
++                else if ((STR_IN_SET(name, "DefaultMemoryLow", "DefaultMemoryMin", "MemoryLow", "MemoryHigh", "MemoryMax", "MemorySwapMax", "MemoryLimit", "MemoryMemswLimit", "MemoryAvailable") && u == CGROUP_LIMIT_MAX) ||
+                          (STR_IN_SET(name, "TasksMax", "DefaultTasksMax") && u == UINT64_MAX) ||
+                          (startswith(name, "Limit") && u == UINT64_MAX) ||
+                          (startswith(name, "DefaultLimit") && u == UINT64_MAX))
+diff --git a/src/shared/bus-unit-util.c b/src/shared/bus-unit-util.c
+index f20fcbf..b4b04e1 100644
+--- a/src/shared/bus-unit-util.c
++++ b/src/shared/bus-unit-util.c
+@@ -521,6 +521,7 @@ static int bus_append_cgroup_property(sd_bus_message *m, const char *field, cons
+                               "MemoryMax",
+                               "MemorySwapMax",
+                               "MemoryLimit",
++                              "MemoryMemswLimit",
+                               "TasksMax")) {
+ 
+                 if (streq(eq, "infinity")) {
+diff --git a/test/fuzz/fuzz-unit-file/directives-all.service b/test/fuzz/fuzz-unit-file/directives-all.service
+index 1cd161d..208c33b 100644
+--- a/test/fuzz/fuzz-unit-file/directives-all.service
++++ b/test/fuzz/fuzz-unit-file/directives-all.service
+@@ -158,6 +158,7 @@ MemoryHigh=
+ MemoryLimit=
+ MemoryLow=
+ MemoryMax=
++MemoryMemswLimit=
+ MemorySwapMax=
+ MessageQueueMaxMessages=
+ MessageQueueMessageSize=
+diff --git a/test/fuzz/fuzz-unit-file/directives.mount b/test/fuzz/fuzz-unit-file/directives.mount
+index 53c035a..0c3cd57 100644
+--- a/test/fuzz/fuzz-unit-file/directives.mount
++++ b/test/fuzz/fuzz-unit-file/directives.mount
+@@ -109,6 +109,7 @@ MemoryLimit=
+ MemoryLow=
+ MemoryMax=
+ MemoryMin=
++MemoryMemswLimit=
+ MemorySwapMax=
+ MountAPIVFS=
+ MountFlags=
+diff --git a/test/fuzz/fuzz-unit-file/directives.scope b/test/fuzz/fuzz-unit-file/directives.scope
+index 1dd6c60..36a60f6 100644
+--- a/test/fuzz/fuzz-unit-file/directives.scope
++++ b/test/fuzz/fuzz-unit-file/directives.scope
+@@ -52,6 +52,7 @@ MemoryLimit=
+ MemoryLow=
+ MemoryMax=
+ MemoryMin=
++MemoryMemswLimit=
+ MemorySwapMax=
+ NetClass=
+ RestartKillSignal=
+diff --git a/test/fuzz/fuzz-unit-file/directives.service b/test/fuzz/fuzz-unit-file/directives.service
+index a5f7f07..8044977 100644
+--- a/test/fuzz/fuzz-unit-file/directives.service
++++ b/test/fuzz/fuzz-unit-file/directives.service
+@@ -231,6 +231,7 @@ MemoryLimit=
+ MemoryLow=
+ MemoryMax=
+ MemoryMin=
++MemoryMemswLimit=
+ MemorySwapMax=
+ MountAPIVFS=
+ MountFlags=
+diff --git a/test/fuzz/fuzz-unit-file/directives.slice b/test/fuzz/fuzz-unit-file/directives.slice
+index 2328a24..097ff4e 100644
+--- a/test/fuzz/fuzz-unit-file/directives.slice
++++ b/test/fuzz/fuzz-unit-file/directives.slice
+@@ -49,6 +49,7 @@ MemoryLimit=
+ MemoryLow=
+ MemoryMax=
+ MemoryMin=
++MemoryMemswLimit=
+ MemorySwapMax=
+ NetClass=
+ Slice=
+diff --git a/test/fuzz/fuzz-unit-file/directives.socket b/test/fuzz/fuzz-unit-file/directives.socket
+index 6fb1e5f..c372f1e 100644
+--- a/test/fuzz/fuzz-unit-file/directives.socket
++++ b/test/fuzz/fuzz-unit-file/directives.socket
+@@ -137,6 +137,7 @@ MemoryLimit=
+ MemoryLow=
+ MemoryMax=
+ MemoryMin=
++MemoryMemswLimit=
+ MemorySwapMax=
+ MessageQueueMaxMessages=
+ MessageQueueMessageSize=
+diff --git a/test/fuzz/fuzz-unit-file/directives.swap b/test/fuzz/fuzz-unit-file/directives.swap
+index 6ca6198..a46164e 100644
+--- a/test/fuzz/fuzz-unit-file/directives.swap
++++ b/test/fuzz/fuzz-unit-file/directives.swap
+@@ -106,6 +106,7 @@ MemoryLimit=
+ MemoryLow=
+ MemoryMax=
+ MemoryMin=
++MemoryMemswLimit=
+ MemorySwapMax=
+ MountAPIVFS=
+ MountFlags=
+-- 
+2.23.0
+

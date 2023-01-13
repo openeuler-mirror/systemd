@@ -1,0 +1,144 @@
+From 637310cf1903f9072a391074a65855fc1c41ae2b Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Fri, 15 Apr 2022 09:28:15 +0800
+Subject: [PATCH] core: add OptionalLog to allow users change log level.
+This adds log_optional* log_unit_optional* to log messages in LOG_INFO
+or LOG_DEBUG. Set "OptionalLog=yes" to log in LOG_INFO. Defaults to no.
+
+---
+ src/basic/log.h         | 2 ++
+ src/core/dbus-manager.c | 1 +
+ src/core/main.c         | 4 ++++
+ src/core/manager.h      | 1 +
+ src/core/mount.c        | 2 +-
+ src/core/system.conf.in | 1 +
+ src/core/unit.h         | 2 ++
+ 7 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/src/basic/log.h b/src/basic/log.h
+index 625be22..6ff143f 100644
+--- a/src/basic/log.h
++++ b/src/basic/log.h
+@@ -239,6 +239,7 @@ int log_emergency_level(void);
+ #define log_warning(...)   log_full(LOG_WARNING, __VA_ARGS__)
+ #define log_error(...)     log_full(LOG_ERR,     __VA_ARGS__)
+ #define log_emergency(...) log_full(log_emergency_level(), __VA_ARGS__)
++#define log_optional(use_info, ...) log_full(((use_info) ? LOG_INFO : LOG_DEBUG), __VA_ARGS__)
+ 
+ /* Logging triggered by an errno-like error */
+ #define log_debug_errno(error, ...)     log_full_errno(LOG_DEBUG,   error, __VA_ARGS__)
+@@ -235,6 +236,7 @@ int log_emergency_level(void);
+ #define log_warning_errno(error, ...)   log_full_errno(LOG_WARNING, error, __VA_ARGS__)
+ #define log_error_errno(error, ...)     log_full_errno(LOG_ERR,     error, __VA_ARGS__)
+ #define log_emergency_errno(error, ...) log_full_errno(log_emergency_level(), error, __VA_ARGS__)
++#define log_optional_errno(error, use_info, ...) log_full_errno(((use_info) ? LOG_INFO : LOG_DEBUG), error, __VA_ARGS__)
+ 
+ /* This logs at the specified level the first time it is called, and then
+  * logs at debug. If the specified level is debug, this logs only the first
+diff --git a/src/core/dbus-manager.c b/src/core/dbus-manager.c
+index 184df9d..acf782d 100644
+--- a/src/core/dbus-manager.c
++++ b/src/core/dbus-manager.c
+@@ -2656,6 +2656,7 @@ const sd_bus_vtable bus_manager_vtable[] = {
+         BUS_PROPERTY_DUAL_TIMESTAMP("InitRDUnitsLoadFinishTimestamp", offsetof(Manager, timestamps[MANAGER_TIMESTAMP_INITRD_UNITS_LOAD_FINISH]), SD_BUS_VTABLE_PROPERTY_CONST),
+         SD_BUS_WRITABLE_PROPERTY("LogLevel", "s", bus_property_get_log_level, property_set_log_level, 0, 0),
+         SD_BUS_WRITABLE_PROPERTY("LogTarget", "s", bus_property_get_log_target, property_set_log_target, 0, 0),
++        SD_BUS_PROPERTY("OptionalLog", "b", bus_property_get_bool, offsetof(Manager, optional_log), SD_BUS_VTABLE_PROPERTY_CONST),
+         SD_BUS_PROPERTY("NNames", "u", property_get_hashmap_size, offsetof(Manager, units), 0),
+         SD_BUS_PROPERTY("NFailedUnits", "u", property_get_set_size, offsetof(Manager, failed_units), SD_BUS_VTABLE_PROPERTY_EMITS_CHANGE),
+         SD_BUS_PROPERTY("NJobs", "u", property_get_hashmap_size, offsetof(Manager, jobs), 0),
+diff --git a/src/core/main.c b/src/core/main.c
+index 2a6b9b8..15a3cb9 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -110,6 +110,7 @@ static const char *arg_bus_introspect = NULL;
+  * defaults are assigned in reset_arguments() below. */
+ static char *arg_default_unit;
+ static bool arg_system;
++static bool arg_optional_log;
+ static bool arg_dump_core;
+ static int arg_crash_chvt;
+ static bool arg_crash_shell;
+@@ -641,6 +642,7 @@ static int parse_config_file(void) {
+                 { "Manager", "LogColor",                     config_parse_color,                 0, NULL                                   },
+                 { "Manager", "LogLocation",                  config_parse_location,              0, NULL                                   },
+                 { "Manager", "LogTime",                      config_parse_time,                  0, NULL                                   },
++                { "Manager", "OptionalLog",                  config_parse_bool,                  0, &arg_optional_log                      },
+                 { "Manager", "DumpCore",                     config_parse_bool,                  0, &arg_dump_core                         },
+                 { "Manager", "CrashChVT", /* legacy */       config_parse_crash_chvt,            0, &arg_crash_chvt                        },
+                 { "Manager", "CrashChangeVT",                config_parse_crash_chvt,            0, &arg_crash_chvt                        },
+@@ -748,6 +750,7 @@ static void set_manager_defaults(Manager *m) {
+          * affect the manager itself, but are just what newly allocated units will have set if they haven't set
+          * anything else. (Also see set_manager_settings() for the settings that affect the manager's own behaviour) */
+ 
++        m->optional_log = arg_optional_log;
+         m->default_timer_accuracy_usec = arg_default_timer_accuracy_usec;
+         m->default_std_output = arg_default_std_output;
+         m->default_std_error = arg_default_std_error;
+@@ -2327,6 +2330,7 @@ static void reset_arguments(void) {
+ 
+         /* arg_system — ignore */
+ 
++        arg_optional_log = false;
+         arg_dump_core = true;
+         arg_crash_chvt = -1;
+         arg_crash_shell = false;
+diff --git a/src/core/manager.h b/src/core/manager.h
+index c20abd5..543f30c 100644
+--- a/src/core/manager.h
++++ b/src/core/manager.h
+@@ -378,6 +378,7 @@ struct Manager {
+         LogTarget original_log_target;
+         bool log_level_overridden;
+         bool log_target_overridden;
++        bool optional_log;
+ 
+         struct rlimit *rlimit[_RLIMIT_MAX];
+ 
+diff --git a/src/core/mount.c b/src/core/mount.c
+index 9d676c2..dba8566 100644
+--- a/src/core/mount.c
++++ b/src/core/mount.c
+@@ -674,7 +674,7 @@ static void mount_set_state(Mount *m, MountState state) {
+         }
+ 
+         if (state != old_state)
+-                log_unit_debug(UNIT(m), "Changed %s -> %s", mount_state_to_string(old_state), mount_state_to_string(state));
++                log_unit_optional(UNIT(m), UNIT(m)->manager->optional_log, "Changed %s -> %s", mount_state_to_string(old_state), mount_state_to_string(state));
+ 
+         unit_notify(UNIT(m), state_translation_table[old_state], state_translation_table[state],
+                     m->reload_result == MOUNT_SUCCESS ? 0 : UNIT_NOTIFY_RELOAD_FAILURE);
+diff --git a/src/core/system.conf.in b/src/core/system.conf.in
+index d6cc751..f521f3e 100644
+--- a/src/core/system.conf.in
++++ b/src/core/system.conf.in
+@@ -20,6 +20,7 @@
+ #LogColor=yes
+ #LogLocation=no
+ #LogTime=no
++#OptionalLog=no
+ #DumpCore=yes
+ #ShowStatus=yes
+ #CrashChangeVT=no
+diff --git a/src/core/unit.h b/src/core/unit.h
+index 759104f..02f4cb2 100644
+--- a/src/core/unit.h
++++ b/src/core/unit.h
+@@ -990,12 +990,14 @@ int unit_thaw_vtable_common(Unit *u);
+ #define log_unit_notice(unit, ...)  log_unit_full(unit, LOG_NOTICE, __VA_ARGS__)
+ #define log_unit_warning(unit, ...) log_unit_full(unit, LOG_WARNING, __VA_ARGS__)
+ #define log_unit_error(unit, ...)   log_unit_full(unit, LOG_ERR, __VA_ARGS__)
++#define log_unit_optional(unit, use_info, ...) log_unit_full(unit, ((use_info) ? LOG_INFO : LOG_DEBUG), __VA_ARGS__)
+ 
+ #define log_unit_debug_errno(unit, error, ...)   log_unit_full_errno(unit, LOG_DEBUG, error, __VA_ARGS__)
+ #define log_unit_info_errno(unit, error, ...)    log_unit_full_errno(unit, LOG_INFO, error, __VA_ARGS__)
+ #define log_unit_notice_errno(unit, error, ...)  log_unit_full_errno(unit, LOG_NOTICE, error, __VA_ARGS__)
+ #define log_unit_warning_errno(unit, error, ...) log_unit_full_errno(unit, LOG_WARNING, error, __VA_ARGS__)
+ #define log_unit_error_errno(unit, error, ...)   log_unit_full_errno(unit, LOG_ERR, error, __VA_ARGS__)
++#define log_unit_optional_errno(unit, use_info, error, ...) log_unit_full_errno(unit, ((use_info) ? LOG_INFO : LOG_DEBUG), error, __VA_ARGS__)
+ 
+ #define log_unit_struct_errno(unit, level, error, ...)                  \
+         ({                                                              \
+-- 
+2.23.0
+

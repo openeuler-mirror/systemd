@@ -1,0 +1,51 @@
+From c04904a4f54f8949a6a7821a0859e2732366259b Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Tue, 24 Nov 2020 19:57:38 +0800
+Subject: [PATCH] treat hyphen as valid hostname char
+
+---
+ src/basic/hostname-util.c | 14 ++++++++++++--
+ 1 file changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/src/basic/hostname-util.c b/src/basic/hostname-util.c
+index 5bfa028..b80a2b8 100644
+--- a/src/basic/hostname-util.c
++++ b/src/basic/hostname-util.c
+@@ -77,6 +77,16 @@ bool valid_ldh_char(char c) {
+                 c == '-';
+ }
+ 
++static bool hostname_valid_char(char c) {
++        return
++                (c >= 'a' && c <= 'z') ||
++                (c >= 'A' && c <= 'Z') ||
++                (c >= '0' && c <= '9') ||
++                c == '-' ||
++                c == '_' ||
++                c == '.';
++}
++
+ bool hostname_is_valid(const char *s, ValidHostnameFlags flags) {
+         unsigned n_dots = 0;
+         const char *p;
+@@ -117,7 +127,7 @@ bool hostname_is_valid(const char *s, bool allow_trailing_dot) {
+                         hyphen = true;
+ 
+                 } else {
+-                        if (!valid_ldh_char(*p))
++                        if (!hostname_valid_char(*p))
+                                 return false;
+ 
+                         dot = false;
+@@ -160,7 +170,7 @@ char* hostname_cleanup(char *s) {
+                         dot = false;
+                         hyphen = true;
+ 
+-                } else if (valid_ldh_char(*p)) {
++                } else if (hostname_valid_char(*p)) {
+                         *(d++) = *p;
+                         dot = false;
+                         hyphen = false;
+-- 
+2.23.0
+
