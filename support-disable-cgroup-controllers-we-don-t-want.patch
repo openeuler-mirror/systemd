@@ -1,0 +1,216 @@
+From ef31366523d784d92f25abd99b3782acda29a01c Mon Sep 17 00:00:00 2001
+From: xujing <xujing125@huawei.com>
+Date: Fri, 8 Jul 2022 19:47:45 +0800
+Subject: [PATCH] support disable cgroup controllers we don't want
+
+---
+ src/basic/cgroup-util.c  | 14 +++++++++++
+ src/basic/cgroup-util.h  |  1 +
+ src/core/cgroup.c        |  1 +
+ src/core/main.c          |  7 ++++++
+ src/core/manager.h       |  2 ++
+ src/core/system.conf.in  |  1 +
+ src/shared/conf-parser.c | 54 ++++++++++++++++++++++++++++++++++++++++
+ src/shared/conf-parser.h |  1 +
+ 8 files changed, 81 insertions(+)
+
+diff --git a/src/basic/cgroup-util.c b/src/basic/cgroup-util.c
+index f912b65..79089ac 100644
+--- a/src/basic/cgroup-util.c
++++ b/src/basic/cgroup-util.c
+@@ -1951,6 +1951,20 @@ int cg_mask_supported(CGroupMask *ret) {
+         return cg_mask_supported_subtree(root, ret);
+ }
+ 
++int cg_mask_disable_cgroup(CGroupMask disabled, CGroupMask *ret) {
++        int r;
++
++        r = cg_all_unified();
++        if (r < 0)
++                return r;
++
++        /* We only care CGROUP_V1 */
++        if (r == 0)
++                *ret &= ~disabled;
++
++        return 0;
++}
++
+ int cg_kernel_controllers(Set **ret) {
+         _cleanup_set_free_free_ Set *controllers = NULL;
+         _cleanup_fclose_ FILE *f = NULL;
+diff --git a/src/basic/cgroup-util.h b/src/basic/cgroup-util.h
+index a491eca..faa253b 100644
+--- a/src/basic/cgroup-util.h
++++ b/src/basic/cgroup-util.h
+@@ -269,6 +269,7 @@ typedef const char* (*cg_migrate_callback_t)(CGroupMask mask, void *userdata);
+ 
+ int cg_mask_supported(CGroupMask *ret);
+ int cg_mask_supported_subtree(const char *root, CGroupMask *ret);
++int cg_mask_disable_cgroup(CGroupMask disabled, CGroupMask *ret);
+ int cg_mask_from_string(const char *s, CGroupMask *ret);
+ int cg_mask_to_string(CGroupMask mask, char **ret);
+ 
+diff --git a/src/core/cgroup.c b/src/core/cgroup.c
+index ab6d602..6101d53 100644
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -3378,6 +3378,7 @@ int manager_setup_cgroup(Manager *m) {
+         if (r < 0)
+                 return log_error_errno(r, "Failed to determine supported bpf-based pseudo-controllers: %m");
+         m->cgroup_supported |= mask;
++        m->system_cgroup_supported = m->cgroup_supported;
+ 
+         /* 10. Log which controllers are supported */
+         for (CGroupController c = 0; c < _CGROUP_CONTROLLER_MAX; c++)
+diff --git a/src/core/main.c b/src/core/main.c
+index a39d7d3..c4ce9a8 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -145,6 +145,7 @@ static nsec_t arg_timer_slack_nsec;
+ static usec_t arg_default_timer_accuracy_usec;
+ static Set* arg_syscall_archs;
+ static FILE* arg_serialization;
++static CGroupMask arg_disable_cgroup_controllers;
+ static int arg_default_cpu_accounting;
+ static bool arg_default_io_accounting;
+ static bool arg_default_ip_accounting;
+@@ -696,6 +697,7 @@ static int parse_config_file(void) {
+                 { "Manager", "DefaultLimitNICE",             config_parse_rlimit,                RLIMIT_NICE, arg_default_rlimit           },
+                 { "Manager", "DefaultLimitRTPRIO",           config_parse_rlimit,                RLIMIT_RTPRIO, arg_default_rlimit         },
+                 { "Manager", "DefaultLimitRTTIME",           config_parse_rlimit,                RLIMIT_RTTIME, arg_default_rlimit         },
++                { "Manager", "DisableCGroupControllers",     config_parse_cgroup,                0, &arg_disable_cgroup_controllers        },
+                 { "Manager", "DefaultCPUAccounting",         config_parse_tristate,              0, &arg_default_cpu_accounting            },
+                 { "Manager", "DefaultIOAccounting",          config_parse_bool,                  0, &arg_default_io_accounting             },
+                 { "Manager", "DefaultIPAccounting",          config_parse_bool,                  0, &arg_default_ip_accounting             },
+@@ -767,6 +769,10 @@ static void set_manager_defaults(Manager *m) {
+         m->default_start_limit_burst = arg_default_start_limit_burst;
+         m->default_dfx_reboot = arg_default_dfx_reboot;
+ 
++        m->cgroup_disabled = arg_disable_cgroup_controllers;
++        m->cgroup_supported = m->system_cgroup_supported;
++        (void) cg_mask_disable_cgroup(m->cgroup_disabled, &m->cgroup_supported);
++
+         /* On 4.15+ with unified hierarchy, CPU accounting is essentially free as it doesn't require the CPU
+          * controller to be enabled, so the default is to enable it unless we got told otherwise. */
+         if (arg_default_cpu_accounting >= 0)
+@@ -2395,6 +2401,7 @@ static void reset_arguments(void) {
+ 
+         /* arg_serialization — ignore */
+ 
++        arg_disable_cgroup_controllers = 0;
+         arg_default_cpu_accounting = -1;
+         arg_default_io_accounting = false;
+         arg_default_ip_accounting = false;
+diff --git a/src/core/manager.h b/src/core/manager.h
+index 54c1d3e..1f7d3b5 100644
+--- a/src/core/manager.h
++++ b/src/core/manager.h
+@@ -295,6 +295,8 @@ struct Manager {
+         /* Data specific to the cgroup subsystem */
+         Hashmap *cgroup_unit;
+         CGroupMask cgroup_supported;
++        CGroupMask system_cgroup_supported;
++        CGroupMask cgroup_disabled;
+         char *cgroup_root;
+ 
+         /* Notifications from cgroups, when the unified hierarchy is used is done via inotify. */
+diff --git a/src/core/system.conf.in b/src/core/system.conf.in
+index c1fd308..2fe6f60 100644
+--- a/src/core/system.conf.in
++++ b/src/core/system.conf.in
+@@ -49,6 +49,7 @@
+ #DefaultStartLimitIntervalSec=10s
+ #DefaultStartLimitBurst=5
+ #DefaultEnvironment=
++#DisableCGroupControllers=no
+ #DefaultCPUAccounting=no
+ #DefaultIOAccounting=no
+ #DefaultIPAccounting=no
+diff --git a/src/shared/conf-parser.c b/src/shared/conf-parser.c
+index d0ac1b2..23fc1f5 100644
+--- a/src/shared/conf-parser.c
++++ b/src/shared/conf-parser.c
+@@ -10,6 +10,7 @@
+ #include "alloc-util.h"
+ #include "conf-files.h"
+ #include "conf-parser.h"
++#include "cgroup-util.h"
+ #include "def.h"
+ #include "ether-addr-util.h"
+ #include "extract-word.h"
+@@ -1196,6 +1197,59 @@ int config_parse_rlimit(
+         return 0;
+ }
+ 
++int config_parse_cgroup(
++                const char *unit,
++                const char *filename,
++                unsigned line,
++                const char *section,
++                unsigned section_line,
++                const char *lvalue,
++                int ltype,
++                const char *rvalue,
++                void *data,
++                void *userdata) {
++        assert(filename);
++        assert(lvalue);
++        assert(rvalue);
++        assert(data);
++
++        CGroupMask *disabled_mask = data;
++        int r;
++
++        for (;;) {
++                _cleanup_free_ char *word = NULL;
++                CGroupController cc;
++                int yes_or_no = 0;
++
++                r = extract_first_word(&rvalue, &word, NULL, EXTRACT_UNQUOTE|EXTRACT_RETAIN_ESCAPE);
++                if (r == 0)
++                        break;
++                if (r == -ENOMEM)
++                        return log_oom();
++                if (r < 0) {
++                        log_syntax(unit, LOG_ERR, filename, line, r, "Invalid syntax, ignoring: %s", rvalue);
++                        break;
++                }
++
++                yes_or_no = parse_boolean(word);
++                if (yes_or_no == 0) {
++                        *disabled_mask = 0;
++                        break;
++                } else if (yes_or_no == 1) {
++                        *disabled_mask = CGROUP_MASK_V1;
++                        break;
++                }
++
++                cc = cgroup_controller_from_string(word);
++                if (cc < 0) {
++                        log_syntax(unit, LOG_ERR, filename, line, r, "Failed to parse DisableCGroupControllers, ignoring: %s", word);
++                        break;
++                }
++                *disabled_mask |= CGROUP_CONTROLLER_TO_MASK(cc);
++        }
++        return 0;
++}
++
+ int config_parse_permille(
+                 const char* unit,
+                 const char *filename,
+diff --git a/src/shared/conf-parser.h b/src/shared/conf-parser.h
+index c3a1382..65ef71e 100644
+--- a/src/shared/conf-parser.h
++++ b/src/shared/conf-parser.h
+@@ -146,6 +146,7 @@ CONFIG_PARSER_PROTOTYPE(config_parse_ifnames);
+ CONFIG_PARSER_PROTOTYPE(config_parse_ip_port);
+ CONFIG_PARSER_PROTOTYPE(config_parse_mtu);
+ CONFIG_PARSER_PROTOTYPE(config_parse_rlimit);
++CONFIG_PARSER_PROTOTYPE(config_parse_cgroup);
+ CONFIG_PARSER_PROTOTYPE(config_parse_vlanprotocol);
+ CONFIG_PARSER_PROTOTYPE(config_parse_hwaddr);
+ CONFIG_PARSER_PROTOTYPE(config_parse_hwaddrs);
+-- 
+2.23.0
+
