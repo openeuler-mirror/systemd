@@ -1,0 +1,34 @@
+From c285d500d0fe356f74f34846bc2ac0e25fe6ae42 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 8 Jul 2022 22:00:58 +0900
+Subject: [PATCH] resolve: fix heap-buffer-overflow reported by ASAN with
+ strict_string_checks=1
+
+Fixes #23942.
+
+(cherry picked from commit beeab352de413e1c04de0a67ee36525fcf6e99dd)
+(cherry picked from commit feb244676baa246e660b713544c2cb8766c25b34)
+(cherry picked from commit 63c0ce2346cb70a2959bd539541119866223a619)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/c285d500d0fe356f74f34846bc2ac0e25fe6ae42
+---
+ src/resolve/resolved-dns-packet.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/resolve/resolved-dns-packet.c b/src/resolve/resolved-dns-packet.c
+index b37f57fe67..c4cfbf7820 100644
+--- a/src/resolve/resolved-dns-packet.c
++++ b/src/resolve/resolved-dns-packet.c
+@@ -1393,7 +1393,7 @@ int dns_packet_read_string(DnsPacket *p, char **ret, size_t *start) {
+         if (memchr(d, 0, c))
+                 return -EBADMSG;
+ 
+-        t = strndup(d, c);
++        t = memdup_suffix0(d, c);
+         if (!t)
+                 return -ENOMEM;
+ 
+-- 
+2.27.0
+

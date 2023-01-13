@@ -1,0 +1,35 @@
+From b1b19cfdd22892ecc11e27206c3eab138c719e13 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 12 Aug 2022 04:19:27 +0900
+Subject: [PATCH] sd-device-monitor: actually refuse to send invalid devices
+
+Fixes an issue introduced by 9e79123884a36ce095b98d1c0fe247dddf02dbec.
+
+(cherry picked from commit 8bb4989906a1659b0f6adfa03dc7585e294a392b)
+(cherry picked from commit 6e1acfe81823b67b6b830d3ae8d0f0184eab8b2f)
+(cherry picked from commit b48a17f13fb85145c17ee1dd3beb450d1dcc4b08)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/b1b19cfdd22892ecc11e27206c3eab138c719e13
+---
+ src/libsystemd/sd-device/device-monitor.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/libsystemd/sd-device/device-monitor.c b/src/libsystemd/sd-device/device-monitor.c
+index 2cb35951de..d7c6c69640 100644
+--- a/src/libsystemd/sd-device/device-monitor.c
++++ b/src/libsystemd/sd-device/device-monitor.c
+@@ -577,8 +577,8 @@ int device_monitor_send_device(
+         if (r < 0)
+                 return log_device_debug_errno(device, r, "sd-device-monitor: Failed to get device properties: %m");
+         if (blen < 32)
+-                log_device_debug_errno(device, SYNTHETIC_ERRNO(EINVAL),
+-                                       "sd-device-monitor: Length of device property nulstr is too small to contain valid device information");
++                return log_device_debug_errno(device, SYNTHETIC_ERRNO(EINVAL),
++                                              "sd-device-monitor: Length of device property nulstr is too small to contain valid device information");
+ 
+         /* fill in versioned header */
+         r = sd_device_get_subsystem(device, &val);
+-- 
+2.27.0
+

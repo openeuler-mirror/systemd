@@ -1,0 +1,145 @@
+From 89110c823f246d3d2c398652999826107da446bf Mon Sep 17 00:00:00 2001
+From: yangbin <robin.yb@huawei.com>
+Date: Tue, 7 Apr 2020 12:01:39 +0800
+Subject: [PATCH] systemd-machined: Also stop machine when a machine unit is
+ active but the leader process is exited
+
+When a VM machine is created in a scenario as below, it will remain in systemd-machined even though it has already been terminated by libvirtd.
+1. libvirtd sends a request to systemd-machined with the leader(the PID of the vm) to create a machine.
+2. systemd-machined directs the request to systemd
+3. systemd constructs a scope and creates cgroup for the machine. the scope unit is then added to job queue and will be started later.
+4. the leader process(the PID of the vm) is terminated by libvirtd(due some reason) before the scope is started.
+5. Since the scope unit is yet not started, systemd will not destroy the scope althrough it is noticed with the signal event.
+6. systemd starts the scope, and now the scope and machine is in active but no leader process exist.
+7. systemd-machined will not stop and destroy the machine, and remains in system until the scope is stopped by others or the OS is restarted.
+
+This patch fix this problem by ansering yes to stop machine in machine_check_gc
+when the machine unit is active but the leader process has already exited.
+
+Change-Id: I80e3c32832f4ecf08b6cb149735978730ce1d1c0
+---
+ src/machine/machine.c       | 37 ++++++++++++++++++++++++++++++++++++-
+ src/machine/machined-dbus.c | 35 +++++++++++++++++++++++++++++++++++
+ src/machine/machined.h      |  1 +
+ 3 files changed, 72 insertions(+), 1 deletion(-)
+
+diff --git a/src/machine/machine.c b/src/machine/machine.c
+index c0ed24b..b48aee6 100644
+--- a/src/machine/machine.c
++++ b/src/machine/machine.c
+@@ -32,6 +32,7 @@
+ #include "unit-name.h"
+ #include "user-util.h"
+ #include "util.h"
++#include "cgroup-util.h"
+ 
+ Machine* machine_new(Manager *manager, MachineClass class, const char *name) {
+         Machine *m;
+@@ -523,6 +524,40 @@ int machine_finalize(Machine *m) {
+         return 0;
+ }
+ 
++static bool machine_validate_unit(Machine *m) {
++        int r;
++        _cleanup_free_ char *unit = NULL;
++        _cleanup_free_ char *cgroup = NULL;
++
++        r = cg_pid_get_unit(m->leader, &unit);
++        if (!r && streq(m->unit, unit))
++                return true;
++
++        if (r == -ESRCH) {
++                /* the original leader may exit and be replaced with a new leader when qemu hotreplace is performed.
++                 * so we don't return true here, otherwise the vm will be added to the gc list.
++                 * */
++                log_info("Machine unit is in active, but the leader process is exited. "
++                        "machine: %s, leader: "PID_FMT", unit: %s.", m->name, m->leader, m->unit);
++        } else if (r) {
++                log_info_errno(r, "Can not get unit from cgroup. "
++                        "machine: %s, leader: "PID_FMT", unit: %s, error: %m", m->name, m->leader, m->unit);
++        } else if (unit && !streq(m->unit, unit)) {
++                log_info("Machine unit name not match. "
++                        "machine: %s, leader: "PID_FMT", machine unit: %s, real unit: %s", m->name, m->leader, m->unit, unit);
++        }
++
++        r = manager_get_unit_cgroup_path(m->manager, m->unit, &cgroup);
++        if (!r && !isempty(cgroup) && cg_is_empty_recursive(SYSTEMD_CGROUP_CONTROLLER, cgroup) > 0) {
++                log_info("Cgroup is empty in the machine unit. "
++                        "machine: %s, leader: "PID_FMT", machine unit: %s.", m->name, m->leader, m->unit);
++                /*The vm will be added to gc list only when there is no any process in the scope*/
++                return false;
++        }
++
++        return true;
++}
++
+ bool machine_may_gc(Machine *m, bool drop_not_started) {
+         assert(m);
+ 
+@@ -535,7 +570,7 @@ bool machine_may_gc(Machine *m, bool drop_not_started) {
+         if (m->scope_job && manager_job_is_active(m->manager, m->scope_job))
+                 return false;
+ 
+-        if (m->unit && manager_unit_is_active(m->manager, m->unit))
++        if (m->unit && manager_unit_is_active(m->manager, m->unit) && machine_validate_unit(m))
+                 return false;
+ 
+         return true;
+diff --git a/src/machine/machined-dbus.c b/src/machine/machined-dbus.c
+index 342b18a..dcc2253 100644
+--- a/src/machine/machined-dbus.c
++++ b/src/machine/machined-dbus.c
+@@ -1614,3 +1614,38 @@ int manager_add_machine(Manager *m, const char *name, Machine **_machine) {
+ 
+         return 0;
+ }
++
++int manager_get_unit_cgroup_path(Manager *manager, const char *unit, char **cgroup) {
++        _cleanup_(sd_bus_error_free) sd_bus_error error = SD_BUS_ERROR_NULL;
++        _cleanup_(sd_bus_message_unrefp) sd_bus_message *reply = NULL;
++        _cleanup_free_ char *path = NULL;
++        const char *cgroup_path = NULL;
++        int r;
++
++        assert(manager);
++        assert(unit);
++
++        path = unit_dbus_path_from_name(unit);
++        if (!path)
++                return -ENOMEM;
++
++        r = sd_bus_get_property(
++                        manager->bus,
++                        "org.freedesktop.systemd1",
++                        path,
++                        endswith(unit, ".scope") ? "org.freedesktop.systemd1.Scope" : "org.freedesktop.systemd1.Service",
++                        "ControlGroup",
++                        &error,
++                        &reply,
++                        "s");
++        if (r < 0) {
++                return r;
++        }
++
++        r = sd_bus_message_read(reply, "s", &cgroup_path);
++        if (r < 0)
++                return -EINVAL;
++        *cgroup = strdup(cgroup_path);
++
++        return 0;
++}
+diff --git a/src/machine/machined.h b/src/machine/machined.h
+index 280c32b..6b8d98b 100644
+--- a/src/machine/machined.h
++++ b/src/machine/machined.h
+@@ -58,6 +58,7 @@ int manager_kill_unit(Manager *manager, const char *unit, int signo, sd_bus_erro
+ int manager_unref_unit(Manager *m, const char *unit, sd_bus_error *error);
+ int manager_unit_is_active(Manager *manager, const char *unit);
+ int manager_job_is_active(Manager *manager, const char *path);
++int manager_get_unit_cgroup_path(Manager *manager, const char *unit, char **cgroup);
+ 
+ #if ENABLE_NSCD
+ int manager_enqueue_nscd_cache_flush(Manager *m);
+-- 
+2.23.0
+

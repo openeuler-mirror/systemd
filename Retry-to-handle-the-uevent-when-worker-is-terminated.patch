@@ -1,0 +1,93 @@
+From a3d2f4261ef9a953904e3e21abafba0dad7daa77 Mon Sep 17 00:00:00 2001
+From: gaoyi <gaoyi15@huawei.com>
+Date: Mon, 28 Sep 2020 22:36:37 +0800
+Subject: [PATCH] Retry to handle the uevent when worker is terminated abnormal
+
+When processing uevent events fails, retry it.
+---
+ src/udev/udevd.c | 41 ++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 36 insertions(+), 5 deletions(-)
+
+diff --git a/src/udev/udevd.c b/src/udev/udevd.c
+index eb94ed3..5b743ad 100644
+--- a/src/udev/udevd.c
++++ b/src/udev/udevd.c
+@@ -70,6 +70,7 @@
+ #include "version.h"
+ 
+ #define WORKER_NUM_MAX 2048U
++#define UEVENT_MAX_RETRY_TIMES 3
+ 
+ static bool arg_debug = false;
+ static int arg_daemonize = false;
+@@ -114,6 +115,7 @@ typedef struct Event {
+         Manager *manager;
+         Worker *worker;
+         EventState state;
++        int retry;
+ 
+         sd_device *dev;
+         sd_device *dev_kernel; /* clone of originally received device */
+@@ -148,6 +150,32 @@ typedef struct Worker {
+ typedef struct WorkerMessage {
+ } WorkerMessage;
+ 
++static bool event_retry(Event *event) {
++        if (!event)
++                return false;
++
++        assert(event->manager);
++
++        if (--event->retry < 0) {
++                log_device_error(event->dev, "Retry failed.");
++                return false;
++        }
++
++        log_device_info(event->dev, "Retry %d times.", UEVENT_MAX_RETRY_TIMES - event->retry);
++
++        event->timeout_warning_event = sd_event_source_unref(event->timeout_warning_event);
++        event->timeout_event = sd_event_source_unref(event->timeout_event);
++
++        if (event->worker) {
++                event->worker->event = NULL;
++                event->worker = NULL;
++        }
++
++        event->state = EVENT_QUEUED;
++
++        return true;
++}
++
+ static void event_free(Event *event) {
+         if (!event)
+                 return;
+@@ -638,6 +666,7 @@ static int event_queue_insert(Manager *manager, sd_device *dev) {
+                 .dev_kernel = TAKE_PTR(clone),
+                 .seqnum = seqnum,
+                 .state = EVENT_QUEUED,
++                .retry = UEVENT_MAX_RETRY_TIMES,
+         };
+ 
+         if (LIST_IS_EMPTY(manager->events)) {
+@@ -1314,11 +1343,13 @@ static int on_sigchld(sd_event_source *s, const struct signalfd_siginfo *si, voi
+                         device_delete_db(worker->event->dev);
+                         device_tag_index(worker->event->dev, NULL, false);
+ 
+-                        if (manager->monitor) {
+-                                /* forward kernel event without amending it */
+-                                r = device_monitor_send_device(manager->monitor, NULL, worker->event->dev_kernel);
+-                                if (r < 0)
+-                                        log_device_error_errno(worker->event->dev_kernel, r, "Failed to send back device to kernel: %m");
++                        if (event_retry(worker->event) == false) {
++                                if (manager->monitor) {
++                                        /* forward kernel event without amending it */
++                                        r = device_monitor_send_device(manager->monitor, NULL, worker->event->dev_kernel);
++                                        if (r < 0)
++                                                log_device_error_errno(worker->event->dev_kernel, r, "Failed to send back device to kernel: %m");
++                                }
+                         }
+                 }
+ 
+-- 
+2.23.0
+
