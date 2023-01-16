@@ -1,0 +1,41 @@
+From 2065d03c1592ff0e9027e1c06b40f55fb3e1d1ae Mon Sep 17 00:00:00 2001
+From: Daniel Braunwarth <daniel@braunwarth.dev>
+Date: Sun, 28 Aug 2022 20:02:50 +0200
+Subject: [PATCH] condition: fix device-tree firmware path
+
+The path /sys/firmware/device-tree doesn't exist. This should be either
+/proc/device-tree or /sys/firmware/devicetree.
+
+The first path is only a link. So lets use the second path.
+
+See https://github.com/torvalds/linux/blob/v4.14/drivers/of/base.c#L218.
+
+(cherry picked from commit 1037178acfd093fb10d8f5e74f3072f78afdf7e8)
+(cherry picked from commit 254b77e73cb81265146de653563a7fe3f9936b56)
+(cherry picked from commit ba29bb342deb4eeb55debfa7abb4ba97d50df076)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/2065d03c1592ff0e9027e1c06b40f55fb3e1d1ae
+---
+ src/shared/condition.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/shared/condition.c b/src/shared/condition.c
+index 6645f771dd..b0520566ed 100644
+--- a/src/shared/condition.c
++++ b/src/shared/condition.c
+@@ -555,9 +555,9 @@ static int condition_test_firmware(Condition *c, char **env) {
+         assert(c->type == CONDITION_FIRMWARE);
+ 
+         if (streq(c->parameter, "device-tree")) {
+-                if (access("/sys/firmware/device-tree/", F_OK) < 0) {
++                if (access("/sys/firmware/devicetree/", F_OK) < 0) {
+                         if (errno != ENOENT)
+-                                log_debug_errno(errno, "Unexpected error when checking for /sys/firmware/device-tree/: %m");
++                                log_debug_errno(errno, "Unexpected error when checking for /sys/firmware/devicetree/: %m");
+                         return false;
+                 } else
+                         return true;
+-- 
+2.27.0
+

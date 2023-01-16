@@ -1,0 +1,33 @@
+From 53fd101c2144cb104d34aea8e68c7c24443107bd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Fri, 7 Oct 2022 15:52:33 +0200
+Subject: [PATCH] analyze: add forgotten return statement
+
+We would fail with an assert in sd_bus_message_enter_container() afterwards.
+
+(cherry picked from commit 5475e963c5e6ade35404384ba03caf79cb1bc2e5)
+(cherry picked from commit e0ba044985ac33d5eb2fb0d09fc2ff1b2f9b73dc)
+(cherry picked from commit 1316666e98accf6b8ab8cb0fb5ef73d275049a34)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/53fd101c2144cb104d34aea8e68c7c24443107bd
+---
+ src/analyze/analyze.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/analyze/analyze.c b/src/analyze/analyze.c
+index 62c0ccbdfe..6452d23331 100644
+--- a/src/analyze/analyze.c
++++ b/src/analyze/analyze.c
+@@ -1274,7 +1274,7 @@ static int dot(int argc, char *argv[], void *userdata) {
+ 
+         r = bus_call_method(bus, bus_systemd_mgr, "ListUnits", &error, &reply, NULL);
+         if (r < 0)
+-                log_error_errno(r, "Failed to list units: %s", bus_error_message(&error, r));
++                return log_error_errno(r, "Failed to list units: %s", bus_error_message(&error, r));
+ 
+         r = sd_bus_message_enter_container(reply, SD_BUS_TYPE_ARRAY, "(ssssssouso)");
+         if (r < 0)
+-- 
+2.27.0
+

@@ -1,0 +1,63 @@
+From 3ac4d1fc1a067afc0e0d4ca37a44ac252ee8b96b Mon Sep 17 00:00:00 2001
+From: xujing <xujing99@huawei.com>
+Date: Tue, 8 Feb 2022 21:02:31 +0800
+Subject: [PATCH] shutdown: reboot when recieve crash signal
+
+---
+ src/shutdown/shutdown.c | 33 +++++++++++++++++++++++++++++++++
+ 1 files changed, 33 insertions(+)
+
+diff --git a/src/shutdown/shutdown.c b/src/shutdown/shutdown.c
+index 680de4f..066a03a 100644
+--- a/src/shutdown/shutdown.c
++++ b/src/shutdown/shutdown.c
+@@ -307,6 +307,26 @@ static void bump_sysctl_printk_log_level(int min_level) {
+                 log_debug_errno(r, "Failed to bump kernel.printk to %i: %m", min_level + 1);
+ }
+ 
++_noreturn_ static void crash(int sig) {
++        if (getpid_cached() != 1)
++                /* Pass this on immediately, if this is not PID 1 */
++                (void) raise(sig);
++        else {
++                bool in_container = detect_container() > 0;
++
++                log_info("Recieve signal %d.", sig);
++
++                broadcast_signal(SIGTERM, true, true, arg_timeout);
++                broadcast_signal(SIGKILL, true, false, arg_timeout);
++
++                if (!in_container)
++                        sync_with_progress();
++
++                log_info("Rebooting now.");
++                (void) reboot(RB_AUTOBOOT);
++        }
++}
++
+ int main(int argc, char *argv[]) {
+         bool need_umount, need_swapoff, need_loop_detach, need_dm_detach, need_md_detach, in_container, use_watchdog = false, can_initrd;
+         _cleanup_free_ char *cgroup = NULL;
+@@ -316,6 +336,19 @@ int main(int argc, char *argv[]) {
+         usec_t now_time, time_interval;
+         pid_t pid;
+         bool fork_failed = false;
++        static const struct sigaction sa = {
++                .sa_handler = crash,
++                .sa_flags = SA_NODEFER, /* So that we can raise the signal again from the signal handler */
++        };
++
++        (void) reset_all_signal_handlers();
++        (void) ignore_signals(SIGNALS_IGNORE, -1);
++
++        /* We ignore the return value here, since, we don't mind if we
++         * cannot set up a crash handler */
++        r = sigaction_many(&sa, SIGNALS_CRASH_HANDLER, -1);
++        if (r < 0)
++                log_debug_errno(r, "I had trouble setting up the crash handler, ignoring: %m");
+ 
+         /* The log target defaults to console, but the original systemd process will pass its log target in through a
+          * command line argument, which will override this default. Also, ensure we'll never log to the journal or
+-- 
+2.23.0
+
