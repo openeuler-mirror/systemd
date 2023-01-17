@@ -1,0 +1,52 @@
+From 561205a9c4fd0db341a93e227d249a6b6d03e2e1 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sun, 4 Sep 2022 22:34:38 +0900
+Subject: [PATCH] mount-util: fix error code
+
+If multiple service is starting simultaneously with a shared image,
+then one of the service may fail to create a mount node:
+
+systemd[695]: Bind-mounting /usr/lib/os-release on /run/systemd/unit-root/run/host/os-release (MS_BIND|MS_REC "")...
+systemd[696]: Bind-mounting /usr/lib/os-release on /run/systemd/unit-root/run/host/os-release (MS_BIND|MS_REC "")...
+systemd[695]: Failed to mount /usr/lib/os-release (type n/a) on /run/systemd/unit-root/run/host/os-release (MS_BIND|MS_REC ""): No such file or directory
+systemd[696]: Failed to mount /usr/lib/os-release (type n/a) on /run/systemd/unit-root/run/host/os-release (MS_BIND|MS_REC ""): No such file or directory
+systemd[695]: Bind-mounting /usr/lib/os-release on /run/systemd/unit-root/run/host/os-release (MS_BIND|MS_REC "")...
+systemd[696]: Failed to create destination mount point node '/run/systemd/unit-root/run/host/os-release': Operation not permitted
+systemd[695]: Successfully mounted /usr/lib/os-release to /run/systemd/unit-root/run/host/os-release
+
+The function apply_one_mount() in src/core/namespace.c gracefully
+handles -EEXIST from make_mount_point_inode_from_path(), but it erroneously
+returned -EPERM previously. This fixes the issue.
+
+Fixes one of the issues in #24147, especially reported at
+https://github.com/systemd/systemd/issues/24147#issuecomment-1236194671.
+
+(cherry picked from commit b6ca2b281eff254dce2293990360e799af806ad4)
+(cherry picked from commit 24238be484e6d7633bc68c784f7b3180299a80d4)
+(cherry picked from commit 260633c50b5da5522b714d7989a138ecd73febd6)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/561205a9c4fd0db341a93e227d249a6b6d03e2e1
+---
+ src/shared/mount-util.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/shared/mount-util.c b/src/shared/mount-util.c
+index 26618bb113..199ff6163d 100644
+--- a/src/shared/mount-util.c
++++ b/src/shared/mount-util.c
+@@ -1089,8 +1089,10 @@ int make_mount_point_inode_from_stat(const struct stat *st, const char *dest, mo
+ 
+         if (S_ISDIR(st->st_mode))
+                 return mkdir_label(dest, mode);
++        else if (mknod(dest, S_IFREG|(mode & ~0111), 0) < 0)
++                return -errno;
+         else
+-                return mknod(dest, S_IFREG|(mode & ~0111), 0);
++                return 0;
+ }
+ 
+ int make_mount_point_inode_from_path(const char *source, const char *dest, mode_t mode) {
+-- 
+2.27.0
+

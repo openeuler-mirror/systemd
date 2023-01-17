@@ -1,0 +1,156 @@
+From f4b4008495211c60bda7e1edda45beb36a553bc7 Mon Sep 17 00:00:00 2001
+From: licunlong<licunlong1@huawei.com>
+Date: Thu, 14 Jan 2021 15:57:59 +0800
+Subject: [PATCH] process-util: log more information when running
+ systemctl.
+
+ Print the PID and its cmdline to the system log when a process
+ runs systemctl command.
+---
+ src/basic/process-util.c     | 31 +++++++++++++++++++++++++++++++
+ src/basic/process-util.h     |  1 +
+ src/systemctl/systemctl.c    | 12 ++++++++++++
+ src/test/test-process-util.c | 22 ++++++++++++++++++++++
+ 4 files changed, 66 insertions(+)
+
+diff --git a/src/basic/process-util.c b/src/basic/process-util.c
+index 5452edd..f137ba0 100644
+--- a/src/basic/process-util.c
++++ b/src/basic/process-util.c
+@@ -42,6 +42,7 @@
+ #include "stdio-util.h"
+ #include "string-table.h"
+ #include "string-util.h"
++#include "strv.h"
+ #include "terminal-util.h"
+ #include "user-util.h"
+ #include "utf8.h"
+@@ -189,6 +190,36 @@ int get_process_cmdline(pid_t pid, size_t max_columns, ProcessCmdlineFlags flags
+         return 0;
+ }
+ 
++int print_process_cmdline_with_arg(pid_t pid, int argc, char *argv[], char *filter[]) {
++      bool is_filtered = false;
++      int r;
++      const char *arg_cmdline = "[";
++      _cleanup_free_ char *cmdline = NULL;
++
++      r = get_process_cmdline(pid, SIZE_MAX, 0, &cmdline);
++      if (r < 0) {
++              syslog(LOG_INFO, "Failed to get cmdline of PID %d. Ignoring.", pid);
++              return r;
++      } else {
++              for (int i = 0; i < argc; i++ ) {
++                      if (filter && strv_find(filter, argv[i])) {
++                              is_filtered = true;
++                              break;
++                      }
++                      if (i == 0) {
++                              arg_cmdline = strjoina(arg_cmdline, argv[i]);
++                      } else {
++                              arg_cmdline = strjoina(arg_cmdline, " ", argv[i]);
++                      }
++              }
++              if (!is_filtered) {
++                      syslog(LOG_INFO, "%s] called by PID %d (%s)", arg_cmdline, pid, cmdline);
++              }
++              return 0;
++      }
++
++}
++
+ static int update_argv(const char name[], size_t l) {
+         static int can_do = -1;
+ 
+diff --git a/src/basic/process-util.h b/src/basic/process-util.h
+index 41d4759..4d8147e 100644
+--- a/src/basic/process-util.h
++++ b/src/basic/process-util.h
+@@ -38,6 +38,7 @@ typedef enum ProcessCmdlineFlags {
+ 
+ int get_process_comm(pid_t pid, char **name);
+ int get_process_cmdline(pid_t pid, size_t max_columns, ProcessCmdlineFlags flags, char **line);
++int print_process_cmdline_with_arg(pid_t pid, int argc, char *argv[], char *filter[]);
+ int get_process_exe(pid_t pid, char **name);
+ int get_process_uid(pid_t pid, uid_t *uid);
+ int get_process_gid(pid_t pid, gid_t *gid);
+diff --git a/src/systemctl/systemctl.c b/src/systemctl/systemctl.c
+index 1c01914..dd5bee9 100644
+--- a/src/systemctl/systemctl.c
++++ b/src/systemctl/systemctl.c
+@@ -12,6 +12,7 @@
+ 
+ #include <getopt.h>
+ #include <locale.h>
++#include <sys/types.h>
+ #include <unistd.h>
+ 
+ #include "sd-daemon.h"
+@@ -9272,6 +9273,14 @@ static int logind_cancel_shutdown(void) {
+ 
+ static int run(int argc, char *argv[]) {
+         int r;
++        pid_t ppid;
++        char *filter[] = {
++                "status", "show", "cat",
++                "is-active", "is-failed", "is-enabled", "is-system-running",
++                "list-units", "list-sockets", "list-timers", "list-dependencies",
++                "list-unit-files", "list-machines", "list-jobs",
++                "get-default", "show-environment", NULL
++        };
+ 
+         setlocale(LC_ALL, "");
+         log_parse_environment();
+@@ -9291,6 +9300,9 @@ static int run(int argc, char *argv[]) {
+         if (r <= 0)
+                 goto finish;
+ 
++        ppid = getppid();
++        (void) print_process_cmdline_with_arg(ppid, argc, argv, filter);
++
+         if (arg_action != ACTION_SYSTEMCTL && running_in_chroot() > 0) {
+                 if (!arg_quiet)
+                         log_info("Running in chroot, ignoring request.");
+diff --git a/src/test/test-process-util.c b/src/test/test-process-util.c
+index 8dc9fdd..1cb4ee2 100644
+--- a/src/test/test-process-util.c
++++ b/src/test/test-process-util.c
+@@ -601,6 +601,27 @@ static void test_ioprio_class_from_to_string(void) {
+         }
+ }
+ 
++static void test_print_process_cmdline_with_arg(pid_t pid) {
++        char *arg_filter_empty[] = {"", NULL};
++        char *arg_filter_1_in[] = {"status", NULL};
++        char *arg_filter_1_no[] = {"stop", NULL};
++        char *arg_filter_2_in[] = {"restart", "status", NULL};
++        char *arg_filter_2_no[] = {"restart", "stop", NULL};
++        char *arg_var_1[1] = {"systemctl"};
++        char *arg_var_10[10] = {"systemctl", "restart", "1", "2", "3", "4", "5", "6", "7", "8"};
++        char *arg_var_filter[3] = {"systemctl", "status", "dbus.service"};
++        assert_se(print_process_cmdline_with_arg(pid, 0, NULL, NULL) >=0);
++        assert_se(print_process_cmdline_with_arg(pid, 1, arg_var_1, NULL) >= 0);
++        assert_se(print_process_cmdline_with_arg(pid, 10, arg_var_10, NULL) >= 0);
++        assert_se(print_process_cmdline_with_arg(897349, 1, arg_var_1, NULL) < 0);
++        assert_se(print_process_cmdline_with_arg(897349, 10, arg_var_10, NULL) < 0);
++        assert_se(print_process_cmdline_with_arg(pid, 3, arg_var_filter, arg_filter_empty) >= 0);
++        assert_se(print_process_cmdline_with_arg(pid, 3, arg_var_filter, arg_filter_1_in) >= 0);
++        assert_se(print_process_cmdline_with_arg(pid, 3, arg_var_filter, arg_filter_1_no) >= 0);
++        assert_se(print_process_cmdline_with_arg(pid, 3, arg_var_filter, arg_filter_2_in) >= 0);
++        assert_se(print_process_cmdline_with_arg(pid, 3, arg_var_filter, arg_filter_2_no) >= 0);
++}
++
+ int main(int argc, char *argv[]) {
+         log_show_color(true);
+         test_setup_logging(LOG_INFO);
+@@ -627,6 +648,7 @@ int main(int argc, char *argv[]) {
+         test_ioprio_class_from_to_string();
+         test_setpriority_closest();
+         test_get_process_ppid();
++        test_print_process_cmdline_with_arg(getpid());
+ 
+         return 0;
+ }
+-- 
+2.23.0
+

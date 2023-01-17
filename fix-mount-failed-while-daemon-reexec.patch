@@ -1,0 +1,61 @@
+From e485f8a182f8a141676f7ffe0311a1a4724c3c1a Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Tue, 28 Jun 2022 21:56:26 +0800
+Subject: [PATCH] fix mount failed while daemon-reexec
+ 
+---
+ src/core/manager.c | 1 +
+ src/core/manager.h | 1 +
+ src/core/mount.c   | 5 ++++-
+ 3 files changed, 6 insertions(+), 1 deletion(-)
+ 
+diff --git a/src/core/manager.c b/src/core/manager.c
+index 5dff366..45c4ae0 100644
+--- a/src/core/manager.c
++++ b/src/core/manager.c
+@@ -1762,6 +1762,7 @@ int manager_startup(Manager *m, FILE *serialization, FDSet *fds) {
+         }
+ 
+         manager_ready(m);
++        m->mountinfo_uptodate = false;
+ 
+         return 0;
+ }
+diff --git a/src/core/manager.h b/src/core/manager.h
+index cf6cd64..663fe8d 100644
+--- a/src/core/manager.h
++++ b/src/core/manager.h
+@@ -238,6 +238,7 @@ struct Manager {
+         /* Data specific to the mount subsystem */
+         struct libmnt_monitor *mount_monitor;
+         sd_event_source *mount_event_source;
++        bool mountinfo_uptodate;
+ 
+         /* Data specific to the swap filesystem */
+         FILE *proc_swaps;
+diff --git a/src/core/mount.c b/src/core/mount.c
+index 6e514d5..25b0460 100644
+--- a/src/core/mount.c
++++ b/src/core/mount.c
+@@ -1684,6 +1684,7 @@ static int mount_load_proc_self_mountinfo(Manager *m, bool set_flags) {
+                 (void) mount_setup_unit(m, device, path, options, fstype, set_flags);
+         }
+ 
++        m->mountinfo_uptodate = true;
+         return 0;
+ }
+ 
+@@ -1842,8 +1843,10 @@ static int mount_process_proc_self_mountinfo(Manager *m) {
+         assert(m);
+ 
+         r = drain_libmount(m);
+-        if (r <= 0)
++        if (r < 0)
+                 return r;
++        if (r == 0 && m->mountinfo_uptodate)
++                return 0;
+ 
+         r = mount_load_proc_self_mountinfo(m, true);
+         if (r < 0) {
+-- 
+2.33.0

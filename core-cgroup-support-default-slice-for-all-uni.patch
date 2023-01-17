@@ -1,0 +1,216 @@
+From a25f206a49d8a3111ac42791b2eca8a3c9af4991 Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Thu, 6 May 2021 09:38:55 +0800
+Subject: [PATCH] core-cgroup: support default slice for all units.
+
+With this patch, users can specify a default slice for all units by
+adding DefaultUnitSlice=xxx.slice in /etc/systemd/system.conf.
+---
+ src/core/main.c    | 22 +++++++++++
+ src/core/manager.h |  2 +
+ src/core/unit.c    | 98 ++++++++++++++++++++++++++++++++++++++++++----
+ 3 files changed, 114 insertions(+), 8 deletions(-)
+
+diff --git a/src/core/main.c b/src/core/main.c
+index 48e8a4b..c3d9e1c 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -159,6 +159,7 @@ static EmergencyAction arg_cad_burst_action;
+ static OOMPolicy arg_default_oom_policy;
+ static CPUSet arg_cpu_affinity;
+ static NUMAPolicy arg_numa_policy;
++static char *arg_default_unit_slice = NULL;
+ static usec_t arg_clock_usec;
+ static void *arg_random_seed;
+ static size_t arg_random_seed_size;
+@@ -705,6 +706,7 @@ static int parse_config_file(void) {
+                 { "Manager", "DefaultTasksMax",              config_parse_tasks_max,             0, &arg_default_tasks_max                 },
+                 { "Manager", "CtrlAltDelBurstAction",        config_parse_emergency_action,      0, &arg_cad_burst_action                  },
+                 { "Manager", "DefaultOOMPolicy",             config_parse_oom_policy,            0, &arg_default_oom_policy                },
++                { "Manager", "DefaultUnitSlice",             config_parse_string,                0, &arg_default_unit_slice                },
+                 {}
+         };
+ 
+@@ -784,6 +786,26 @@ static void set_manager_defaults(Manager *m) {
+ 
+         (void) manager_default_environment(m);
+         (void) manager_transient_environment_add(m, arg_default_environment);
++        if (m->default_unit_slice)
++        {
++                free(m->default_unit_slice);
++                m->default_unit_slice = NULL;
++        }
++
++        if (arg_default_unit_slice)
++        {
++                char *default_unit_slice_tmp = NULL;
++
++                default_unit_slice_tmp = strdup(arg_default_unit_slice);
++                if (!default_unit_slice_tmp)
++                        log_oom();
++
++                m->default_unit_slice = default_unit_slice_tmp;
++
++                /* free */
++                free(arg_default_unit_slice);
++                arg_default_unit_slice = NULL;
++        }
+ }
+ 
+ static void set_manager_settings(Manager *m) {
+diff --git a/src/core/manager.h b/src/core/manager.h
+index 25d058f..ddddc8e 100644
+--- a/src/core/manager.h
++++ b/src/core/manager.h
+@@ -23,6 +23,7 @@ typedef struct Unit Unit;
+ 
+ /* Enforce upper limit how many names we allow */
+ #define MANAGER_MAX_NAMES 131072 /* 128K */
++#define DEFAULT_UNIT_NAME_LEN_MAX 32
+ 
+ typedef struct Manager Manager;
+ 
+@@ -445,6 +446,7 @@ struct Manager {
+         unsigned notifygen;
+ 
+         bool honor_device_enumeration;
++        char *default_unit_slice;
+         bool in_manager_catchup;
+ 
+         VarlinkServer *varlink_server;
+diff --git a/src/core/unit.c b/src/core/unit.c
+index cbb02ea..e3dee86 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -3316,6 +3316,58 @@ int unit_set_slice(Unit *u, Unit *slice) {
+         return 1;
+ }
+ 
++/* system-xxx.slice, xxx must be (a b c/A B C...and 0 1 2...) */
++static bool slicename_is_valid(const char *slicename) {
++        const char *str_start  = "system-";
++        const char *str_end    = ".slice";
++        const char *str_tmp    = NULL;
++        size_t len_in    = 0;
++        size_t len_start = 0;
++        size_t len_end   = 0;
++        size_t i         = 0;
++
++        if (isempty(slicename))
++                return false;
++
++        len_in    = strlen(slicename);
++        len_start = strlen(str_start);
++        len_end   = strlen(str_end);
++
++        if (len_in > DEFAULT_UNIT_NAME_LEN_MAX)
++                return false;
++
++        if (len_in <= len_start + len_end)
++                return false;
++
++        /* system- */
++        if (strncmp(slicename, str_start, len_start) != 0)
++                return false;
++
++        str_tmp = slicename + len_start;
++
++        len_in = strlen(str_tmp);
++        if (len_in <= len_end)
++                return false;
++
++        /* .slice */
++        if (!strneq(str_tmp + len_in - len_end, str_end, len_end))
++                return false;
++
++        /* a b c/A B C...and 0 1 2... */
++        for (i = 0; i < (len_in - len_end); i++) {
++                char c = *(str_tmp + i);
++
++                if ((c >= 'a' && c <= 'z') ||
++                    (c >= 'A' && c <= 'Z') ||
++                    (c >= '0' && c <= '9'))
++                        continue;
++                else
++                        return false;
++        }
++
++        return true;
++}
++
+ int unit_set_default_slice(Unit *u) {
+         const char *slice_name;
+         Unit *slice;
+@@ -3326,6 +3378,20 @@ int unit_set_default_slice(Unit *u) {
+         if (UNIT_GET_SLICE(u))
+                 return 0;
+ 
++        bool isdefaultslice = false;
++        char *default_unit_slice = u->manager->default_unit_slice;
++
++        if (default_unit_slice) {
++                isdefaultslice = true;
++
++                if (streq(default_unit_slice, SPECIAL_SYSTEM_SLICE))
++                        isdefaultslice = false;
++                else if (!slicename_is_valid(default_unit_slice)) {
++                        log_error("default unit slice is error. slice name '%s' is invalid.", default_unit_slice);
++                        isdefaultslice = false;
++                }
++        }
++
+         if (u->instance) {
+                 _cleanup_free_ char *prefix = NULL, *escaped = NULL;
+ 
+@@ -3343,24 +3409,40 @@ int unit_set_default_slice(Unit *u) {
+                 if (!escaped)
+                         return -ENOMEM;
+ 
+-                if (MANAGER_IS_SYSTEM(u->manager))
+-                        slice_name = strjoina("system-", escaped, ".slice");
+-                else
++                if (MANAGER_IS_SYSTEM(u->manager)) {
++                        if (isdefaultslice) {
++                                _cleanup_free_ char *default_unit_slice_tmp = NULL;
++
++                                default_unit_slice_tmp = strreplace(default_unit_slice, ".slice", "-");
++                                if (!default_unit_slice_tmp)
++                                        return -ENOMEM;
++
++                                slice_name = strjoina(default_unit_slice_tmp, escaped, ".slice");
++                        } else
++                                slice_name = strjoina("system-", escaped, ".slice");
++                } else
+                         slice_name = strjoina("app-", escaped, ".slice");
+ 
+-        } else if (unit_is_extrinsic(u))
++        } else if (unit_is_extrinsic(u)) {
+                 /* Keep all extrinsic units (e.g. perpetual units and swap and mount units in user mode) in
+                  * the root slice. They don't really belong in one of the subslices. */
+                 slice_name = SPECIAL_ROOT_SLICE;
+-
+-        else if (MANAGER_IS_SYSTEM(u->manager))
+-                slice_name = SPECIAL_SYSTEM_SLICE;
+-        else
++                isdefaultslice = false;
++        } else if (MANAGER_IS_SYSTEM(u->manager)) {
++                if (isdefaultslice)
++                        slice_name = default_unit_slice;
++                else
++                        slice_name = SPECIAL_SYSTEM_SLICE;
++        } else {
+                 slice_name = SPECIAL_APP_SLICE;
++                isdefaultslice = false;
++        }
+ 
+         r = manager_load_unit(u->manager, slice_name, NULL, NULL, &slice);
+         if (r < 0)
+                 return r;
++        if (isdefaultslice)
++                slice->default_dependencies=false;
+ 
+         return unit_set_slice(u, slice);
+ }
+-- 
+2.27.0
+
