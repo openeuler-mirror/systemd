@@ -1,0 +1,39 @@
+From 417f37c1455fe770d96559205b864766188d9866 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 2 Sep 2022 18:35:03 +0200
+Subject: [PATCH] log: don't attempt to duplicate closed fd
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+if the console fd is not open we shouldn#t try to move it out of the 0…2
+range.
+
+Fixes: #24535
+Alternative-for: #24537
+(cherry picked from commit f1ee066840eea748ad4074ac2bc859bb897953b9)
+(cherry picked from commit e0dde8a14f8b05b88e1add1abdb68c364913346b)
+(cherry picked from commit 40cedddab7e5c84c8fa4738de423971997d9aef5)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/417f37c1455fe770d96559205b864766188d9866
+---
+ src/basic/log.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/basic/log.c b/src/basic/log.c
+index 1d68b49963..4a1d3c0d6d 100644
+--- a/src/basic/log.c
++++ b/src/basic/log.c
+@@ -1477,7 +1477,7 @@ int log_dup_console(void) {
+         /* Duplicate the fd we use for fd logging if it's < 3 and use the copy from now on. This call is useful
+          * whenever we want to continue logging through the original fd, but want to rearrange stderr. */
+ 
+-        if (console_fd >= 3)
++        if (console_fd < 0 || console_fd >= 3)
+                 return 0;
+ 
+         copy = fcntl(console_fd, F_DUPFD_CLOEXEC, 3);
+-- 
+2.27.0
+

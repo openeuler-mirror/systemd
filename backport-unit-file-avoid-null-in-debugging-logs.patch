@@ -1,0 +1,43 @@
+From e58e1472edc97ff2b234fda60fd0f977f12659fb Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sat, 23 Jul 2022 12:48:35 +0900
+Subject: [PATCH] unit-file: avoid (null) in debugging logs
+
+The variable `inst` was set to NULL by TAKE_PTR().
+
+This fixes the following log message:
+```
+systemd[1]: Unit getty@tty2.service has alias (null).
+```
+
+(cherry picked from commit 7c35b78a0b96085e3d634542212c5521bc2a2f21)
+(cherry picked from commit 9ac0ad80fe97c22ec3dc4670e859abaae9a1f8bf)
+(cherry picked from commit 0e7214c8b5c95bc378ad6b9353e944ec0fba4e21)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/e58e1472edc97ff2b234fda60fd0f977f12659fb
+---
+ src/basic/unit-file.c | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/src/basic/unit-file.c b/src/basic/unit-file.c
+index d1e997ec9f..7b0c932654 100644
+--- a/src/basic/unit-file.c
++++ b/src/basic/unit-file.c
+@@ -520,12 +520,9 @@ static int add_names(
+                                 continue;
+                         }
+ 
+-                        r = set_consume(*names, TAKE_PTR(inst));
+-                        if (r > 0)
+-                                log_debug("Unit %s has alias %s.", unit_name, inst);
++                        r = add_name(unit_name, names, inst);
+                 } else
+                         r = add_name(unit_name, names, *alias);
+-
+                 if (r < 0)
+                         return r;
+         }
+-- 
+2.27.0
+

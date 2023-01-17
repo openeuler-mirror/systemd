@@ -1,0 +1,96 @@
+From 8c9de291f2b782f5d7d40447f08553b5e325a34d Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Fri, 19 Mar 2021 01:29:01 +0800
+Subject: [PATCH] let the child of one unit don't affect each other.
+This should only be used for .slice unit in the [Unit] section.
+To reproduce the problem resolved by this patch, try the following steps:
+1. start service A in a slice;
+2. change the cgroup property by "echo 512 > service_a/cpu.shares";
+3. systemctl daemon-reload;
+4. start service B in a slice;
+5. check the cgroup property by "cat service_a/cpu.shares";
+With this directive enabled, the value will stay as 512; if disabled,
+if will be restored to the default value of systemd. Defaults to "no".
+
+---
+ src/core/cgroup.c                           | 3 +++
+ src/core/load-fragment-gperf.gperf.in       | 1 +
+ src/core/unit-serialize.c                   | 2 ++
+ src/core/unit.h                             | 2 ++
+ test/fuzz/fuzz-unit-file/directives.service | 1 +
+ 5 files changed, 9 insertions(+)
+
+diff --git a/src/core/cgroup.c b/src/core/cgroup.c
+index 4eedaf7..ab6d602 100644
+--- a/src/core/cgroup.c
++++ b/src/core/cgroup.c
+@@ -2618,6 +2618,9 @@ void unit_add_family_to_cgroup_realize_queue(Unit *u) {
+ 
+                 UNIT_FOREACH_DEPENDENCY(m, u, UNIT_ATOM_SLICE_OF) {
+ 
++                        if (u->independent_child)
++                                continue;
++
+                         /* No point in doing cgroup application for units without active processes. */
+                         if (UNIT_IS_INACTIVE_OR_FAILED(unit_active_state(m)))
+                                 continue;
+diff --git a/src/core/load-fragment-gperf.gperf.in b/src/core/load-fragment-gperf.gperf.in
+index 0702aa0..76b1217 100644
+--- a/src/core/load-fragment-gperf.gperf.in
++++ b/src/core/load-fragment-gperf.gperf.in
+@@ -286,6 +286,7 @@ Unit.JoinsNamespaceOf,                   config_parse_unit_deps,
+ Unit.RequiresOverridable,                config_parse_obsolete_unit_deps,             UNIT_REQUIRES,                      0
+ Unit.RequisiteOverridable,               config_parse_obsolete_unit_deps,             UNIT_REQUISITE,                     0
+ Unit.RequiresMountsFor,                  config_parse_unit_requires_mounts_for,       0,                                  0
++Unit.IndependentChild,                   config_parse_bool,                           0,                                  offsetof(Unit, independent_child)
+ Unit.StopWhenUnneeded,                   config_parse_bool,                           0,                                  offsetof(Unit, stop_when_unneeded)
+ Unit.RefuseManualStart,                  config_parse_bool,                           0,                                  offsetof(Unit, refuse_manual_start)
+ Unit.RefuseManualStop,                   config_parse_bool,                           0,                                  offsetof(Unit, refuse_manual_stop)
+diff --git a/src/core/unit-serialize.c b/src/core/unit-serialize.c
+index f3b3e70..b818181 100644
+--- a/src/core/unit-serialize.c
++++ b/src/core/unit-serialize.c
+@@ -801,6 +801,7 @@ void unit_dump(Unit *u, FILE *f, const char *prefix) {
+         if (u->load_state == UNIT_LOADED) {
+ 
+                 fprintf(f,
++                        "%s\tIndependentChild:%s\n"
+                         "%s\tStopWhenUnneeded: %s\n"
+                         "%s\tRefuseManualStart: %s\n"
+                         "%s\tRefuseManualStop: %s\n"
+@@ -808,6 +809,7 @@ void unit_dump(Unit *u, FILE *f, const char *prefix) {
+                         "%s\tOnSuccessJobMode: %s\n"
+                         "%s\tOnFailureJobMode: %s\n"
+                         "%s\tIgnoreOnIsolate: %s\n",
++                        prefix, yes_no(u->independent_child),
+                         prefix, yes_no(u->stop_when_unneeded),
+                         prefix, yes_no(u->refuse_manual_start),
+                         prefix, yes_no(u->refuse_manual_stop),
+diff --git a/src/core/unit.h b/src/core/unit.h
+index cb85dfc..439714a 100644
+--- a/src/core/unit.h
++++ b/src/core/unit.h
+@@ -350,6 +350,8 @@ typedef struct Unit {
+         sd_id128_t invocation_id;
+         char invocation_id_string[SD_ID128_STRING_MAX]; /* useful when logging */
+ 
++        bool independent_child;
++
+         /* Garbage collect us we nobody wants or requires us anymore */
+         bool stop_when_unneeded;
+
+diff --git a/test/fuzz/fuzz-unit-file/directives.service b/test/fuzz/fuzz-unit-file/directives.service
+index 8044977..03eab60 100644
+--- a/test/fuzz/fuzz-unit-file/directives.service
++++ b/test/fuzz/fuzz-unit-file/directives.service
+@@ -98,6 +98,7 @@ RefuseManualStop=
+ ReloadPropagatedFrom=
+ Requires=
+ RequiresMountsFor=
++IndependentChild=
+ RequiresOverridable=
+ Requisite=
+ RequisiteOverridable=
+-- 
+2.27.0
+
