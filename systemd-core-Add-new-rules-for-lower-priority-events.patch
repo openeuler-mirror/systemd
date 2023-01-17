@@ -1,0 +1,224 @@
+From 135dce487e4637e8afc4090334ccb2cb9feccdf1 Mon Sep 17 00:00:00 2001
+From: yangbin <robin.yb@huawei.com>
+Date: Fri, 3 Apr 2020 11:56:41 +0800
+Subject: [PATCH] systemd-core: Add new rules for lower priority events to
+ preempt over higher priority events
+
+1. When a high priority event happenes very frequent, and this event takes long time for execution,systemd will get into busy for handling this event only, and lower priority events will have no any change to dispatch and run.
+
+2. One example is the event for /proc/self/mountinfo, which have a very high priority with -10.
+When there are many mountpoints in mountinfo(for example, there may be many netns mountpoints),this event will take long time to finish.
+Then if now there are mountpoints in repeating mounting and unmounting(for example, /run/user/uid mountpoint will be mounted then unmounted when for one su command),
+this event will take all time of systemd, and lower priority lower events will not be dispatched anyway.
+This will case a very severity problem that zombie process will not be reaped, for the evnet for reaping zombies has a lower priority of -6.
+
+3. This patch fix this problem by add the following rules to allow lower priority events to preempt over higher priority events.
+a) If a higher priority event has already been execute for a certain count in consecutive, it can be preempted by lower priority events. The default value for this count is 10, and can be configured through 'sd_event_source_set_preempt_dispatch_count'.
+b) If a lower priority gets into pending for 10 times in consecutive, it can preempt over higher priority events.
+c) If a lower priority is in pending, and is not dispatched over 50 iteration, it can preempt over higher priority events.
+d) The above rules only works for events with priority equal or higher than 'SD_EVENT_PRIORITY_NORMAL' or evnets with type of SOURCE_DEFER, since SOURCE_DEFER events is used for job running queues.
+---
+ src/core/mount.c                       |  4 ++
+ src/libsystemd/sd-event/event-source.h |  5 ++
+ src/libsystemd/sd-event/sd-event.c     | 81 ++++++++++++++++++++++++++
+ src/systemd/sd-event.h                 |  1 +
+ 4 files changed, 91 insertions(+)
+
+diff --git a/src/core/mount.c b/src/core/mount.c
+index 053deac..de5b745 100644
+--- a/src/core/mount.c
++++ b/src/core/mount.c
+@@ -1895,6 +1895,10 @@ static void mount_enumerate(Manager *m) {
+                         goto fail;
+                 }
+ 
++                r = sd_event_source_set_preempt_dispatch_count(m->mount_event_source, 5);
++                if (r < 0)
++                        goto fail;
++
+                 (void) sd_event_source_set_description(m->mount_event_source, "mount-monitor-dispatch");
+         }
+ 
+diff --git a/src/libsystemd/sd-event/event-source.h b/src/libsystemd/sd-event/event-source.h
+index d2dc214..0fa41aa 100644
+--- a/src/libsystemd/sd-event/event-source.h
++++ b/src/libsystemd/sd-event/event-source.h
+@@ -70,6 +70,11 @@ struct sd_event_source {
+         uint64_t pending_iteration;
+         uint64_t prepare_iteration;
+ 
++        uint64_t preempted_iteration; /*The iteration that dispatched_count is greater than preempt_dispatch_count*/
++        unsigned pending_count; /*times of pending not dispatched*/
++        unsigned dispatched_count; /*consecutive dispatched count*/
++        unsigned preempt_dispatch_count; /*Will be preempted by lower priority if dispatched count reaches to this*/
++
+         sd_event_destroy_t destroy_callback;
+ 
+         LIST_FIELDS(sd_event_source, sources);
+diff --git a/src/libsystemd/sd-event/sd-event.c b/src/libsystemd/sd-event/sd-event.c
+index e9199de..46f8aff 100644
+--- a/src/libsystemd/sd-event/sd-event.c
++++ b/src/libsystemd/sd-event/sd-event.c
+@@ -27,6 +27,11 @@
+ #include "strxcpyx.h"
+ #include "time-util.h"
+ 
++#define DEFAULT_PREEMPTED_ITERATION_COUNT (3)
++#define DEFAULT_PREEMPT_DISPATCH_COUNT (10)
++#define DEFAULT_PREEMPT_PENDING_COUNT (10)
++#define DEFAULT_PREEMPT_ITERATION_COUNT (30)
++
+ #define DEFAULT_ACCURACY_USEC (250 * USEC_PER_MSEC)
+ 
+ static bool EVENT_SOURCE_WATCH_PIDFD(sd_event_source *s) {
+@@ -152,6 +157,11 @@ struct sd_event {
+ 
+         LIST_HEAD(sd_event_source, sources);
+ 
++        /*last dispatched source, its type is sd_event_source,
++         * here use void to avoid accessing its members,
++         * for it may have been freed already.*/
++        void *last_source;
++
+         usec_t last_run_usec, last_log_usec;
+         unsigned delays[sizeof(usec_t) * 8];
+ };
+@@ -165,6 +175,39 @@ static sd_event *event_resolve(sd_event *e) {
+         return e == SD_EVENT_DEFAULT ? default_event : e;
+ }
+ 
++static int preempt_prioq_compare(const sd_event_source *x, const sd_event_source *y) {
++        if((x->priority > SD_EVENT_PRIORITY_NORMAL && x->type != SOURCE_DEFER)
++                || (y->priority > SD_EVENT_PRIORITY_NORMAL && y->type != SOURCE_DEFER)) {
++                return 0; /*only high priority evnets can preempt*/
++        }
++
++        if(x->priority <= y->priority) {
++                if(x->dispatched_count >= x->preempt_dispatch_count)
++                        return 1;
++                if(y->type != SOURCE_DEFER) { /*pending state for defer event is always true*/
++                        /*y has lower priority, but its pending count is greater than x, so y wins*/
++                        if(y->pending_count >= (x->pending_count + DEFAULT_PREEMPT_PENDING_COUNT))
++                                return 1;
++                        /*y has lower priority, but is in pending longer than x, so y wins*/
++                        if(x->pending_iteration >= (y->pending_iteration + DEFAULT_PREEMPT_ITERATION_COUNT))
++                                return 1;
++                }
++        } else {
++                if(y->dispatched_count >= y->preempt_dispatch_count)
++                        return -1;
++                if(x->type != SOURCE_DEFER) { /*pending state for defer event is always true*/
++                        /*x has lower priority, but its pending count is greater than y, so x wins*/
++                        if(x->pending_count >= (y->pending_count + DEFAULT_PREEMPT_PENDING_COUNT))
++                                return -1;
++                        /*x has lower priority, but is in pending longer than y, so x wins*/
++                        if(y->pending_iteration >= (x->pending_iteration + DEFAULT_PREEMPT_ITERATION_COUNT))
++                                return -1;
++                }
++        }
++
++        return 0;
++}
++
+ static int pending_prioq_compare(const void *a, const void *b) {
+         const sd_event_source *x = a, *y = b;
+         int r;
+@@ -182,6 +225,10 @@ static int pending_prioq_compare(const void *a, const void *b) {
+         if (r != 0)
+                 return r;
+ 
++        r = preempt_prioq_compare(a, b);
++        if(r != 0)
++                return r;
++
+         /* Lower priority values first */
+         r = CMP(x->priority, y->priority);
+         if (r != 0)
+@@ -998,6 +1045,17 @@ static int source_set_pending(sd_event_source *s, bool b) {
+         assert(s);
+         assert(s->type != SOURCE_EXIT);
+ 
++        if (b && s->pending == b)
++                s->pending_count++;
++        else
++                s->pending_count = (b ? 1 : 0);
++        if (b && s->preempted_iteration &&
++                (s->pending_count >= DEFAULT_PREEMPTED_ITERATION_COUNT ||
++                s->event->iteration >= (s->preempted_iteration + DEFAULT_PREEMPTED_ITERATION_COUNT)) ) {
++                s->dispatched_count = 0;
++                s->preempted_iteration = 0;
++        }
++
+         if (s->pending == b)
+                 return 0;
+ 
+@@ -1057,6 +1115,7 @@ static sd_event_source *source_new(sd_event *e, bool floating, EventSourceType t
+                 .type = type,
+                 .pending_index = PRIOQ_IDX_NULL,
+                 .prepare_index = PRIOQ_IDX_NULL,
++                .preempt_dispatch_count = DEFAULT_PREEMPT_DISPATCH_COUNT,
+         };
+ 
+         if (!floating)
+@@ -2370,6 +2429,7 @@ static int event_source_offline(
+         s->enabled = enabled;
+         s->ratelimited = ratelimited;
+ 
++        s->pending_count = 0;
+         switch (s->type) {
+ 
+         case SOURCE_IO:
+@@ -3443,6 +3503,19 @@ static int process_inotify(sd_event *e) {
+         return done;
+ }
+ 
++static void source_dispatch_pre(sd_event_source *s) {
++        if(s->event->last_source == s) {
++                s->dispatched_count++;
++                if(s->dispatched_count >= s->preempt_dispatch_count)
++                        s->preempted_iteration = s->event->iteration;
++        } else {
++                s->preempted_iteration = 0;
++                s->dispatched_count = 0;
++        }
++        s->event->last_source = s;
++        s->pending_count = 0;
++}
++
+ static int source_dispatch(sd_event_source *s) {
+         _cleanup_(sd_event_unrefp) sd_event *saved_event = NULL;
+         EventSourceType saved_type;
+@@ -3496,6 +3569,7 @@ static int source_dispatch(sd_event_source *s) {
+                         return r;
+         }
+ 
++        source_dispatch_pre(s);
+         s->dispatching = true;
+ 
+         switch (s->type) {
+@@ -4449,3 +4523,10 @@ _public_ int sd_event_source_is_ratelimited(sd_event_source *s) {
+ 
+         return s->ratelimited;
+ }
++
++_public_ int sd_event_source_set_preempt_dispatch_count(sd_event_source *s, unsigned count) {
++        assert_return(s, -EINVAL);
++
++        s->preempt_dispatch_count = count;
++        return 0;
++}
+diff --git a/src/systemd/sd-event.h b/src/systemd/sd-event.h
+index 2ae2a0d..f113aba 100644
+--- a/src/systemd/sd-event.h
++++ b/src/systemd/sd-event.h
+@@ -165,6 +165,7 @@ int sd_event_source_set_exit_on_failure(sd_event_source *s, int b);
+ int sd_event_source_set_ratelimit(sd_event_source *s, uint64_t interval_usec, unsigned burst);
+ int sd_event_source_get_ratelimit(sd_event_source *s, uint64_t *ret_interval_usec, unsigned *ret_burst);
+ int sd_event_source_is_ratelimited(sd_event_source *s);
++int sd_event_source_set_preempt_dispatch_count(sd_event_source *s, unsigned count);
+ 
+ /* Define helpers so that __attribute__((cleanup(sd_event_unrefp))) and similar may be used. */
+ _SD_DEFINE_POINTER_CLEANUP_FUNC(sd_event, sd_event_unref);
+-- 
+2.23.0
+

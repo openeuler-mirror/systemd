@@ -1,0 +1,1283 @@
+From 5966f7a3b90ee25f23182e9320621a8477a40a51 Mon Sep 17 00:00:00 2001
+From: jiangchuangang <jiangchuangang@huawei.com>
+Date: Thu, 2 Sep 2021 12:14:19 +0800
+Subject: [PATCH] print process status to console when shutdown
+
+---
+ meson.build                    |   6 +-
+ src/basic/process-util.c       |  58 ++++
+ src/basic/process-util.h       |   2 +
+ src/core/fuser.c               | 506 +++++++++++++++++++++++++++++++++
+ src/core/fuser.h               |  55 ++++
+ src/core/job.c                 |  36 +++
+ src/core/main.c                |  13 +-
+ src/core/manager.c             |   1 +
+ src/core/manager.h             |   2 +
+ src/core/meson.build           |   2 +
+ src/core/system.conf.in        |   1 +
+ src/shutdown/meson.build       |  10 +-
+ src/shutdown/process-status.c  | 143 ++++++++++
+ src/shutdown/process-status.h  |  24 ++
+ src/shutdown/shutdown.c        |  45 +++
+ src/shutdown/umount.c          |   8 +-
+ src/test/meson.build           |  17 ++
+ src/test/test-fuser.c          |  14 +
+ src/test/test-process-status.c |  10 +
+ 19 files changed, 945 insertions(+), 8 deletions(-)
+ create mode 100644 src/core/fuser.c
+ create mode 100644 src/core/fuser.h
+ create mode 100644 src/shutdown/process-status.c
+ create mode 100644 src/shutdown/process-status.h
+ create mode 100644 src/test/test-fuser.c
+ create mode 100644 src/test/test-process-status.c
+
+diff --git a/meson.build b/meson.build
+index 1c088ba..278e264 100644
+--- a/meson.build
++++ b/meson.build
+@@ -3211,8 +3211,10 @@ public_programs += executable(
+ executable(
+         'systemd-shutdown',
+         systemd_shutdown_sources,
+-        include_directories : includes,
+-        link_with : [libshared],
++        include_directories : [includes,
++                               core_includes],
++        link_with : [libcore,
++                     libshared],
+         dependencies : [libmount],
+         install_rpath : rootlibexecdir,
+         install : true,
+diff --git a/src/basic/process-util.c b/src/basic/process-util.c
+index 14259ea..e28412a 100644
+--- a/src/basic/process-util.c
++++ b/src/basic/process-util.c
+@@ -1729,3 +1729,61 @@ static const char* const sched_policy_table[] = {
+ };
+ 
+ DEFINE_STRING_TABLE_LOOKUP_WITH_FALLBACK(sched_policy, int, INT_MAX);
++
++unsigned int read_cmdline(char *restrict const dst, unsigned sz, const char* whom, const char *what, char sep) {
++        char path[PATH_MAX];
++        _cleanup_close_ int fd = 0;
++        int len = 0;
++        unsigned n = 0;
++
++        if (sz <= 0)
++                return 0;
++
++        if (sz >= INT_MAX)
++                sz = INT_MAX-1;
++
++        dst[0] = '\0';
++
++        len = snprintf(path, sizeof(path), "%s/%s", whom, what);
++        if (len <= 0 || (size_t)len >= sizeof(path))
++                return 0;
++
++        fd = open(path, O_RDONLY);
++        if (fd == -1)
++                return 0;
++
++        for (;;) {
++                ssize_t r = read(fd, dst+n, sz-n);
++
++                if (r == -1) {
++                        if (errno == EINTR)
++                                continue;
++                        break;
++                }
++
++                if (r <= 0)
++                        break;
++                n += r;
++
++                if (n == sz) {
++                        --n;
++                        break;
++                }
++        }
++
++        if (n) {
++                unsigned i = n;
++
++                while (i && dst[i-1] == '\0')
++                        --i;
++
++                while (i--)
++                        if (dst[i] == '\n' || dst[i] == '\0') dst[i] = sep;
++
++                if (dst[n-1] == ' ')
++                        dst[n-1] = '\0';
++        }
++
++        dst[n] = '\0';
++        return n;
++}
+diff --git a/src/basic/process-util.h b/src/basic/process-util.h
+index 0e064de..6f9b577 100644
+--- a/src/basic/process-util.h
++++ b/src/basic/process-util.h
+@@ -205,3 +205,5 @@ int pidfd_get_pid(int fd, pid_t *ret);
+ int setpriority_closest(int priority);
+ 
+ bool invoked_as(char *argv[], const char *token);
++
++unsigned int read_cmdline(char *restrict const dst, unsigned sz, const char* whom, const char *what, char sep);
+diff --git a/src/core/fuser.c b/src/core/fuser.c
+new file mode 100644
+index 0000000..0a0c791
+--- /dev/null
++++ b/src/core/fuser.c
+@@ -0,0 +1,506 @@
++#include "fuser.h"
++#include "process-util.h"
++
++static int parse_dir(struct name *this_name, struct inode *match_inode) {
++        if ((this_name == NULL) || (match_inode == NULL)) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't parse dir.");
++                return -1;
++        }
++
++        if (stat(this_name->filename, &this_name->st) != 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't stat dir %s.", this_name->filename);
++                return -1;
++        }
++
++        match_inode->name = this_name;
++        match_inode->device = this_name->st.st_dev;
++        match_inode->inode = this_name->st.st_ino;
++
++        return 0;
++}
++
++static int parse_mounts(struct name *this_name, struct device *match_device) {
++        if ((this_name == NULL) && (match_device == NULL)) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't parse mounts.");
++                return -1;
++        }
++
++        match_device->name = this_name;
++
++        if (S_ISBLK(this_name->st.st_mode))
++                match_device->device = this_name->st.st_rdev;
++        else
++                match_device->device = this_name->st.st_dev;
++
++        return 0;
++}
++
++static uid_t getpiduid(const pid_t pid) {
++        char pathname[PATH_MAX];
++        struct stat st;
++        int r = 0;
++
++        r = snprintf(pathname, sizeof(pathname), "/proc/%d", pid);
++        if (r < 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Snprintf run failed in getpiduid.");
++                return 0;
++        }
++
++        if (stat(pathname, &st) != 0)
++                return 0;
++
++        return st.st_uid;
++}
++
++static struct stat *get_pidstat(const pid_t pid) {
++        char pathname[PATH_MAX];
++        struct stat *st = NULL;
++        int r = 0;
++
++        st = (struct stat *)malloc(sizeof(struct stat));
++        if (st == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Malloc failed in get_pidstat.");
++                return NULL;
++        }
++
++        r = snprintf(pathname, sizeof(pathname), "/proc/%d/cwd", pid);
++        if (r < 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Snprintf run failed in get_pidstat.");
++                return NULL;
++        }
++
++        if (stat(pathname, st) != 0) {
++                free(st);
++                return NULL;
++        }
++
++        return st;
++}
++
++static void add_matched_proc(struct name *name, const pid_t pid, const uid_t uid) {
++        struct procs *pptr = NULL;
++        struct procs *last_proc = NULL;
++        char pathname[PATH_MAX];
++        char cmdname[CMD_NAME_LEN + 1];
++        char *cptr = NULL;
++        int cmdlen = 0;
++        FILE *fp = NULL;
++
++        if (name == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Name should not be NULL.");
++                return;
++        }
++
++        //find out wheather the pid already in pptr->pid
++        for (pptr = name->matched_procs; pptr != NULL; pptr = pptr->next) {
++                last_proc = pptr;
++
++                if (pptr->pid == pid)
++                            return;
++        }
++
++        pptr = (struct procs *)malloc(sizeof(struct procs));
++        if (pptr == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't malloc in add_matched_proc.");
++                return;
++        }
++
++        pptr->pid = pid;
++        pptr->uid = uid;
++        pptr->username = NULL;
++        pptr->next = NULL;
++        pptr->command = NULL;
++
++        if ((snprintf(pathname, sizeof(pathname), "/proc/%d/stat", pid) > 0) &&
++                ((fp = fopen(pathname, "r")) != NULL) && (fscanf(fp, "%*d (%100[^)]", cmdname) == 1)) {
++                pptr->command = (char *)malloc(COMM_LEN + 1);
++
++                if (pptr->command != NULL) {
++                       cmdlen = 0;
++
++                       for (cptr = cmdname; cmdlen < COMM_LEN && *cptr; cptr++) {
++                               if (isprint(*cptr)) {
++                                       pptr->command[cmdlen++] = *cptr;
++                               } else if (cmdlen < (COMM_LEN - 4)) {
++                                       cmdlen += sprintf(&(pptr->command[cmdlen]), "\\%03o", *cptr);
++                               }
++                       }
++
++                       pptr->command[cmdlen] = '\0';
++                }
++        }
++
++        if (last_proc == NULL)
++                name->matched_procs = pptr;
++        else
++                last_proc->next = pptr;
++
++        if (fp)
++                fclose(fp);
++}
++
++static void check_dir(const pid_t pid, const char *dirname, const struct device *dev,
++        const struct inode *ino, const uid_t uid) {
++        DIR *dirp = NULL;
++        dev_t thedev;
++        struct dirent *direntry = NULL;
++        struct stat st;
++        char dirpath[PATH_MAX];
++        char filepath[PATH_MAX];
++        int r = 0;
++
++        if (dirname == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Dirname is NULL.");
++                return;
++        }
++
++        r = snprintf(dirpath, sizeof(dirpath), "/proc/%d/%s", pid, dirname);
++        if (r < 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Snprintf run failed in check_dir.");
++               return;
++        }
++
++        dirp = opendir(dirpath);
++        if (dirp == NULL)
++                return;
++
++        while ((direntry = readdir(dirp)) != NULL) {
++                if (direntry->d_name[0] < '0' || direntry->d_name[0] > '9')
++                        continue;
++
++                snprintf(filepath, sizeof(filepath), "/proc/%d/%s/%s",
++                        pid, dirname, direntry->d_name);
++
++                if (stat(filepath, &st) != 0)
++                        continue;
++
++                thedev = st.st_dev;
++
++                if ((dev != NULL) && (thedev == dev->device)) {
++                        add_matched_proc(dev->name, pid, uid);
++                }
++
++                if ((ino != NULL) && (thedev == ino->device)) {
++                        if (st.st_ino == ino->inode) {
++                                add_matched_proc(ino->name, pid, uid);
++                        }
++                }
++        } //end while
++
++        closedir(dirp);
++}
++
++static int scan_procs(const struct name *name, const struct inode *ino, const struct device *dev) {
++        DIR *topproc_dir = NULL;
++        struct dirent *topproc_dent = NULL;
++        pid_t pid;
++        pid_t my_pid;
++        uid_t uid;
++
++        if (name == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                         "Name should not be null in scan_procs.");
++                return -1;
++        }
++
++        if ((ino == NULL) && (dev == NULL)) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Ino and dev should not be NULL in scan_procs.");
++                return -1;
++        }
++
++        topproc_dir = opendir("/proc");
++        if (topproc_dir == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't open dir proc.");
++                return -1;
++        }
++
++       my_pid = getpid();
++
++        while ((topproc_dent = readdir(topproc_dir)) != NULL) {
++                dev_t scan_dev;
++                struct stat *st = NULL;
++
++                /* Not a process */
++                if ((topproc_dent->d_name[0] < '0') || (topproc_dent->d_name[0] > '9'))
++                        continue;
++
++                pid = atoi(topproc_dent->d_name);
++                if (pid == my_pid)
++                        continue;
++
++                uid = getpiduid(pid);
++
++                st = get_pidstat(pid);
++                scan_dev = st ? st->st_dev : 0;
++
++                if ((dev != NULL) && (scan_dev == dev->device))
++                        add_matched_proc(dev->name, pid, uid);
++
++                if ((ino != NULL) && (scan_dev == ino->device)) {
++                        if (!st)
++                                st = get_pidstat(pid);
++
++                        if (st && (st->st_dev == ino->device) && (st->st_ino == ino->inode))
++                                add_matched_proc(ino->name, pid, uid);
++                }
++
++                if (st)
++                        free(st);
++
++                check_dir(pid, "fd", dev, ino, uid);
++        } // end while
++
++        closedir(topproc_dir);
++        return 0;
++}
++
++static void add_special_proc(struct name *name, const uid_t uid, const char *command) {
++        struct procs *pptr = NULL;
++
++        if (name == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Name should not be null in add_special_proc.");
++                return;
++        }
++
++        for (pptr = name->matched_procs; pptr != NULL; pptr = pptr->next) {
++                if (pptr->command != NULL && strcmp(pptr->command, command) == 0)
++                        return;
++        }
++
++        if ((pptr = malloc(sizeof(struct procs))) == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't allocate memory for add_special_proc() proc");
++                return;
++        }
++
++        pptr->pid = 0;
++        pptr->uid = uid;
++        pptr->next = name->matched_procs;
++        pptr->command = strdup(command);
++
++        name->matched_procs = pptr;
++}
++
++static void scan_mounts_and_swaps(const struct name *name, const struct inode *ino,
++            const struct device *dev, const char *file) {
++        FILE *fp = NULL;
++        char line[PATH_MAX];
++        char *find_mountp = NULL;
++        char *find_space_mounts = NULL;
++        char *find_space_swaps = NULL;
++        struct stat st;
++
++        if (name == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Name should not be null in scan_mounts_and_swaps.");
++                return;
++        }
++
++        if ((ino == NULL) && (dev == NULL)) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Ino and dev should not be null in scan_mounts_and_swaps.");
++                return;
++        }
++
++        fp = fopen(file, "r");
++        if (fp == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't open file %s", file);
++                return;
++        }
++
++        while (fgets(line, PATH_MAX, fp) != NULL) {
++                if (strcmp(file, PROC_MOUNTS) == 0) {
++                        if ((find_mountp = strchr(line, ' ')) == NULL)
++                                continue;
++
++                        find_mountp++;
++
++                        find_space_mounts = strchr(find_mountp, ' ');
++                        if (find_space_mounts == NULL)
++                                continue;
++
++                        *find_space_mounts = '\0';
++
++                        if (stat(find_mountp, &st) != 0)
++                                continue;
++                } else {
++                        find_space_swaps = strchr(line, ' ');
++                        if (find_space_swaps == NULL)
++                                continue;
++
++                        *find_space_swaps = '\0';
++                        find_space_swaps++;
++
++                        while (*find_space_swaps == ' ') {
++                                find_space_swaps++;
++
++                                if (*find_space_swaps == '\0')
++                                        continue;
++                        }
++
++                        if (stat(line, &st) != 0) {
++                                continue;
++                        }
++                }
++
++                if ((dev != NULL) && (st.st_dev == dev->device)) {
++                        if (strcmp(file, PROC_MOUNTS) == 0)
++                                add_special_proc(dev->name, 0, find_mountp);
++
++                        if (strcmp(file, PROC_SWAPS) == 0)
++                                add_special_proc(dev->name, 0, line);
++                }
++
++                if ((ino != NULL) && (st.st_dev == ino->device) && (st.st_ino == ino->inode)) {
++                        if (strcmp(file, PROC_MOUNTS) == 0)
++                                add_special_proc(ino->name, 0, find_mountp);
++
++                        if (strcmp(file, PROC_SWAPS) == 0)
++                                add_special_proc(ino->name, 0, line);
++                }
++        } // end while
++
++        fclose(fp);
++}
++
++static void print_matches(const struct name *name) {
++        struct procs *pptr = NULL;
++        struct passwd *pwent = NULL;
++        static char P_cmd_long[MAX_COMM_LEN];
++        char cmd_path[PATH_MAX];
++        int r = 0;
++
++        if (name == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Name should not be null in print_matches.");
++                return;
++        }
++
++        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                "\t\tUSER\t\tPID\tCOMMAND");
++        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                "%s:", name->filename);
++
++        for (pptr = name->matched_procs; pptr != NULL; pptr = pptr->next) {
++                if (pwent == NULL || pwent->pw_uid != pptr->uid)
++                        pwent = getpwuid(pptr->uid); //get username
++
++                r = snprintf(cmd_path, sizeof(cmd_path), "/proc/%d", pptr->pid);
++                if (r <= 0) {
++                        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL, "Can't snprintf /proc/%d.", pptr->pid);
++                        return;
++                }
++
++                read_cmdline(P_cmd_long, sizeof(P_cmd_long), cmd_path, "cmdline", ' ');
++
++                if (strlen(P_cmd_long) != 0){
++                        free(pptr->command);
++                        pptr->command = strdup(P_cmd_long);
++                }
++
++                if (pptr->command == NULL)
++                        continue;
++
++                if (pwent != NULL) {
++                        if (pptr->pid != 0)
++                                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                                        "\t\t%-s\t\t%-d\t%-s", pwent->pw_name, pptr->pid, pptr->command);
++                        else
++                                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                                        "\t\t%-s\t\t%-s\t%-s", pwent->pw_name, "kernel", pptr->command);
++                } else {
++                        if (pptr->pid != 0)
++                                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                                        "\t\t%-d\t\t%-d\t%-s", pptr->uid, pptr->pid, pptr->command);
++                        else
++                                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                                      "\t\t%-d\t\t%-s\t%-s", pptr->uid, "kernel", pptr->command);
++                }
++        }
++}
++
++static void free_matched_procs(struct procs *matched_procs) {
++        struct procs *procs_tmp = NULL;
++        struct procs *procs_next = NULL;
++
++        procs_tmp = matched_procs;
++
++        while (procs_tmp != NULL) {
++                procs_next = procs_tmp->next;
++
++                if (procs_tmp->command)
++                        free(procs_tmp->command);
++
++                free(procs_tmp);
++
++                procs_tmp = procs_next;
++        }
++}
++
++int fuser(const char *dir) {
++        struct name this_name;
++        struct inode match_inode;
++        struct device match_device;
++        int r = 0;
++
++        if (dir == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Dir should not be NULL.");
++                return -1;
++        }
++
++        this_name.matched_procs = NULL;
++
++        this_name.filename = strdup(dir); //need to free
++        if (this_name.filename == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                      "Can't allocate memory for fuser() this_name->filename.");
++                return -1;
++        }
++
++        r = parse_dir(&this_name, &match_inode);
++        if (r < 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "%s", "Failed to parse file.");
++                free(this_name.filename);
++                return -1;
++        }
++
++        r = parse_mounts(&this_name, &match_device);
++        if (r < 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "%s", "Failed to parse mounts.");
++                free(this_name.filename);
++                return -1;
++        }
++
++        r = scan_procs(&this_name, &match_inode, &match_device);
++        if (r < 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "%s", "Failed to scan_procs.");
++                free(this_name.filename);
++                return -1;
++        }
++
++        scan_mounts_and_swaps(&this_name, &match_inode, &match_device, PROC_MOUNTS);
++        scan_mounts_and_swaps(&this_name, &match_inode, &match_device, PROC_SWAPS);
++        print_matches(&this_name);
++
++        free_matched_procs(this_name.matched_procs);
++        free(this_name.filename);
++        return 0;
++}
+diff --git a/src/core/fuser.h b/src/core/fuser.h
+new file mode 100644
+index 0000000..b74b879
+--- /dev/null
++++ b/src/core/fuser.h
+@@ -0,0 +1,55 @@
++#pragma once
++
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <stdio.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <stdlib.h>
++#include <dirent.h>
++#include <ctype.h>
++#include <unistd.h>
++#include <pwd.h>
++#include <string.h>
++#include <limits.h>
++#include <errno.h>
++
++#include "manager.h"
++
++struct procs {
++        pid_t pid;
++        uid_t uid;
++        char *username;
++        char *command;
++        struct procs *next;
++};
++
++struct name {
++        char *filename;
++        struct stat st;
++        struct procs *matched_procs;
++};
++
++struct inode {
++        struct name *name;
++        dev_t device;
++        ino_t inode;
++};
++
++struct device {
++        struct name *name;
++        dev_t device;
++};
++
++#ifndef PATH_MAX
++#define PATH_MAX 4096
++#endif /* PATH_MAX */
++
++#define CMD_NAME_LEN 100
++#define COMM_LEN 64
++#define MAX_COMM_LEN 1024
++#define PROC_MOUNTS "/proc/mounts"
++#define PROC_SWAPS "/proc/swaps"
++
++int fuser(const char *dir);
+diff --git a/src/core/job.c b/src/core/job.c
+index eb6728a..3645c11 100644
+--- a/src/core/job.c
++++ b/src/core/job.c
+@@ -27,6 +27,9 @@
+ #include "terminal-util.h"
+ #include "unit.h"
+ #include "virt.h"
++#include "fuser.h"
++#include "mount.h"
++#include "process-util.h"
+ 
+ Job* job_new_raw(Unit *unit) {
+         Job *j;
+@@ -677,6 +680,8 @@ static const char* job_done_mid(JobType type, JobResult result) {
+ static void job_emit_done_message(Unit *u, uint32_t job_id, JobType t, JobResult result) {
+         _cleanup_free_ char *free_ident = NULL;
+         const char *ident, *format;
++        int r = 0;
++        pid_t pid;
+ 
+         assert(u);
+         assert(t >= 0);
+@@ -741,6 +746,37 @@ static void job_emit_done_message(Unit *u, uint32_t job_id, JobType t, JobResult
+                                                       "See 'systemctl status %s' for details.", quoted);
+                 }
+         }
++
++        if (IN_SET(manager_state(u->manager), MANAGER_STOPPING) && u->manager->default_dfx_reboot &&
++                ((u->type == UNIT_MOUNT || u->type == UNIT_AUTOMOUNT) && t == JOB_STOP && result == JOB_FAILED)) {
++
++                Mount *m = MOUNT(u);
++
++                r = safe_fork("(fuser-shutdown)", FORK_RESET_SIGNALS, &pid);
++                if (r < 0) {
++                        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                                "Failed to fork for fuser!");
++                       return;
++                }
++                if (r == 0) {
++                        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                                "-------------fuser -mv %s----------------", m->where);
++
++                        r = fuser(m->where);
++                        if (r < 0)
++                                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL, "Can't run fuser.");
++
++                        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                                "%s","----------------------------------------------------------------------");
++                        _exit(r < 0 ? EXIT_FAILURE : EXIT_SUCCESS);
++                }
++
++                r = wait_for_terminate_with_timeout(pid, 3 * USEC_PER_SEC);
++                if (r == -ETIMEDOUT) {
++                        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL, "Timeout to run (fuser-shutdown).");
++                        (void) kill(pid, SIGKILL);
++                }
++        }
+ }
+ 
+ static int job_perform_on_unit(Job **j) {
+diff --git a/src/core/main.c b/src/core/main.c
+index 8de32a7..2a6b9b8 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -114,6 +114,7 @@ static bool arg_dump_core;
+ static int arg_crash_chvt;
+ static bool arg_crash_shell;
+ static bool arg_crash_reboot;
++static bool arg_default_dfx_reboot;
+ static char *arg_confirm_spawn;
+ static ShowStatus arg_show_status;
+ static StatusUnitFormat arg_status_unit_format;
+@@ -645,6 +646,7 @@ static int parse_config_file(void) {
+                 { "Manager", "CrashChangeVT",                config_parse_crash_chvt,            0, &arg_crash_chvt                        },
+                 { "Manager", "CrashShell",                   config_parse_bool,                  0, &arg_crash_shell                       },
+                 { "Manager", "CrashReboot",                  config_parse_bool,                  0, &arg_crash_reboot                      },
++                { "Manager", "DefaultDFXReboot",             config_parse_bool,                  0, &arg_default_dfx_reboot                },
+                 { "Manager", "ShowStatus",                   config_parse_show_status,           0, &arg_show_status                       },
+                 { "Manager", "StatusUnitFormat",             config_parse_status_unit_format,    0, &arg_status_unit_format                },
+                 { "Manager", "CPUAffinity",                  config_parse_cpu_affinity2,         0, &arg_cpu_affinity                      },
+@@ -756,6 +758,7 @@ static void set_manager_defaults(Manager *m) {
+         m->default_restart_usec = arg_default_restart_usec;
+         m->default_start_limit_interval = arg_default_start_limit_interval;
+         m->default_start_limit_burst = arg_default_start_limit_burst;
++        m->default_dfx_reboot = arg_default_dfx_reboot;
+ 
+         /* On 4.15+ with unified hierarchy, CPU accounting is essentially free as it doesn't require the CPU
+          * controller to be enabled, so the default is to enable it unless we got told otherwise. */
+@@ -1473,18 +1476,20 @@ static int become_shutdown(
+ 
+         char log_level[DECIMAL_STR_MAX(int) + 1],
+                 exit_code[DECIMAL_STR_MAX(uint8_t) + 1],
+-                timeout[DECIMAL_STR_MAX(usec_t) + 1];
++                timeout[DECIMAL_STR_MAX(usec_t) + 1],
++                dfx_reboot[DECIMAL_STR_MAX(bool)+1];
+ 
+-        const char* command_line[13] = {
++        const char* command_line[15] = {
+                 SYSTEMD_SHUTDOWN_BINARY_PATH,
+                 shutdown_verb,
+                 "--timeout", timeout,
+                 "--log-level", log_level,
++                "--dfx-reboot", dfx_reboot,
+                 "--log-target",
+         };
+ 
+         _cleanup_strv_free_ char **env_block = NULL;
+-        size_t pos = 7;
++        size_t pos = 9;
+         int r;
+         usec_t watchdog_timer = 0;
+ 
+@@ -1494,6 +1499,7 @@ static int become_shutdown(
+ 
+         xsprintf(log_level, "%d", log_get_max_level());
+         xsprintf(timeout, "%" PRI_USEC "us", arg_default_timeout_stop_usec);
++        xsprintf(dfx_reboot, "%d", arg_default_dfx_reboot);
+ 
+         switch (log_get_target()) {
+ 
+@@ -2325,6 +2331,7 @@ static void reset_arguments(void) {
+         arg_crash_chvt = -1;
+         arg_crash_shell = false;
+         arg_crash_reboot = false;
++        arg_default_dfx_reboot = false;
+         arg_confirm_spawn = mfree(arg_confirm_spawn);
+         arg_show_status = _SHOW_STATUS_INVALID;
+         arg_status_unit_format = STATUS_UNIT_FORMAT_DEFAULT;
+diff --git a/src/core/manager.c b/src/core/manager.c
+index 3a12d6d..29ef96b 100644
+--- a/src/core/manager.c
++++ b/src/core/manager.c
+@@ -771,6 +771,7 @@ int manager_new(UnitFileScope scope, ManagerTestRunFlags test_run_flags, Manager
+         *m = (Manager) {
+                 .unit_file_scope = scope,
+                 .objective = _MANAGER_OBJECTIVE_INVALID,
++                .default_dfx_reboot = false,
+ 
+                 .status_unit_format = STATUS_UNIT_FORMAT_DEFAULT,
+ 
+diff --git a/src/core/manager.h b/src/core/manager.h
+index dada79c..c20abd5 100644
+--- a/src/core/manager.h
++++ b/src/core/manager.h
+@@ -335,6 +335,8 @@ struct Manager {
+         /* Have we ever changed the "kernel.pid_max" sysctl? */
+         bool sysctl_pid_max_changed;
+ 
++        bool default_dfx_reboot;
++
+         ManagerTestRunFlags test_run_flags;
+ 
+         /* If non-zero, exit with the following value when the systemd
+diff --git a/src/core/meson.build b/src/core/meson.build
+index f0d2c6f..825eede 100644
+--- a/src/core/meson.build
++++ b/src/core/meson.build
+@@ -127,6 +127,8 @@ libcore_sources = '''
+         unit-serialize.h
+         unit.c
+         unit.h
++        fuser.c
++        fuser.h
+ '''.split()
+ 
+ subdir('bpf/socket_bind')
+diff --git a/src/core/system.conf.in b/src/core/system.conf.in
+index dfc2477..cf34a12 100644
+--- a/src/core/system.conf.in
++++ b/src/core/system.conf.in
+@@ -74,3 +74,4 @@ DefaultLimitMEMLOCK=64M
+ #DefaultLimitRTPRIO=
+ #DefaultLimitRTTIME=
+ #DefaultOOMPolicy=stop
++#DefaultDFXReboot=no
+diff --git a/src/shutdown/meson.build b/src/shutdown/meson.build
+index e1348d9..12fbef3 100644
+--- a/src/shutdown/meson.build
++++ b/src/shutdown/meson.build
+@@ -1,15 +1,21 @@
+ # SPDX-License-Identifier: LGPL-2.1-or-later
+ 
++shutdown_includes = [includes, include_directories('.')]
++
+ systemd_shutdown_sources = files('''
+         shutdown.c
+         umount.c
+         umount.h
++        process-status.c
++        process-status.h
+ '''.split())
+ 
+ tests += [
+         [['src/shutdown/test-umount.c',
+           'src/shutdown/umount.c',
+           'src/shutdown/umount.h'],
+-         [],
+-         [libmount]],
++         [libshared,
++          libcore],
++         [libmount],
++         core_includes],
+ ]
+diff --git a/src/shutdown/process-status.c b/src/shutdown/process-status.c
+new file mode 100644
+index 0000000..11837a2
+--- /dev/null
++++ b/src/shutdown/process-status.c
+@@ -0,0 +1,143 @@
++#include "process-status.h"
++#include "process-util.h"
++
++static uid_t P_uid;
++static int P_pid;
++static int P_ppid;
++static char P_stat[COMM_LEN];
++static char P_cmd_short[COMM_LEN];
++static char P_user[COMM_LEN];
++static char P_cmd_long[COMM_LEN];
++
++static int read_from_stat(int pid) {
++        char buf[PATH_MAX];
++        char cmd_path[PATH_MAX];
++        char pathname[PATH_MAX];
++        int fd = 0;
++        struct stat st;
++        int r = 0;
++
++        memset(buf, 0, sizeof(buf));
++        memset(cmd_path, 0, sizeof(cmd_path));
++        memset(pathname, 0, sizeof(pathname));
++
++        r = snprintf(pathname, sizeof(pathname), "/proc/%d", pid);
++        if (r <= 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't snprintf /proc/%d.", pid);
++                return -1;
++        }
++
++        if (stat(pathname, &st) != 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't stat %s.", pathname);
++                return -1;
++        }
++
++        P_uid = st.st_uid;
++
++        r = snprintf(buf, sizeof(buf), "/proc/%d/stat", pid);
++        if (r <= 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't snprintf /proc/%d/stat.", pid);
++                return -1;
++        }
++
++        fd = open(buf, O_RDONLY, 0);
++        if (fd == -1) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't open %s.", buf);
++                return -1;
++        }
++
++        r = read(fd, buf, sizeof(buf) - 1);
++        if (r < 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't read /proc/%d/stat.", pid);
++                close(fd);
++                return -1;
++        }
++
++        r = sscanf(buf, "%d %s %s %d", &P_pid, P_cmd_short, P_stat, &P_ppid);
++        if (r < 0) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                        "Can't run sscanf.");
++                close(fd);
++                return -1;
++        }
++
++        close(fd);
++
++        if(P_pid != pid)
++                return -1;
++
++        r = snprintf(cmd_path, sizeof(cmd_path), "/proc/%d", pid);
++        if (r <= 0) {
++            manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL, "Can't snprintf /proc/%d.", pid);
++             return -1;
++        }
++
++        /* read from /proc/$pid/cmdline */
++        read_cmdline(P_cmd_long, sizeof(P_cmd_long), cmd_path, "cmdline", ' ');
++
++        return 0;
++}
++
++static void do_user(void) {
++        struct passwd *p = NULL;
++
++        p = getpwuid(P_uid);
++        if (p) {
++                snprintf(P_user, sizeof(P_user), "%s", p->pw_name);
++        } else {
++                snprintf(P_user, sizeof(P_user), "%u", P_uid);
++        }
++}
++
++static void print_proc(void) {
++        if ((P_ppid != KTHREADD) && (strcmp(P_cmd_short, "(kthreadd)") != 0)) {
++                if (strlen(P_cmd_long) != 0) {
++                        manager_status_printf(NULL, STATUS_TYPE_NORMAL,"systemd-shutdown",
++                                "%-s\t%-d\t%-d\t%-s", P_user, P_pid, P_ppid, P_cmd_long);
++                } else {
++                        manager_status_printf(NULL, STATUS_TYPE_NORMAL,"systemd-shutdown",
++                                "%-s\t%-d\t%-d\t%-s", P_user, P_pid, P_ppid, P_cmd_short);
++                }
++        }
++}
++
++int process_status(void) {
++        manager_status_printf(NULL, STATUS_TYPE_NORMAL,"systemd-shutdown",
++                "%s", "-----------------------------------------------------------------");
++        manager_status_printf(NULL, STATUS_TYPE_NORMAL,"systemd-shutdown",
++                "%s", "USER\tPID\tPPID\tCMD");
++
++        struct dirent *ent = NULL;
++        DIR *dir = NULL;
++
++        dir = opendir("/proc");
++        if (dir == NULL) {
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL,"systemd-shutdown",
++                        "%s", "can't open /proc");
++                return -1;
++        }
++
++        while((ent = readdir(dir))){
++                if (*ent->d_name < '0' || *ent->d_name > '9')
++                        continue;
++
++                if (read_from_stat(atoi(ent->d_name)) != 0)
++                        continue;
++
++                do_user();
++
++                print_proc();
++        }
++
++        closedir(dir);
++
++        manager_status_printf(NULL, STATUS_TYPE_NORMAL,"systemd-shutdown",
++                "%s", "------------------------------------------------------------------");
++
++        return 0;
++}
+diff --git a/src/shutdown/process-status.h b/src/shutdown/process-status.h
+new file mode 100644
+index 0000000..2f4333d
+--- /dev/null
++++ b/src/shutdown/process-status.h
+@@ -0,0 +1,24 @@
++#pragma once
++
++#include <fcntl.h>
++#include <stdio.h>
++#include <dirent.h>
++#include <string.h>
++#include <pwd.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <sys/stat.h>
++#include <limits.h>
++#include <errno.h>
++
++#include "manager.h"
++
++#define COMM_LEN 512
++
++#ifndef PATH_MAX
++#define PATH_MAX 4096
++#endif
++
++#define KTHREADD 2
++
++int process_status(void);
+diff --git a/src/shutdown/shutdown.c b/src/shutdown/shutdown.c
+index a98cfc4..1ad6fa0 100644
+--- a/src/shutdown/shutdown.c
++++ b/src/shutdown/shutdown.c
+@@ -38,13 +38,17 @@
+ #include "util.h"
+ #include "virt.h"
+ #include "watchdog.h"
++#include "process-status.h"
+ 
+ #define SYNC_PROGRESS_ATTEMPTS 3
+ #define SYNC_TIMEOUT_USEC (10*USEC_PER_SEC)
++#define SHUTDOWN_TIMEOUT_MIN (0*USEC_PER_SEC)
++#define SHUTDOWN_TIMEOUT_INTERVAL (30*USEC_PER_SEC)
+ 
+ static char* arg_verb;
+ static uint8_t arg_exit_code;
+ static usec_t arg_timeout = DEFAULT_TIMEOUT_USEC;
++static bool dfx_reboot = false;
+ 
+ static int parse_argv(int argc, char *argv[]) {
+         enum {
+@@ -55,6 +59,7 @@ static int parse_argv(int argc, char *argv[]) {
+                 ARG_LOG_TIME,
+                 ARG_EXIT_CODE,
+                 ARG_TIMEOUT,
++                ARG_DFX_REBOOT,
+         };
+ 
+         static const struct option options[] = {
+@@ -65,6 +70,7 @@ static int parse_argv(int argc, char *argv[]) {
+                 { "log-time",      optional_argument, NULL, ARG_LOG_TIME     },
+                 { "exit-code",     required_argument, NULL, ARG_EXIT_CODE    },
+                 { "timeout",       required_argument, NULL, ARG_TIMEOUT      },
++                { "dfx-reboot",    required_argument, NULL, ARG_DFX_REBOOT   },
+                 {}
+         };
+ 
+@@ -78,6 +84,13 @@ static int parse_argv(int argc, char *argv[]) {
+         while ((c = getopt_long(argc, argv, "-", options, NULL)) >= 0)
+                 switch (c) {
+ 
++                case ARG_DFX_REBOOT:
++                        if (streq(optarg, "1")) {
++                                dfx_reboot = true;
++                        }
++
++                        break;
++
+                 case ARG_LOG_LEVEL:
+                         r = log_set_max_level_from_string(optarg);
+                         if (r < 0)
+@@ -313,6 +326,9 @@ int main(int argc, char *argv[]) {
+         char *arguments[3], *watchdog_device;
+         int cmd, r, umount_log_level = LOG_INFO;
+         static const char* const dirs[] = {SYSTEM_SHUTDOWN_PATH, NULL};
++        usec_t now_time, time_interval;
++        pid_t pid;
++        bool fork_failed = false;
+ 
+         /* The log target defaults to console, but the original systemd process will pass its log target in through a
+          * command line argument, which will override this default. Also, ensure we'll never log to the journal or
+@@ -405,8 +421,37 @@ int main(int argc, char *argv[]) {
+         need_md_detach = !in_container;
+         can_initrd = !in_container && !in_initrd() && access("/run/initramfs/shutdown", X_OK) == 0;
+ 
++        now_time = now(CLOCK_MONOTONIC);
++        time_interval = SHUTDOWN_TIMEOUT_MIN;
+         /* Unmount all mountpoints, swaps, and loopback devices */
+         for (;;) {
++                if (dfx_reboot && (now(CLOCK_MONOTONIC) >= now_time + time_interval)) {
++                        r = safe_fork("(process_status)", FORK_RESET_SIGNALS, &pid);
++                        if (r < 0) {
++                               manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL,
++                                "Failed to fork for process_status!");
++                                fork_failed = true;
++                        }
++                        if (r == 0) {
++                                r = process_status();
++                                if (r < 0)
++                                        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL, "Can't run ps.");
++
++                               _exit(r < 0 ? EXIT_FAILURE : EXIT_SUCCESS);
++                        }
++
++                        now_time = now(CLOCK_MONOTONIC);
++                        time_interval = SHUTDOWN_TIMEOUT_INTERVAL;
++
++                        if (!fork_failed) {
++                                r = wait_for_terminate_with_timeout(pid, 3 * USEC_PER_SEC);
++                                if (r == -ETIMEDOUT) {
++                                        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL, "Timeout to run (process_status).");
++                                        (void) kill(pid, SIGKILL);
++                                }
++                        }
++                }
++
+                 bool changed = false;
+ 
+                 if (use_watchdog)
+diff --git a/src/shutdown/umount.c b/src/shutdown/umount.c
+index c2a2624..1541bcc 100644
+--- a/src/shutdown/umount.c
++++ b/src/shutdown/umount.c
+@@ -37,6 +37,7 @@
+ #include "umount.h"
+ #include "util.h"
+ #include "virt.h"
++#include "manager.h"
+ 
+ static void mount_point_free(MountPoint **head, MountPoint *m) {
+         assert(head);
+@@ -553,6 +554,7 @@ static int umount_with_timeout(MountPoint *m, int umount_log_level) {
+                 return r;
+         if (r == 0) {
+                 log_info("Unmounting '%s'.", m->path);
++                manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL, "Unmounting '%s'.", m->path);
+ 
+                 /* Start the mount operation here in the child Using MNT_FORCE
+                  * causes some filesystems (e.g. FUSE and NFS and other network
+@@ -562,8 +564,12 @@ static int umount_with_timeout(MountPoint *m, int umount_log_level) {
+                  * filesystem less busy so the unmount might succeed (rather
+                  * than return EBUSY). */
+                 r = umount2(m->path, MNT_FORCE);
+-                if (r < 0)
++                if (r < 0) {
+                         log_full_errno(umount_log_level, errno, "Failed to unmount %s: %m", m->path);
++                        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL, "Failed to unmount '%s'.", m->path);
++                } else {
++                        manager_status_printf(NULL, STATUS_TYPE_NORMAL, NULL, "Unmounted '%s'.", m->path);
++                }
+ 
+                 _exit(r < 0 ? EXIT_FAILURE : EXIT_SUCCESS);
+         }
+diff --git a/src/test/meson.build b/src/test/meson.build
+index 561386d..09c5298 100644
+--- a/src/test/meson.build
++++ b/src/test/meson.build
+@@ -616,6 +616,23 @@ tests += [
+           libshared],
+          [],
+          core_includes],
++
++        [['src/test/test-process-status.c',
++          'src/shutdown/process-status.c',
++          'src/shutdown/process-status.h'],
++         [libcore,
++          libshared],
++         [],
++         [shutdown_includes,
++          core_includes]],
++
++         [['src/test/test-fuser.c',
++          'src/core/fuser.c',
++          'src/core/fuser.h'],
++         [libcore,
++          libshared],
++         [],
++         core_includes],
+ ]
+ 
+ ############################################################
+diff --git a/src/test/test-fuser.c b/src/test/test-fuser.c
+new file mode 100644
+index 0000000..1527b5b
+--- /dev/null
++++ b/src/test/test-fuser.c
+@@ -0,0 +1,14 @@
++#include "fuser.h"
++#include "tests.h"
++
++int main(int argc, char *argv[]){
++        test_setup_logging(LOG_DEBUG);
++
++        assert_se(fuser("/") == 0);
++        assert_se(fuser(NULL) < 0);
++        assert_se(fuser("/dev") == 0);
++        assert_se(fuser("/dev/empty/mountpoint") < 0);
++        assert_se(fuser("") < 0);
++
++        return 0;
++}
+diff --git a/src/test/test-process-status.c b/src/test/test-process-status.c
+new file mode 100644
+index 0000000..4a4c3da
+--- /dev/null
++++ b/src/test/test-process-status.c
+@@ -0,0 +1,10 @@
++#include "process-status.h"
++#include "tests.h"
++
++int main(int argc, char *argv[]){
++
++      assert_se(process_status() == 0);
++
++      return 0;
++
++}
+-- 
+2.23.0
+
