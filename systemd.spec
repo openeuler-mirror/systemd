@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        45
+Release:        46
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1910,6 +1910,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Thu Jan 19 2023 yangmingtai <yangmingtai@huawei.com> -249-46
+- delete unused patch files
+
 * Fri Jan 13 2023 yangmingtai <yangmingtai@huawei.com> -249-45
 - backport patches from upstream and add patchs to enhance compatibility
   and features
