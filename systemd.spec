@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        46
+Release:        47
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -1741,7 +1741,7 @@ fi
 /usr/lib/udev/mtd_probe
 /usr/lib/udev/scsi_id
 /usr/lib/udev/fido_id
-%ifnarch sw_64
+%ifnarch sw_64 riscv64
 /usr/lib/udev/dmi_memory_id
 %endif
 
@@ -1808,7 +1808,7 @@ fi
 %{_udevrulesdir}/50-udev-default.rules
 %{_udevrulesdir}/60-fido-id.rules
 %{_udevrulesdir}/81-net-dhcp.rules
-%ifnarch sw_64
+%ifnarch sw_64 riscv64
 %{_udevrulesdir}/70-memory.rules
 %endif
 %{_udevrulesdir}/README
@@ -1910,6 +1910,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Tue Feb 28 2023 misaka00251 <liuxin@iscas.ac.cn> -249-47
+- Exclude riscv64 unsupported files for now, might add them back later
+
 * Thu Jan 19 2023 yangmingtai <yangmingtai@huawei.com> -249-46
 - delete unused patch files
 
