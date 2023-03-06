@@ -1,0 +1,34 @@
+From b369b5884d52e5fd5fde0de78323d16a969df9d5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Zbigniew=20J=C4=99drzejewski-Szmek?= <zbyszek@in.waw.pl>
+Date: Mon, 19 Dec 2022 14:36:08 +0100
+Subject: [PATCH] sd-event: never pass negative errnos as signalfd to signalfd
+
+We treat any negative value as "invalid fd", but signalfd only
+accepts -1.
+
+(cherry picked from commit cbff793ffb280d9d11e5d7b1dc3964276491bee8)
+(cherry picked from commit 54c840ea58c578060e941f754a4fed2931483820)
+(cherry picked from commit 4178457f0ec07452f856894988e5490bbc91cc36)
+(cherry picked from commit 0accce1b1c5d67e4183cb67f0bbbaaf7fc50c9f6)
+---
+ src/libsystemd/sd-event/sd-event.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/libsystemd/sd-event/sd-event.c b/src/libsystemd/sd-event/sd-event.c
+index 20ffd38eff..4ba7151050 100644
+--- a/src/libsystemd/sd-event/sd-event.c
++++ b/src/libsystemd/sd-event/sd-event.c
+@@ -649,7 +649,9 @@ static int event_make_signal_data(
+         ss_copy = d->sigset;
+         assert_se(sigaddset(&ss_copy, sig) >= 0);
+ 
+-        r = signalfd(d->fd, &ss_copy, SFD_NONBLOCK|SFD_CLOEXEC);
++        r = signalfd(d->fd >= 0 ? d->fd : -1,   /* the first arg must be -1 or a valid signalfd */
++                     &ss_copy,
++                     SFD_NONBLOCK|SFD_CLOEXEC);
+         if (r < 0) {
+                 r = -errno;
+                 goto fail;
+-- 
+2.27.0
+
