@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        46
+Release:        47
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -440,6 +440,13 @@ Patch6392:      backport-mount-util-fix-error-code.patch
 Patch6393:      backport-analyze-add-forgotten-return-statement.patch
 Patch6394:      backport-shared-condition-avoid-nss-lookup-in-PID1.patch
 Patch6395:      backport-logind-fix-getting-property-OnExternalPower-via-D-Bu.patch
+Patch6396:	backport-mount-setup-don-t-need-to-mount-sys-fs-pstore-if-the.patch
+Patch6397:	backport-swap-tell-swapon-to-reinitialize-swap-if-needed.patch
+Patch6398:	backport-sd-event-never-pass-negative-errnos-as-signalfd-to.patch
+Patch6399:	backport-sd-event-don-t-mistake-USEC_INFINITY-passed-in-for.patch
+Patch6400:	backport-tmpfiles-avoid-null-free-for-acl-attributes.patch
+Patch6401:	backport-nspawn-guard-acl_free-with-a-NULL-check.patch
+Patch6402:	backport-core-mount-namespaces-Remove-auxiliary-bind-mounts.patch
 
 Patch9001:      update-rtc-with-system-clock-when-shutdown.patch
 Patch9002:      udev-add-actions-while-rename-netif-failed.patch
@@ -1910,6 +1917,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Mon Mar 6 2023 hongjinghao <hongjinghao@huawei.com> -249-47
+- backport patches from upstream and add patches
+
 * Thu Jan 19 2023 yangmingtai <yangmingtai@huawei.com> -249-46
 - delete unused patch files
 

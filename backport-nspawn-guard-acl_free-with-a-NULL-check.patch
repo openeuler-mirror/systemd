@@ -1,0 +1,36 @@
+From 1d0921354ab975910c44ac0d646661323bca8717 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 6 Jan 2023 12:30:36 +0100
+Subject: [PATCH] nspawn: guard acl_free() with a NULL check
+
+Inspired by #25957 there's one other place where we don't guard
+acl_free() calls with a NULL check.
+
+Fix that.
+
+(cherry picked from commit 34680637e838415204850f77c93ca6ca219abaf1)
+(cherry picked from commit 4dabf90526d4573144a51bdd87c1203b25265b33)
+(cherry picked from commit d8b4ac7a1783a29435cb3dfee3dfdee37c1b1ac8)
+(cherry picked from commit 3a9fe8e7687ed3b2b563c6b2237d2b62a79f79e6)
+---
+ src/nspawn/nspawn-patch-uid.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/nspawn/nspawn-patch-uid.c b/src/nspawn/nspawn-patch-uid.c
+index 785332e091..321caf066b 100644
+--- a/src/nspawn/nspawn-patch-uid.c
++++ b/src/nspawn/nspawn-patch-uid.c
+@@ -189,7 +189,9 @@ static int patch_acls(int fd, const char *name, const struct stat *st, uid_t shi
+ 
+         if (S_ISDIR(st->st_mode)) {
+                 acl_free(acl);
+-                acl_free(shifted);
++
++                if (shifted)
++                        acl_free(shifted);
+ 
+                 acl = shifted = NULL;
+ 
+-- 
+2.27.0
+

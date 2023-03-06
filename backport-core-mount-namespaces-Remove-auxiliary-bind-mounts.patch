@@ -1,0 +1,79 @@
+From b7e5e6e85048c1a71632bc2d5efe57fb1bfe7472 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michal=20Koutn=C3=BD?= <mkoutny@suse.com>
+Date: Wed, 18 Jan 2023 23:20:31 +0100
+Subject: [PATCH] core: mount namespaces: Remove auxiliary bind mounts
+ directory after unit termination
+
+Unit that requires its own mount namespace creates a temporary directory
+to implement dynamic bind mounts (org.freedesktop.systemd1.Manager.BindMountUnit).
+However, this directory is never removed and they will accumulate for
+each unique unit (e.g. templated units of systemd-coredump@).
+
+Attach the auxiliary runtime directory existence to lifetime of other
+"runtime" only per-unit directories.
+
+(cherry picked from commit b9f976fb45635e09cd709dbedd0afb03d4b73c05)
+(cherry picked from commit 80e8340ec49d0da3744cdf81f82202e13b0fad3b)
+(cherry picked from commit fd260cb37e3441b851c7fee4825d5b6af17f66ca)
+(cherry picked from commit ff542dcd1a8c2c7cdc96b9f4b9889774b9474c26)
+---
+ src/core/execute.c | 17 +++++++++++++++++
+ src/core/execute.h |  1 +
+ src/core/unit.c    |  1 +
+ 3 files changed, 19 insertions(+)
+
+diff --git a/src/core/execute.c b/src/core/execute.c
+index 37f63a9378..6844b1d28f 100644
+--- a/src/core/execute.c
++++ b/src/core/execute.c
+@@ -4978,6 +4978,23 @@ int exec_context_destroy_credentials(const ExecContext *c, const char *runtime_p
+         return 0;
+ }
+ 
++int exec_context_destroy_mount_ns_dir(Unit *u) {
++        _cleanup_free_ char *p = NULL;
++
++        if (!u || !MANAGER_IS_SYSTEM(u->manager))
++                return 0;
++
++        p = path_join("/run/systemd/propagate/", u->id);
++        if (!p)
++                return -ENOMEM;
++
++        /* This is only filled transiently (see mount_in_namespace()), should be empty or even non-existent*/
++        if (rmdir(p) < 0 && errno != ENOENT)
++                log_unit_debug_errno(u, errno, "Unable to remove propagation dir '%s', ignoring: %m", p);
++
++        return 0;
++}
++
+ static void exec_command_done(ExecCommand *c) {
+         assert(c);
+ 
+diff --git a/src/core/execute.h b/src/core/execute.h
+index 47349a69a2..f1f0ee4186 100644
+--- a/src/core/execute.h
++++ b/src/core/execute.h
+@@ -422,6 +422,7 @@ void exec_context_dump(const ExecContext *c, FILE* f, const char *prefix);
+ 
+ int exec_context_destroy_runtime_directory(const ExecContext *c, const char *runtime_root);
+ int exec_context_destroy_credentials(const ExecContext *c, const char *runtime_root, const char *unit);
++int exec_context_destroy_mount_ns_dir(Unit *u);
+ 
+ const char* exec_context_fdname(const ExecContext *c, int fd_index);
+ 
+diff --git a/src/core/unit.c b/src/core/unit.c
+index 0e8a01966a..0f44ea8bcd 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -5700,6 +5700,7 @@ void unit_destroy_runtime_data(Unit *u, const ExecContext *context) {
+                 exec_context_destroy_runtime_directory(context, u->manager->prefix[EXEC_DIRECTORY_RUNTIME]);
+ 
+         exec_context_destroy_credentials(context, u->manager->prefix[EXEC_DIRECTORY_RUNTIME], u->id);
++        exec_context_destroy_mount_ns_dir(u);
+ }
+ 
+ int unit_clean(Unit *u, ExecCleanMask mask) {
+-- 
+2.27.0
+

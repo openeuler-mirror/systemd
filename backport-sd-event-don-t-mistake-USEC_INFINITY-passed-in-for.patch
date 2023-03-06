@@ -1,0 +1,37 @@
+From 3aa1cf93ad9eff91e8d26fb4628ac33b620b6b28 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 6 Jan 2023 11:27:17 +0100
+Subject: [PATCH] sd-event: don't mistake USEC_INFINITY passed in for overflow
+
+Let's pass USEC_INFINITY from sd_event_source_set_time_relative() to
+sd_event_source_set_time() instead of raising EOVERFLOW.
+
+We should raise EOVERFLOW only if your addition fails, but not if the
+input already is USEC_INFINITY, since it's an entirely valid operation
+to have an infinite time-out, and we should support that.
+
+(cherry picked from commit ef8591951aefccb668201f24aa481aa6cda834da)
+(cherry picked from commit 9769d84fe51573b4f2d5cb8f76664e886c7daf88)
+(cherry picked from commit 5fe49d0fb88b779d5096713627ce54757bff70b2)
+(cherry picked from commit 33036c403225ad0c88c9e5a9058aea69ff6ed9bc)
+---
+ src/libsystemd/sd-event/sd-event.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/libsystemd/sd-event/sd-event.c b/src/libsystemd/sd-event/sd-event.c
+index 4ba7151050..19e7680687 100644
+--- a/src/libsystemd/sd-event/sd-event.c
++++ b/src/libsystemd/sd-event/sd-event.c
+@@ -2611,6 +2611,9 @@ _public_ int sd_event_source_set_time_relative(sd_event_source *s, uint64_t usec
+         assert_return(s, -EINVAL);
+         assert_return(EVENT_SOURCE_IS_TIME(s->type), -EDOM);
+ 
++        if (usec == USEC_INFINITY)
++                return sd_event_source_set_time(s, USEC_INFINITY);
++
+         r = sd_event_now(s->event, event_source_type_to_clock(s->type), &t);
+         if (r < 0)
+                 return r;
+-- 
+2.27.0
+
