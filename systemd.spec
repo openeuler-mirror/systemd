@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        47
+Release:        48
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -440,6 +440,7 @@ Patch6392:      backport-mount-util-fix-error-code.patch
 Patch6393:      backport-analyze-add-forgotten-return-statement.patch
 Patch6394:      backport-shared-condition-avoid-nss-lookup-in-PID1.patch
 Patch6395:      backport-logind-fix-getting-property-OnExternalPower-via-D-Bu.patch
+Patch6396:      backport-udev-support-by-path-devlink-for-multipath-nvme-bloc.patch
 
 Patch9001:      update-rtc-with-system-clock-when-shutdown.patch
 Patch9002:      udev-add-actions-while-rename-netif-failed.patch
@@ -1910,6 +1911,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Tue Mar 7 2023 wangyuhang <wangyuhang27@huawei.com> -249-48
+- fix symlinks to NVMe drives are missing in /dev/disk/by-path
+
 * Tue Feb 28 2023 misaka00251 <liuxin@iscas.ac.cn> -249-47
 - Exclude riscv64 unsupported files for now, might add them back later
 
