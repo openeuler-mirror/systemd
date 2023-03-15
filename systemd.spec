@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        59
+Release:        60
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -189,6 +189,12 @@ Patch0141:      backport-sd-device-use-right-type-for-usec_initialized.patch
 Patch0142:      backport-fix-CVE-2022-3821.patch
 Patch0143:      backport-cap-list-parse-numerical-capabilities.patch
 Patch0144:      backport-test-use-cap_last_cap-for-max-supported.patch
+Patch0145:      backport-CVE-2023-26604-man-share-description-of-SYSTEMD_COLORS.patch
+Patch0146:      backport-CVE-2023-26604-man-document-all-pager-variables-for-systemctl.patch
+Patch0147:      backport-CVE-2023-26604-pager-set-LESSSECURE-whenver-we-invoke-a-pager.patch
+Patch0148:      backport-CVE-2023-26604-test-login-always-test-sd_pid_get_owner_uid.patch
+Patch0149:      backport-CVE-2023-26604-pager-make-pager-secure-when-under-euid-is-changed.patch
+Patch0150:      backport-CVE-2023-26604-test-ignore-ENOMEDIUM-error-from-sd_pid_get_cgroup.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1596,6 +1602,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Tue Mar 14 2023 huyubiao <huyubiao@huawei.com> - 243-60
+- fix CVE-2023-26604
+
 * Mon Nov 7 2022 yangmingtai <yangmingtai@huawei.com> - 243-59
 - fix CVE-2022-3821 and backport patch to fix ci failed
 
