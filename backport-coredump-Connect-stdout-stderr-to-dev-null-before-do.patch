@@ -1,0 +1,45 @@
+From 098a25754b0835ffe078b12f75a1862cf528a986 Mon Sep 17 00:00:00 2001
+From: Daan De Meyer <daan.j.demeyer@gmail.com>
+Date: Fri, 15 Jul 2022 01:49:25 +0200
+Subject: [PATCH] coredump: Connect stdout/stderr to /dev/null before doing
+ anything
+
+When invoked as the coredump handler by the kernel, systemd-coredump's
+stdout and stderr streams are closed. This is dangerous as this means
+the fd's can get reallocated, leading to hard to debug errors such as
+log messages ending up being appended to a compressed coredump file.
+
+To avoid such issues in the future, let's bind stdout/stderr to
+/dev/null so the file descriptors can't get used for anything else.
+
+(cherry picked from commit 1f9d2a8199c261593aa6a11df9cce5d31e23c714)
+(cherry picked from commit fba50bc0fc5a69e5573ceadb5d6224f365d3c3f5)
+(cherry picked from commit 3e1224d4ac3f44558c7bc3ceec2d6080afe21dc3)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/098a25754b0835ffe078b12f75a1862cf528a986
+---
+ src/coredump/coredump.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/coredump/coredump.c b/src/coredump/coredump.c
+index c6639c0100..72df958bc3 100644
+--- a/src/coredump/coredump.c
++++ b/src/coredump/coredump.c
+@@ -1268,6 +1268,13 @@ static int process_kernel(int argc, char* argv[]) {
+         struct iovec_wrapper *iovw;
+         int r;
+ 
++        /* When we're invoked by the kernel, stdout/stderr are closed which is dangerous because the fds
++         * could get reallocated. To avoid hard to debug issues, let's instead bind stdout/stderr to
++         * /dev/null. */
++        r = rearrange_stdio(STDIN_FILENO, -1, -1);
++        if (r < 0)
++                return log_error_errno(r, "Failed to connect stdout/stderr to /dev/null: %m");
++
+         log_debug("Processing coredump received from the kernel...");
+ 
+         iovw = iovw_new();
+-- 
+2.27.0
+
