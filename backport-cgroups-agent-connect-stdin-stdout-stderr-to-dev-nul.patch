@@ -1,0 +1,41 @@
+From a59a7227a29a73e8e1b0d80153f258e20354c0d7 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Fri, 15 Jul 2022 11:02:40 +0200
+Subject: [PATCH] cgroups-agent: connect stdin/stdout/stderr to /dev/null
+
+Inspired by https://github.com/systemd/systemd/pull/24024 this is
+another user mode helper, where this might be an issue. hence let's
+rather be safe than sorry, and also connect stdin/stdout/stderr
+explicitly with /dev/null.
+
+(cherry picked from commit 50492ce81589773df2d82b4fc8047778e86c6edf)
+(cherry picked from commit 689487785f776815e71642f89685ff01f0bc4fde)
+(cherry picked from commit d8464304f03e6644bfc6ed42e13fb3a460b9ff60)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/a59a7227a29a73e8e1b0d80153f258e20354c0d7
+---
+ src/cgroups-agent/cgroups-agent.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/cgroups-agent/cgroups-agent.c b/src/cgroups-agent/cgroups-agent.c
+index 071cba3099..9126736235 100644
+--- a/src/cgroups-agent/cgroups-agent.c
++++ b/src/cgroups-agent/cgroups-agent.c
+@@ -16,6 +16,13 @@ int main(int argc, char *argv[]) {
+         _cleanup_close_ int fd = -1;
+         ssize_t n;
+         size_t l;
++        int r;
++
++        r = rearrange_stdio(-1, -1, -1);
++        if (r < 0) {
++                log_error_errno(r, "Failed to connect stdin/stdout/stderr with /dev/null: %m");
++                return EXIT_FAILURE;
++        }
+ 
+         if (argc != 2) {
+                 log_error("Incorrect number of arguments.");
+-- 
+2.27.0
+

@@ -1,0 +1,42 @@
+From 9b1f4d855aa7b16b425545fdd888dbef918d1daa Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Mon, 4 Jul 2022 11:23:33 +0900
+Subject: [PATCH] resolve: mdns_packet_extract_matching_rrs() may return 0
+
+Fixes the following assertion:
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9b1f4d855aa7b16b425545fdd888dbef918d1daa
+---
+Assertion 'r > 0' failed at src/resolve/resolved-mdns.c:180, function mdns_do_tiebreak(). Aborting.
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9b1f4d855aa7b16b425545fdd888dbef918d1daa
+---
+
+(cherry picked from commit f2605af1f2e770818bbc6bad2561acdbd25a38ad)
+(cherry picked from commit 0070302b3cdc1350bf7bfd5d032dbea420f4ed40)
+(cherry picked from commit 30d24c8df600545d1878a868bcd409e65479af77)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/9b1f4d855aa7b16b425545fdd888dbef918d1daa
+---
+ src/resolve/resolved-mdns.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/src/resolve/resolved-mdns.c b/src/resolve/resolved-mdns.c
+index 24241249b1..8c8ee81da1 100644
+--- a/src/resolve/resolved-mdns.c
++++ b/src/resolve/resolved-mdns.c
+@@ -165,8 +165,6 @@ static int mdns_do_tiebreak(DnsResourceKey *key, DnsAnswer *answer, DnsPacket *p
+         if (r < 0)
+                 return r;
+ 
+-        assert(r > 0);
+-
+         if (proposed_rrs_cmp(remote, r, our, size) > 0)
+                 return 1;
+ 
+-- 
+2.27.0
+

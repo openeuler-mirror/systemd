@@ -1,0 +1,50 @@
+From ec5a6e5a3011f095e739fa0636c3273fe868f2cf Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sat, 11 Jun 2022 05:51:03 +0900
+Subject: [PATCH] dns-domain: make each label nul-terminated
+
+dns_label_unescape() does not nul-terminate the buffer if it does not
+have enough space. Hence, if a lable is enough long, then strjoin()
+triggers buffer-overflow.
+
+Fixes #23705.
+
+(cherry picked from commit 9db01ca5b0322bc035e1ccd6b8a0d98a26533b4a)
+(cherry picked from commit 25158b294482f793f962e8ee5f34e99a01214321)
+(cherry picked from commit ac4e64939d05ed81739028c0a45c3f99d2f91ba4)
+
+Conflict:NA
+Reference:https://github.com/systemd/systemd/commit/ec5a6e5a3011f095e739fa0636c3273fe868f2cf
+---
+ src/shared/dns-domain.c    | 2 +-
+ src/test/test-dns-domain.c | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/shared/dns-domain.c b/src/shared/dns-domain.c
+index 787bb8fec9..517fe85600 100644
+--- a/src/shared/dns-domain.c
++++ b/src/shared/dns-domain.c
+@@ -1035,7 +1035,7 @@ static bool dns_service_name_label_is_valid(const char *label, size_t n) {
+ int dns_service_split(const char *joined, char **_name, char **_type, char **_domain) {
+         _cleanup_free_ char *name = NULL, *type = NULL, *domain = NULL;
+         const char *p = joined, *q = NULL, *d = NULL;
+-        char a[DNS_LABEL_MAX], b[DNS_LABEL_MAX], c[DNS_LABEL_MAX];
++        char a[DNS_LABEL_MAX+1], b[DNS_LABEL_MAX+1], c[DNS_LABEL_MAX+1];
+         int an, bn, cn, r;
+         unsigned x = 0;
+ 
+diff --git a/src/test/test-dns-domain.c b/src/test/test-dns-domain.c
+index 2df2380de4..10916dd057 100644
+--- a/src/test/test-dns-domain.c
++++ b/src/test/test-dns-domain.c
+@@ -560,6 +560,7 @@ static void test_dns_service_split(void) {
+         test_dns_service_split_one("_foo._bar", NULL, "_foo._bar", ".", 0);
+         test_dns_service_split_one("_meh._foo._bar", "_meh", "_foo._bar", ".", 0);
+         test_dns_service_split_one("Wuff\\032Wuff._foo._bar.waldo.com", "Wuff Wuff", "_foo._bar", "waldo.com", 0);
++        test_dns_service_split_one("_Q._Q-------------------------------------------------------------", NULL, "_Q._Q-------------------------------------------------------------", ".", 0);
+ }
+ 
+ static void test_dns_name_change_suffix_one(const char *name, const char *old_suffix, const char *new_suffix, int r, const char *result) {
+-- 
+2.27.0
+

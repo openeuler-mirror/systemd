@@ -1,0 +1,37 @@
+From e9a1f6237f281b4bf05386bd9b2c921ea999232f Mon Sep 17 00:00:00 2001
+From: undef <gitlab@undef.tools>
+Date: Thu, 14 Jul 2022 05:53:15 +0000
+Subject: [PATCH] growfs: don't actually resize on dry-run
+
+This causes systemd-growfs to exit before resizing the partition when
+`--dry-run` is passed. Resizing during a dry run of a change breaks the
+users expectations.
+
+(cherry picked from commit d26c0f7243a709cfa7b8bdc87e8131746bb0e2d0)
+(cherry picked from commit 00c6c62845c560ef09f845aeedabdc9027be5678)
+(cherry picked from commit e39019fd1065c8e2eb078b72359c5e755b013493)
+
+Conflict:adapt context
+Reference:https://github.com/systemd/systemd/commit/e9a1f6237f281b4bf05386bd9b2c921ea999232f
+---
+ src/partition/growfs.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/partition/growfs.c b/src/partition/growfs.c
+index 9e7178a..413259d 100644
+--- a/src/partition/growfs.c
++++ b/src/partition/growfs.c
+@@ -309,6 +309,10 @@ int main(int argc, char *argv[]) {
+                 return EXIT_FAILURE;
+         }
+ 
++
++        if (arg_dry_run)
++                return 0;
++
+         switch(sfs.f_type) {
+         case EXT4_SUPER_MAGIC:
+                 r = resize_ext4(arg_target, mountfd, devfd, numblocks, blocksize);
+-- 
+2.27.0
+

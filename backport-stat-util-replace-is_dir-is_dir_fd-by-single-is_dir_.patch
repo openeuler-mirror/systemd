@@ -1,0 +1,85 @@
+From ab77d5f0c18783c273d1b3b0e8126c7019ddb1f8 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 13 Jul 2022 23:43:36 +0200
+Subject: [PATCH] stat-util: replace is_dir() + is_dir_fd() by single
+ is_dir_full() call
+
+This new call can execute both of the old operations, but also do
+generic fstatat() like behaviour.
+
+(cherry picked from commit a586dc791ca465f4087473d2ad6794b7776aee2d)
+(cherry picked from commit 9255fa3a15c5c7dea9ddb2ce5399d3b675f8368b)
+(cherry picked from commit a77b81f1240ff7e0ea5d084d61875e1bdefc075d)
+
+Conflict:adapt context
+Reference:https://github.com/systemd/systemd/commit/ab77d5f0c18783c273d1b3b0e8126c7019ddb1f8
+---
+ src/basic/stat-util.c | 20 ++++++--------------
+ src/basic/stat-util.h |  9 +++++++--
+ 2 files changed, 13 insertions(+), 16 deletions(-)
+
+diff --git a/src/basic/stat-util.c b/src/basic/stat-util.c
+index d5db6e6..aff8081 100644
+--- a/src/basic/stat-util.c
++++ b/src/basic/stat-util.c
+@@ -31,31 +31,23 @@ int is_symlink(const char *path) {
+         return !!S_ISLNK(info.st_mode);
+ }
+ 
+-int is_dir(const char* path, bool follow) {
++int is_dir_full(int atfd, const char* path, bool follow) {
+         struct stat st;
+         int r;
+ 
+-        assert(path);
++        assert(atfd >= 0 || atfd == AT_FDCWD);
++        assert(atfd >= 0 || path);
+ 
+-        if (follow)
+-                r = stat(path, &st);
++        if (path)
++                r = fstatat(atfd, path, &st, follow ? 0 : AT_SYMLINK_NOFOLLOW);
+         else
+-                r = lstat(path, &st);
++                r = fstat(atfd, &st);
+         if (r < 0)
+                 return -errno;
+ 
+         return !!S_ISDIR(st.st_mode);
+ }
+ 
+-int is_dir_fd(int fd) {
+-        struct stat st;
+-
+-        if (fstat(fd, &st) < 0)
+-                return -errno;
+-
+-        return !!S_ISDIR(st.st_mode);
+-}
+-
+ int is_device_node(const char *path) {
+         struct stat info;
+ 
+diff --git a/src/basic/stat-util.h b/src/basic/stat-util.h
+index 59aedcb..38cab63 100644
+--- a/src/basic/stat-util.h
++++ b/src/basic/stat-util.h
+@@ -12,8 +12,13 @@
+ #include "macro.h"
+ 
+ int is_symlink(const char *path);
+-int is_dir(const char *path, bool follow);
+-int is_dir_fd(int fd);
++int is_dir_full(int atfd, const char *fname, bool follow);
++static inline int is_dir(const char *path, bool follow) {
++        return is_dir_full(AT_FDCWD, path, follow);
++}
++static inline int is_dir_fd(int fd) {
++        return is_dir_full(fd, NULL, false);
++}
+ int is_device_node(const char *path);
+ 
+ int dir_is_empty_at(int dir_fd, const char *path);
+-- 
+2.27.0
+
