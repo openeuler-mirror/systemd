@@ -1,0 +1,102 @@
+From d903e94e8ea532d2128c5c4686ae440ebf17a07d Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Sat, 6 Aug 2022 13:05:59 +0900
+Subject: [PATCH] dhcp: fix potential buffer overflow
+
+Fixes a bug introduced by 324f818781a250b60f2fcfa74ff1c9101d2d1315.
+
+This also renames several macros for DHCP packet size.
+
+(cherry picked from commit 4473cd7f61b9eb0860f2daab81491ad2145d554b)
+(cherry picked from commit 037b1a8acc50cbeeebb82f95594a4909375577c2)
+(cherry picked from commit 887837a5a9425945b91488db661122459af94c52)
+
+Conflict:adapt context
+Reference:https://github.com/systemd/systemd/commit/d903e94e8ea532d2128c5c4686ae440ebf17a07d
+---
+ src/libsystemd-network/dhcp-protocol.h  |  7 ++++---
+ src/libsystemd-network/sd-dhcp-client.c | 11 +++++------
+ src/libsystemd-network/sd-dhcp-lease.c  |  6 +++---
+ 3 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/src/libsystemd-network/dhcp-protocol.h b/src/libsystemd-network/dhcp-protocol.h
+index f036632..ef1283a 100644
+--- a/src/libsystemd-network/dhcp-protocol.h
++++ b/src/libsystemd-network/dhcp-protocol.h
+@@ -43,9 +43,10 @@ typedef struct DHCPPacket DHCPPacket;
+ 
+ #define DHCP_IP_SIZE            (int32_t)(sizeof(struct iphdr))
+ #define DHCP_IP_UDP_SIZE        (int32_t)(sizeof(struct udphdr) + DHCP_IP_SIZE)
+-#define DHCP_MESSAGE_SIZE       (int32_t)(sizeof(DHCPMessage))
+-#define DHCP_DEFAULT_MIN_SIZE   576 /* the minimum internet hosts must be able to receive */
+-#define DHCP_MIN_OPTIONS_SIZE   (DHCP_DEFAULT_MIN_SIZE - DHCP_IP_UDP_SIZE - DHCP_MESSAGE_SIZE)
++#define DHCP_HEADER_SIZE        (int32_t)(sizeof(DHCPMessage))
++#define DHCP_MIN_MESSAGE_SIZE   576 /* the minimum internet hosts must be able to receive, see RFC 2132 Section 9.10 */
++#define DHCP_MIN_OPTIONS_SIZE   (DHCP_MIN_MESSAGE_SIZE - DHCP_HEADER_SIZE)
++#define DHCP_MIN_PACKET_SIZE    (DHCP_MIN_MESSAGE_SIZE + DHCP_IP_UDP_SIZE)
+ #define DHCP_MAGIC_COOKIE       (uint32_t)(0x63825363)
+ 
+ enum {
+diff --git a/src/libsystemd-network/sd-dhcp-client.c b/src/libsystemd-network/sd-dhcp-client.c
+index 842386a..c688245 100644
+--- a/src/libsystemd-network/sd-dhcp-client.c
++++ b/src/libsystemd-network/sd-dhcp-client.c
+@@ -524,7 +524,7 @@ int sd_dhcp_client_set_client_port(
+ 
+ int sd_dhcp_client_set_mtu(sd_dhcp_client *client, uint32_t mtu) {
+         assert_return(client, -EINVAL);
+-        assert_return(mtu >= DHCP_DEFAULT_MIN_SIZE, -ERANGE);
++        assert_return(mtu >= DHCP_MIN_PACKET_SIZE, -ERANGE);
+ 
+         client->mtu = mtu;
+ 
+@@ -606,7 +606,6 @@ static int client_message_init(
+ 
+         _cleanup_free_ DHCPPacket *packet = NULL;
+         size_t optlen, optoffset, size;
+-        be16_t max_size;
+         usec_t time_now;
+         uint16_t secs;
+         int r;
+@@ -739,9 +738,9 @@ static int client_message_init(
+          */
+         /* RFC7844 section 3:
+            SHOULD NOT contain any other option. */
+-        if (!client->anonymize && type != DHCP_RELEASE) {
+-                max_size = htobe16(size);
+-                r = dhcp_option_append(&packet->dhcp, client->mtu, &optoffset, 0,
++        if (!client->anonymize && IN_SET(type, DHCP_DISCOVER, DHCP_REQUEST)) {
++                be16_t max_size = htobe16(MIN(client->mtu - DHCP_IP_UDP_SIZE, (uint32_t) UINT16_MAX));
++                r = dhcp_option_append(&packet->dhcp, optlen, &optoffset, 0,
+                                        SD_DHCP_OPTION_MAXIMUM_MESSAGE_SIZE,
+                                        2, &max_size);
+                 if (r < 0)
+@@ -2017,7 +2016,7 @@ int sd_dhcp_client_new(sd_dhcp_client **ret, int anonymize) {
+                 .state = DHCP_STATE_INIT,
+                 .ifindex = -1,
+                 .fd = -1,
+-                .mtu = DHCP_DEFAULT_MIN_SIZE,
++                .mtu = DHCP_MIN_PACKET_SIZE,
+                 .port = DHCP_PORT_CLIENT,
+                 .anonymize = !!anonymize,
+                 .max_attempts = (uint64_t) -1,
+diff --git a/src/libsystemd-network/sd-dhcp-lease.c b/src/libsystemd-network/sd-dhcp-lease.c
+index c07936b..ca1b21e 100644
+--- a/src/libsystemd-network/sd-dhcp-lease.c
++++ b/src/libsystemd-network/sd-dhcp-lease.c
+@@ -565,9 +565,9 @@ int dhcp_lease_parse_options(uint8_t code, uint8_t len, const void *option, void
+                 r = lease_parse_u16(option, len, &lease->mtu, 68);
+                 if (r < 0)
+                         log_debug_errno(r, "Failed to parse MTU, ignoring: %m");
+-                if (lease->mtu < DHCP_DEFAULT_MIN_SIZE) {
+-                        log_debug("MTU value of %" PRIu16 " too small. Using default MTU value of %d instead.", lease->mtu, DHCP_DEFAULT_MIN_SIZE);
+-                        lease->mtu = DHCP_DEFAULT_MIN_SIZE;
++                if (lease->mtu < DHCP_MIN_PACKET_SIZE) {
++                        log_debug("MTU value of %" PRIu16 " too small. Using default MTU value of %d instead.", lease->mtu, DHCP_MIN_PACKET_SIZE);
++                        lease->mtu = DHCP_MIN_PACKET_SIZE;
+                 }
+ 
+                 break;
+-- 
+2.27.0
+

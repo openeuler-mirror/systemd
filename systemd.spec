@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        59
+Release:        60
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -182,6 +182,19 @@ Patch0132:      backport-CVE-2023-26604-pager-set-LESSSECURE-whenver-we-invoke-a
 Patch0133:      backport-CVE-2023-26604-test-login-always-test-sd_pid_get_owner_uid.patch
 Patch0134:      backport-CVE-2023-26604-pager-make-pager-secure-when-under-euid-is-changed.patch
 Patch0135:      backport-CVE-2023-26604-test-ignore-ENOMEDIUM-error-from-sd_pid_get_cgroup.patch
+Patch0136:      backport-dns-domain-make-each-label-nul-terminated.patch
+Patch0137:      backport-resolve-fix-heap-buffer-overflow-reported-by-ASAN-wi.patch
+Patch0138:      backport-growfs-don-t-actually-resize-on-dry-run.patch
+Patch0139:      backport-stat-util-replace-is_dir-is_dir_fd-by-single-is_dir_.patch
+Patch0140:      backport-tmpfiles-check-the-directory-we-were-supposed-to-cre.patch
+Patch0141:      backport-coredump-Connect-stdout-stderr-to-dev-null-before-do.patch
+Patch0142:      backport-cgroups-agent-connect-stdin-stdout-stderr-to-dev-nul.patch
+Patch0143:      backport-resolve-mdns_packet_extract_matching_rrs-may-return-.patch
+Patch0144:      backport-dhcp-fix-potential-buffer-overflow.patch
+Patch0145:      backport-log-don-t-attempt-to-duplicate-closed-fd.patch
+Patch0146:      backport-analyze-add-forgotten-return-statement.patch
+Patch0147:      backport-shared-condition-avoid-nss-lookup-in-PID1.patch
+Patch0148:      backport-logind-fix-getting-property-OnExternalPower-via-D-Bu.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1687,6 +1700,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Thu Mar 16 2023 yangmingtai <yangmingtai@huawei.com> - 243-60
+- sync community patches
+
 * Tue Mar 14 2023 huyubiao <huyubiao@huawei.com> - 243-59
 - fix CVE-2023-26604
 

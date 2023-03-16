@@ -1,0 +1,36 @@
+From 675dd1039c69ff28ce9c7e617fcede80e998b3e9 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Wed, 13 Jul 2022 23:44:45 +0200
+Subject: [PATCH] tmpfiles: check the directory we were supposed to create, not
+ its parent
+
+This current code checks the wrong directory. This was broken in
+4c39d899ff00e90b7290e4985696f321d7f2726f which converted the previous
+code incorrectly.
+
+(cherry picked from commit 92631578fff1568fa8e99f96de05baae5b258ffe)
+(cherry picked from commit 625472b219a4b1ac64534d38cf6e64b51ab22bbb)
+(cherry picked from commit 8b674cf43f1ba8137da3a90c67826f13c865838c)
+
+Conflict:adapt context
+Reference:https://github.com/systemd/systemd/commit/675dd1039c69ff28ce9c7e617fcede80e998b3e9
+---
+ src/tmpfiles/tmpfiles.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/tmpfiles/tmpfiles.c b/src/tmpfiles/tmpfiles.c
+index 38136d6..e795821 100644
+--- a/src/tmpfiles/tmpfiles.c
++++ b/src/tmpfiles/tmpfiles.c
+@@ -1556,7 +1556,7 @@ static int create_directory_or_subvolume(const char *path, mode_t mode, bool sub
+                 if (!IN_SET(r, -EEXIST, -EROFS))
+                         return log_error_errno(r, "Failed to create directory or subvolume \"%s\": %m", path);
+ 
+-                k = is_dir_fd(pfd);
++                k = is_dir_full(pfd, basename(path), /* follow= */ false);
+                 if (k == -ENOENT && r == -EROFS)
+                         return log_error_errno(r, "%s does not exist and cannot be created as the file system is read-only.", path);
+                 if (k < 0)
+-- 
+2.27.0
+
