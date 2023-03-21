@@ -1,0 +1,33 @@
+From 0456118807f3afb99bef0249e952f9cdff9fcce2 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 17 Mar 2022 15:01:11 +0100
+Subject: [PATCH] homed: permit inodes owned by UID_MAPPED_ROOT to be created
+ in $HOME
+
+If people use nspawn in their $HOME we should allow this inodes owned by
+this special UID to be created temporarily, so that UID mapped nspawn
+containers just work.
+---
+ src/home/homework-mount.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/home/homework-mount.c b/src/home/homework-mount.c
+index 35645e292e..3095a10ff9 100644
+--- a/src/home/homework-mount.c
++++ b/src/home/homework-mount.c
+@@ -216,6 +216,12 @@ static int make_userns(uid_t stored_uid, uid_t exposed_uid) {
+         if (r < 0)
+                 return log_oom();
+ 
++        /* Map nspawn's mapped root UID as identity mapping so that people can run nspawn uidmap mounted
++         * containers off $HOME, if they want. */
++        r = strextendf(&text, UID_FMT " " UID_FMT " " UID_FMT "\n", UID_MAPPED_ROOT, UID_MAPPED_ROOT, 1);
++        if (r < 0)
++                return log_oom();
++
+         /* Leave everything else unmapped, starting from UID_NOBODY itself. Specifically, this means the
+          * whole space outside of 16bit remains unmapped */
+ 
+-- 
+2.27.0
+

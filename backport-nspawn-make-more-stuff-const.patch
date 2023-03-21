@@ -1,0 +1,26 @@
+From 1eb874b97819983f2e9a3355efbb90e929d39398 Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Thu, 17 Mar 2022 10:02:41 +0100
+Subject: [PATCH] nspawn: make more stuff const
+
+And if we make it const, we can also make it static.
+---
+ src/nspawn/nspawn.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/nspawn/nspawn.c b/src/nspawn/nspawn.c
+index 8e0bc1c077..1a654d8817 100644
+--- a/src/nspawn/nspawn.c
++++ b/src/nspawn/nspawn.c
+@@ -3563,7 +3563,7 @@ static int inner_child(
+ 
+ static int setup_notify_child(void) {
+         _cleanup_close_ int fd = -1;
+-        union sockaddr_union sa = {
++        static const union sockaddr_union sa = {
+                 .un.sun_family = AF_UNIX,
+                 .un.sun_path = NSPAWN_NOTIFY_SOCKET_PATH,
+         };
+-- 
+2.27.0
+

@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        48
+Release:        49
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -441,6 +441,15 @@ Patch6393:      backport-analyze-add-forgotten-return-statement.patch
 Patch6394:      backport-shared-condition-avoid-nss-lookup-in-PID1.patch
 Patch6395:      backport-logind-fix-getting-property-OnExternalPower-via-D-Bu.patch
 Patch6396:      backport-udev-support-by-path-devlink-for-multipath-nvme-bloc.patch
+Patch6397:      backport-homework-add-new-helper-call-that-can-shift-home-dir.patch
+Patch6398:      backport-homed-when-using-id-mapping-on-the-home-dirs-also-do.patch
+Patch6399:      backport-homed-permit-inodes-owned-by-UID_MAPPED_ROOT-to-be-c.patch
+Patch6400:      backport-nspawn-add-filesystem-id-mapping-support-to-bind-and.patch
+Patch6401:      backport-namespace-util-introduce-userns_acquire-as-helper-fo.patch
+Patch6402:      backport-nspawn-make-sure-host-root-can-write-to-the-uidmappe.patch
+Patch6403:      backport-nspawn-make-more-stuff-const.patch
+Patch6404:      backport-nspawn-if-we-refuse-to-operate-on-some-directory-exp.patch
+Patch6405:      backport-base-filesystem-use-uid_is_valid-at-one-more-place.patch
 
 Patch9001:      update-rtc-with-system-clock-when-shutdown.patch
 Patch9002:      udev-add-actions-while-rename-netif-failed.patch
@@ -1911,6 +1920,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Tue Mar 21 2023 zhangyao <zhangyao108@huawei.com> -249-49
+- nspawn: uidmap mount fix
+
 * Tue Mar 7 2023 wangyuhang <wangyuhang27@huawei.com> -249-48
 - fix symlinks to NVMe drives are missing in /dev/disk/by-path
 
