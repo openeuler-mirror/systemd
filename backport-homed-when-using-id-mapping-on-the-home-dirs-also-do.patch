@@ -1,0 +1,37 @@
+From 1af53c0fa8a945616e371cb9cc75ea882874a09c Mon Sep 17 00:00:00 2001
+From: Lennart Poettering <lennart@poettering.net>
+Date: Tue, 15 Feb 2022 18:22:37 +0100
+Subject: [PATCH] homed: when using id mapping on the home dirs, also do an
+ identity mapping for the container UID ranges
+
+Apparently people really want to put high UIDs in their homedirs. Let's
+add some minimal support for that.
+
+Further discussion: https://github.com/systemd/systemd/pull/22239#issuecomment-1040421552
+
+Inspired by, based on, and replacing #22239 by Christian Brauner.
+---
+ src/home/homework-mount.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/src/home/homework-mount.c b/src/home/homework-mount.c
+index 0b028dad37..35645e292e 100644
+--- a/src/home/homework-mount.c
++++ b/src/home/homework-mount.c
+@@ -209,6 +209,13 @@ static int make_userns(uid_t stored_uid, uid_t exposed_uid) {
+         if (r < 0)
+                 return log_oom();
+ 
++        /* Also map the container range. People can use that to place containers owned by high UIDs in their
++         * home directories if they really want. We won't manage this UID range for them but pass it through
++         * 1:1, and it will lose its meaning once migrated between hosts. */
++        r = append_identity_range(&text, CONTAINER_UID_BASE_MIN, CONTAINER_UID_BASE_MAX+1, stored_uid);
++        if (r < 0)
++                return log_oom();
++
+         /* Leave everything else unmapped, starting from UID_NOBODY itself. Specifically, this means the
+          * whole space outside of 16bit remains unmapped */
+ 
+-- 
+2.27.0
+
