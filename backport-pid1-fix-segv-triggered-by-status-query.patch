@@ -1,0 +1,40 @@
+From 0aadfe4937045efd5a7a53a176d05db7dc937435 Mon Sep 17 00:00:00 2001
+From: Robin Humble <plaguedbypenguins@gmail.com>
+Date: Wed, 1 Feb 2023 23:36:48 +1100
+Subject: [PATCH] pid1: fix segv triggered by status query (#26279)
+
+If any query makes it to the end of install_info_follow() then I think symlink_target is set to NULL.
+If that is followed by -EXDEV from unit_file_load_or_readlink(), then that causes basename(NULL)
+which segfaults pid 1.
+
+This is triggered by eg. "systemctl status crond" in RHEL9 if
+
+/etc/systemd/system/crond.service
+  -> /ram/etc/systemd/system/crond.service
+  -> /usr/lib/systemd/system/.crond.service.blah.blah
+  -> /usr/lib/systemd/system/crond.service
+
+(cherry picked from commit 19cfda9fc3c60de21a362ebb56bcb9f4a9855e85)
+(cherry picked from commit 015b0ca9286471c05fe88cfa277dd82e20537ba8)
+(cherry picked from commit 9a906fae890904284fe91e29b6bdcb64429fecba)
+(cherry picked from commit a2dc9e3be9a8895edcba10f4c0d8d703b435c18b)
+---
+ src/shared/install.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shared/install.c b/src/shared/install.c
+index 4bf868f8e9..f038665dea 100644
+--- a/src/shared/install.c
++++ b/src/shared/install.c
+@@ -1609,7 +1609,7 @@ static int install_info_traverse(
+                 }
+ 
+                 r = install_info_follow(c, i, paths->root_dir, flags, false);
+-                if (r == -EXDEV) {
++                if (r == -EXDEV && i->symlink_target) {
+                         _cleanup_free_ char *buffer = NULL;
+                         const char *bn;
+ 
+-- 
+2.27.0
+

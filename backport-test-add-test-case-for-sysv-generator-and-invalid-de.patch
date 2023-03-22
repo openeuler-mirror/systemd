@@ -1,0 +1,210 @@
+From 5f882cc3ab32636d9242effb2cefad20d92d2ec2 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 15 Nov 2022 21:52:19 +0900
+Subject: [PATCH] test: add test case for sysv-generator and invalid dependency
+
+---
+ test/units/assert.sh       |  58 +++++++++++++++++++
+ test/units/testsuite-26.sh | 116 ++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 172 insertions(+), 2 deletions(-)
+ create mode 100755 test/units/assert.sh
+
+diff --git a/test/units/assert.sh b/test/units/assert.sh
+new file mode 100755
+index 0000000..2f4d93a
+--- /dev/null
++++ b/test/units/assert.sh
+@@ -0,0 +1,58 @@
++#!/usr/bin/env bash
++# SPDX-License-Identifier: LGPL-2.1-or-later
++
++# utility functions for shell tests
++
++assert_true() {(
++    set +ex
++
++    local rc
++
++    "$@"
++    rc=$?
++    if [[ $rc -ne 0 ]]; then
++        echo "FAIL: command '$*' failed with exit code $rc" >&2
++        exit 1
++    fi
++)}
++
++
++assert_eq() {(
++    set +ex
++
++    if [[ "${1?}" != "${2?}" ]]; then
++        echo "FAIL: expected: '$2' actual: '$1'" >&2
++        exit 1
++    fi
++)}
++
++assert_in() {(
++    set +ex
++
++    if ! [[ "${2?}" =~ ${1?} ]]; then
++        echo "FAIL: '$1' not found in:" >&2
++        echo "$2" >&2
++        exit 1
++    fi
++)}
++
++assert_not_in() {(
++    set +ex
++
++    if [[ "${2?}" =~ ${1?} ]]; then
++        echo "FAIL: '$1' found in:" >&2
++        echo "$2" >&2
++        exit 1
++    fi
++)}
++
++assert_rc() {(
++    set +ex
++
++    local rc exp="${1?}"
++
++    shift
++    "$@"
++    rc=$?
++    assert_eq "$rc" "$exp"
++)}
+diff --git a/test/units/testsuite-26.sh b/test/units/testsuite-26.sh
+index 7982099..fe6b63b 100755
+--- a/test/units/testsuite-26.sh
++++ b/test/units/testsuite-26.sh
+@@ -2,6 +2,11 @@
+ set -eux
+ set -o pipefail
+ 
++# shellcheck source=test/units/assert.sh
++. "$(dirname "$0")"/assert.sh
++
++: >/failed
++
+ # Make sure PATH is set
+ systemctl show-environment | grep -q '^PATH='
+ 
+@@ -26,6 +31,113 @@ systemctl show-environment | grep '^FOO=$' && exit 1
+ systemctl show-environment | grep '^PATH=.*testaddition$' && exit 1
+ systemctl show-environment | grep -q '^PATH='
+ 
+-echo OK >/testok
++# test for sysv-generator (issue #24990)
++if [[ -x /usr/lib/systemd/system-generators/systemd-sysv-generator ]]; then
++    # This is configurable via -Dsysvinit-path=, but we can't get the value
++    # at runtime, so let's just support the two most common paths for now.
++    [[ -d /etc/rc.d/init.d ]] && SYSVINIT_PATH="/etc/rc.d/init.d" || SYSVINIT_PATH="/etc/init.d"
++
++    # invalid dependency
++    cat >"${SYSVINIT_PATH:?}/issue-24990" <<\EOF
++#!/bin/bash
++
++### BEGIN INIT INFO
++# Provides:test1 test2
++# Required-Start:test1 $remote_fs $network
++# Required-Stop:test1 $remote_fs $network
++# Description:Test
++# Short-Description: Test
++### END INIT INFO
++
++case "$1" in
++    start)
++        echo "Starting issue-24990.service"
++        sleep 1000 &
++        ;;
++    stop)
++        echo "Stopping issue-24990.service"
++        sleep 10 &
++        ;;
++    *)
++        echo "Usage: service test {start|stop|restart|status}"
++        ;;
++esac
++EOF
++
++    chmod +x "$SYSVINIT_PATH/issue-24990"
++    systemctl daemon-reload
++    [[ -L /run/systemd/generator.late/test1.service ]]
++    [[ -L /run/systemd/generator.late/test2.service ]]
++    assert_eq "$(readlink -f /run/systemd/generator.late/test1.service)" "/run/systemd/generator.late/issue-24990.service"
++    assert_eq "$(readlink -f /run/systemd/generator.late/test2.service)" "/run/systemd/generator.late/issue-24990.service"
++    output=$(systemctl cat issue-24990)
++    assert_in "SourcePath=$SYSVINIT_PATH/issue-24990" "$output"
++    assert_in "Description=LSB: Test" "$output"
++    assert_in "After=test1.service" "$output"
++    assert_in "After=remote-fs.target" "$output"
++    assert_in "After=network-online.target" "$output"
++    assert_in "Wants=network-online.target" "$output"
++    assert_in "ExecStart=$SYSVINIT_PATH/issue-24990 start" "$output"
++    assert_in "ExecStop=$SYSVINIT_PATH/issue-24990 stop" "$output"
++    systemctl status issue-24990 || :
++    systemctl show issue-24990
++    assert_not_in "issue-24990.service" "$(systemctl show --property=After --value)"
++    assert_not_in "issue-24990.service" "$(systemctl show --property=Before --value)"
++
++    if ! systemctl is-active network-online.target; then
++        systemctl start network-online.target
++    fi
++
++    systemctl restart issue-24990
++    systemctl stop issue-24990
++
++    # valid dependency
++    cat >"$SYSVINIT_PATH/issue-24990" <<\EOF
++#!/bin/bash
++
++### BEGIN INIT INFO
++# Provides:test1 test2
++# Required-Start:$remote_fs
++# Required-Stop:$remote_fs
++# Description:Test
++# Short-Description: Test
++### END INIT INFO
++
++case "$1" in
++    start)
++        echo "Starting issue-24990.service"
++        sleep 1000 &
++        ;;
++    stop)
++        echo "Stopping issue-24990.service"
++        sleep 10 &
++        ;;
++    *)
++        echo "Usage: service test {start|stop|restart|status}"
++        ;;
++esac
++EOF
++
++    chmod +x "$SYSVINIT_PATH/issue-24990"
++    systemctl daemon-reload
++    [[ -L /run/systemd/generator.late/test1.service ]]
++    [[ -L /run/systemd/generator.late/test2.service ]]
++    assert_eq "$(readlink -f /run/systemd/generator.late/test1.service)" "/run/systemd/generator.late/issue-24990.service"
++    assert_eq "$(readlink -f /run/systemd/generator.late/test2.service)" "/run/systemd/generator.late/issue-24990.service"
++    output=$(systemctl cat issue-24990)
++    assert_in "SourcePath=$SYSVINIT_PATH/issue-24990" "$output"
++    assert_in "Description=LSB: Test" "$output"
++    assert_in "After=remote-fs.target" "$output"
++    assert_in "ExecStart=$SYSVINIT_PATH/issue-24990 start" "$output"
++    assert_in "ExecStop=$SYSVINIT_PATH/issue-24990 stop" "$output"
++    systemctl status issue-24990 || :
++    systemctl show issue-24990
++    assert_not_in "issue-24990.service" "$(systemctl show --property=After --value)"
++    assert_not_in "issue-24990.service" "$(systemctl show --property=Before --value)"
++
++    systemctl restart issue-24990
++    systemctl stop issue-24990
++fi
+ 
+-exit 0
++touch /testok
++rm /failed
+-- 
+2.27.0
+
