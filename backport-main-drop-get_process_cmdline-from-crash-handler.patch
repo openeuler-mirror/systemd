@@ -1,0 +1,36 @@
+From 28c5859fa30572950a24a7638a3a8191d65daf68 Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Thu, 10 Mar 2022 09:22:29 +0800
+Subject: [PATCH] main: drop get_process_cmdline from crash handler
+ get_process_cmdline calls malloc, which should be avoid in signal handler.
+
+Fixes: #22690
+---
+ src/core/main.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/src/core/main.c b/src/core/main.c
+index 41a4b4225f..7c9265f394 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -274,11 +274,12 @@ _noreturn_ static void crash(int sig, siginfo_t *siginfo, void *context) {
+                         int r;
+ 
+                         if (siginfo) {
+-                                _cleanup_free_ char *cmdline = NULL;
+-                                pid_t sender_pid = siginfo->si_pid;
+-
+-                                (void) get_process_cmdline(sender_pid, SIZE_MAX, 0, &cmdline);
+-                                log_emergency("Caught <%s> from PID "PID_FMT" (%s)", signal_to_string(sig), sender_pid, strna(cmdline));
++                                if (siginfo->si_pid == 0)
++                                        log_emergency("Caught <%s> from unknown sender process.", signal_to_string(sig));
++                                else if (siginfo->si_pid == 1)
++                                        log_emergency("Caught <%s> from our own process.", signal_to_string(sig));
++                                else
++                                        log_emergency("Caught <%s> from PID "PID_FMT".", signal_to_string(sig), siginfo->si_pid);
+                         }
+ 
+                         /* Order things nicely. */
+-- 
+2.27.0
+
