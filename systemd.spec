@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        48
+Release:        49
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -448,6 +448,16 @@ Patch6400:      backport-tmpfiles-avoid-null-free-for-acl-attributes.patch
 Patch6401:      backport-nspawn-guard-acl_free-with-a-NULL-check.patch
 Patch6402:      backport-core-mount-namespaces-Remove-auxiliary-bind-mounts.patch
 Patch6403:      backport-udev-support-by-path-devlink-for-multipath-nvme-bloc.patch
+Patch6404:      backport-argv-util-also-update-program_invocation_short_name.patch
+Patch6405:      backport-pid1-fix-segv-triggered-by-status-query.patch
+Patch6406:      backport-main-log-which-process-send-SIGNAL-to-PID1.patch
+Patch6407:      backport-main-drop-get_process_cmdline-from-crash-handler.patch
+Patch6408:      backport-core-unit-drop-dependency-to-the-unit-being-merged.patch
+Patch6409:      backport-core-unit-fix-logic-of-dropping-self-referencing-dep.patch
+Patch6410:      backport-core-unit-merge-two-loops-into-one.patch
+Patch6411:      backport-core-unit-merge-unit-names-after-merging-deps.patch
+Patch6412:      backport-core-unit-fix-log-message.patch
+Patch6413:      backport-test-add-test-case-for-sysv-generator-and-invalid-de.patch
 
 Patch9001:      update-rtc-with-system-clock-when-shutdown.patch
 Patch9002:      udev-add-actions-while-rename-netif-failed.patch
@@ -1918,6 +1928,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Mon Apr 10 2023 hongjinghao <hongjinghao@huawei.com> - 249-49
+- backport: sync patches from systemd community
+
 * Wed Mar 8 2023 wangyuhang <wangyuhang27@huawei.com> -249-48
 - fix symlinks to NVMe drives are missing in /dev/disk/by-path
 
