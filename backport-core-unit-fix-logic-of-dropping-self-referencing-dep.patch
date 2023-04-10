@@ -1,0 +1,31 @@
+From 53e0e6ef0eea396bb432cbfc1f2f6ea1272ff1f1 Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Tue, 15 Nov 2022 23:08:35 +0900
+Subject: [PATCH] core/unit: fix logic of dropping self-referencing
+ dependencies
+
+Fixes a bug in 15ed3c3a188cf7fa5a60ae508fc7a3ed048d2220.
+---
+ src/core/unit.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/unit.c b/src/core/unit.c
+index 1a580157af..a9052428e4 100644
+--- a/src/core/unit.c
++++ b/src/core/unit.c
+@@ -1131,10 +1131,11 @@ static void unit_merge_dependencies(Unit *u, Unit *other) {
+                         }
+                 } else {
+                         assert_se(r >= 0);
+-                        TAKE_PTR(other_deps);
+ 
+                         if (hashmap_remove(other_deps, u))
+                                 unit_maybe_warn_about_dependency(u, other->id, UNIT_DEPENDENCY_FROM_PTR(dt));
++
++                        TAKE_PTR(other_deps);
+                 }
+         }
+ 
+-- 
+2.27.0
+
