@@ -1,0 +1,54 @@
+From 7347b3db838ea3f02afc6c8a6dccac1ff8e7edbd Mon Sep 17 00:00:00 2001
+From: licunlong <licunlong1@huawei.com>
+Date: Tue, 8 Mar 2022 19:18:36 +0800
+Subject: [PATCH] main: log which process send SIGNAL to PID1 This can help
+ users to figure out what makes systemd freeze. 1. Someone kills systemd
+ accidentally, then the sender_pid won't be 1; 2. systemd triggers segfault or
+ assert, then the sender_pid will be 1;
+
+---
+ src/core/main.c | 14 +++++++++++---
+ 1 file changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/main.c b/src/core/main.c
+index 5009b8d85f..41a4b4225f 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -228,7 +228,7 @@ _noreturn_ static void freeze_or_exit_or_reboot(void) {
+         freeze();
+ }
+ 
+-_noreturn_ static void crash(int sig) {
++_noreturn_ static void crash(int sig, siginfo_t *siginfo, void *context) {
+         struct sigaction sa;
+         pid_t pid;
+ 
+@@ -273,6 +273,14 @@ _noreturn_ static void crash(int sig) {
+                         siginfo_t status;
+                         int r;
+ 
++                        if (siginfo) {
++                                _cleanup_free_ char *cmdline = NULL;
++                                pid_t sender_pid = siginfo->si_pid;
++
++                                (void) get_process_cmdline(sender_pid, SIZE_MAX, 0, &cmdline);
++                                log_emergency("Caught <%s> from PID "PID_FMT" (%s)", signal_to_string(sig), sender_pid, strna(cmdline));
++                        }
++
+                         /* Order things nicely. */
+                         r = wait_for_terminate(pid, &status);
+                         if (r < 0)
+@@ -330,8 +338,8 @@ _noreturn_ static void crash(int sig) {
+ 
+ static void install_crash_handler(void) {
+         static const struct sigaction sa = {
+-                .sa_handler = crash,
+-                .sa_flags = SA_NODEFER, /* So that we can raise the signal again from the signal handler */
++                .sa_sigaction = crash,
++                .sa_flags = SA_NODEFER | SA_SIGINFO, /* So that we can raise the signal again from the signal handler */
+         };
+         int r;
+ 
+-- 
+2.27.0
+
