@@ -1,0 +1,35 @@
+From 73be22c6f245ad86ef33d95bd4ab0a8e9fd121be Mon Sep 17 00:00:00 2001
+From: Yu Watanabe <watanabe.yu+github@gmail.com>
+Date: Fri, 3 Feb 2023 18:29:36 +0900
+Subject: [PATCH] argv-util: also update program_invocation_short_name
+
+Our logging uses program_invocation_short_name. Without this patch,
+logs from forked client may become broken; spuriously truncated or
+the short invocation name is not completely shown in the log.
+
+(cherry picked from commit dd15e4cb57129b915e01495e113696bfe0b70214)
+(cherry picked from commit ce4726468dc02bd7383cd7d90c8769576c6973e3)
+(cherry picked from commit 7a862d9d1a7196a5576720959849f45fc68b041c)
+(cherry picked from commit 9fbbd7bf28e5362b786e152a9ce4e8bd40621759)
+---
+ src/basic/process-util.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/basic/process-util.c b/src/basic/process-util.c
+index b76ca6f7c5..10651a4564 100644
+--- a/src/basic/process-util.c
++++ b/src/basic/process-util.c
+@@ -371,6 +371,10 @@ int rename_process(const char name[]) {
+                 strncpy(program_invocation_name, name, k);
+                 if (l > k)
+                         truncated = true;
++
++               /* Also update the short name. */
++                char *p = strrchr(program_invocation_name, '/');
++                program_invocation_short_name = p ? p + 1 : program_invocation_name;
+         }
+ 
+         /* Third step, completely replace the argv[] array the kernel maintains for us. This requires privileges, but
+-- 
+2.27.0
+
