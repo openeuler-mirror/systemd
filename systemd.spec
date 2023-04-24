@@ -16,7 +16,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        243
-Release:        61
+Release:        62
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -208,6 +208,10 @@ Patch0160:      backport-log-don-t-attempt-to-duplicate-closed-fd.patch
 Patch0161:      backport-analyze-add-forgotten-return-statement.patch
 Patch0162:      backport-shared-condition-avoid-nss-lookup-in-PID1.patch
 Patch0163:      backport-logind-fix-getting-property-OnExternalPower-via-D-Bu.patch
+Patch0164:      backport-argv-util-also-update-program_invocation_short_name.patch
+Patch0165:      backport-pid1-fix-segv-triggered-by-status-query.patch
+Patch0166:      backport-main-log-which-process-send-SIGNAL-to-PID1.patch
+Patch0167:      backport-main-drop-get_process_cmdline-from-crash-handler.patch
 
 #openEuler
 Patch9002:      1509-fix-journal-file-descriptors-leak-problems.patch
@@ -1615,6 +1619,9 @@ fi
 %exclude /usr/share/man/man3/*
 
 %changelog
+* Sun Apr 23 2023 hongjinghao <hongjinghao@huawei.com> - 243-62
+- sync community patches
+
 * Thu Mar 16 2023 yangmingtai <yangmingtai@huawei.com> - 243-61
 - sync community patches
 
