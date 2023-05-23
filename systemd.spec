@@ -21,7 +21,7 @@
 Name:           systemd
 Url:            https://www.freedesktop.org/wiki/Software/systemd
 Version:        249
-Release:        49
+Release:        50
 License:        MIT and LGPLv2+ and GPLv2+
 Summary:        System and Service Manager
 
@@ -697,6 +697,10 @@ Systemd PAM module registers the session with systemd-logind.
 
 %build
 
+%if "%toolchain" == "clang"
+	export CFLAGS="$CFLAGS -Wno-error=incompatible-pointer-types-discards-qualifiers"
+	export CXXFLAGS="$CXXFLAGS -Wno-error=incompatible-pointer-types-discards-qualifiers"
+%endif
 CONFIGURE_OPTS=(
         -Dsysvinit-path=/etc/rc.d/init.d
         -Drc-local=/etc/rc.d/rc.local
@@ -740,7 +744,6 @@ CONFIGURE_OPTS=(
         -Dnobody-group=nobody
         -Dsplit-usr=false
         -Dsplit-bin=true
-        -Db_lto=true
         -Db_ndebug=false
         -Dman=true
         -Dversion-tag=v%{version}-%{release}
@@ -780,6 +783,11 @@ CONFIGURE_OPTS=(
         -Dmode=release
         -Durlify=false
 )
+%ifarch riscv64
+CONFIGURE_OPTS+=(-Db_lto=false)
+%else
+CONFIGURE_OPTS+=(-Db_lto=true)
+%endif
 
 %meson "${CONFIGURE_OPTS[@]}"
 %meson_build
@@ -1920,6 +1928,9 @@ fi
 %{_libdir}/security/pam_systemd.so
 
 %changelog
+* Wed May 17 2023 yoo <sunyuechi@iscas.ac.cn> - 249-50
+- fix clang,riscv build error
+
 * Tue Mar 21 2023 zhangyao <zhangyao108@huawei.com> -249-49
 - nspawn: uidmap mount fix
 
